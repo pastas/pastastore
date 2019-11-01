@@ -167,33 +167,43 @@ class ArcticPastas:
     def get_stresses(self, names, progressbar=False):
         return self._get_timeseries("stresses", names, progressbar=progressbar)
 
-    def get_model(self, name):
+    def get_models(self, names, progressbar=False):
 
-        item = self.lib_models.read(name)
-        data = item.data
+        if isinstance(names, str):
+            names = [names]
 
-        if 'series' not in data['oseries']:
-            name = data["oseries"]['name']
-            if name not in self.oseries.index:
-                msg = 'oseries {} not present in project'.format(name)
-                raise(LookupError(msg))
-            s = self.get_oseries(name)
-            data['oseries']['series'] = s.value
-        for ts in data["stressmodels"].values():
-            if "stress" in ts.keys():
-                for stress in ts["stress"]:
-                    if 'series' not in stress:
-                        name = stress['name']
-                        symbol = str(self.stresses.loc[name, "station"])
-                        if name in self.stresses.index:
-                            s = self.get_stresses(symbol)
-                        else:
-                            msg = 'stress {} not present in project'.format(
-                                name)
-                        stress['series'] = s
+        models = []
 
-        ml = ps.io.base.load_model(data)
-        return ml
+        for n in (tqdm(names) if progressbar else names):
+            item = self.lib_models.read(n)
+            data = item.data
+
+            if 'series' not in data['oseries']:
+                name = data["oseries"]['name']
+                if name not in self.oseries.index:
+                    msg = 'oseries {} not present in project'.format(name)
+                    raise(LookupError(msg))
+                s = self.get_oseries(name)
+                data['oseries']['series'] = s.value
+            for ts in data["stressmodels"].values():
+                if "stress" in ts.keys():
+                    for stress in ts["stress"]:
+                        if 'series' not in stress:
+                            name = stress['name']
+                            symbol = str(self.stresses.loc[name, "station"])
+                            if name in self.stresses.index:
+                                s = self.get_stresses(symbol)
+                            else:
+                                msg = 'stress {} not present in project'.format(
+                                    name)
+                            stress['series'] = s
+
+            ml = ps.io.base.load_model(data)
+            models.append(ml)
+        if len(models) == 1:
+            return models[0]
+        else:
+            return models
 
     def get_distances(self, oseries=None, stresses=None, kind=None):
         """Method to obtain the distances in meters between the stresses and
@@ -325,7 +335,7 @@ class ArcticPastas:
             mls = [mls.name]
 
         for ml_name in (tqdm(mls) if progressbar else mls):
-            ml = self.get_model(ml_name)
+            ml = self.get_models(ml_name)
 
             m_kwargs = {}
             for key, value in kwargs.items():
@@ -381,7 +391,7 @@ class ArcticPastas:
 
         results_list = []
         for mlname in (tqdm(mls) if progressbar else mls):
-            iml = self.get_model(mlname)
+            iml = self.get_models(mlname)
             iresults = pastas_get_model_results(
                 iml, parameters='all', stats=('evp',), stderrors=True)
             results_list.append(iresults)
