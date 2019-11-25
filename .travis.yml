@@ -1,0 +1,31 @@
+#
+language: python
+
+env:
+  global:
+    - NO_NET=1
+
+git:
+  depth: 10
+
+branches:
+  only:
+    - master
+
+matrix:
+  include:
+    - python: 3.7
+      dist: xenial
+      sudo: true
+
+# Install dependencies
+install:
+  - pip install -r requirements.travis.txt
+  - pip install -e .
+  - pip install --upgrade pip
+  - pip install codecov
+  - pip install pytest-cov
+
+# command to run tests
+script:
+  - py.test ./tests --cov=pastas_projects --cov-report=html

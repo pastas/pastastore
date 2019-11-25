@@ -1,0 +1,8 @@
+numpy>=1.15
+pandas>=0.25
+geopandas>=0.4.1
+tqdm>=4.36
+pystore>=0.1.13
+arctic>=1.79.2
+shapely>=1.6.4
+pastas>=0.
