@@ -17,13 +17,42 @@ from .base import BaseProject
 
 
 class PystorePastas(BaseProject):
-    """[summary]
+    """Class that connects to a PyStore (location on disk) that can be
+    used to store timeseries and models for Pastas projects.
 
+    Parameters
+    ----------
+    name : str
+        name of the Project
+    path : str
+        path to the pystore directory
+    oseries_store : str, optional
+        name of the oseries store, by default None
+    stresses_store : str, optional
+        name of the stresses store, by default None
+    model_store : str, optional
+        name of the model store, by default None
 
     """
 
     def __init__(self, name, path, oseries_store=None, stresses_store=None,
                  model_store=None):
+        """Create a PystorePastas object that points to a Pystore.
+
+        Parameters
+        ----------
+        name : str
+            name of the Project
+        path : str
+            path to the pystore directory
+        oseries_store : str, optional
+            name of the oseries store, by default None
+        stresses_store : str, optional
+            name of the stresses store, by default None
+        model_store : str, optional
+            name of the model store, by default None
+
+        """
         self.name = name
         self.path = path
 
@@ -32,6 +61,8 @@ class PystorePastas(BaseProject):
         self._initialize(oseries_store, stresses_store, model_store)
 
     def __repr__(self):
+        """string representation of object
+        """
         storename = self.name
         noseries = len(self.lib_oseries.list_collections())
         nstresses = len(self.lib_stresses.list_collections())
@@ -41,7 +72,18 @@ class PystorePastas(BaseProject):
 
     def _initialize(self, oseries_store=None, stresses_store=None,
                     model_store=None):
+        """internal method to initialize links to stores (libraries)
 
+        Parameters
+        ----------
+        oseries_store : str, optional
+            name of the oseries store, by default None
+        stresses_store : str, optional
+            name of the stresses store, by default None
+        model_store : str, optional
+            name of the models store, by default None
+
+        """
         if oseries_store is None:
             oseries_store = "oseries"
         self.lib_oseries = pystore.store(oseries_store)
@@ -59,23 +101,87 @@ class PystorePastas(BaseProject):
 
     def _add_series(self, libname, series, collection, item, metadata=None,
                     overwrite=True):
+        """internal method to add series to a library/store
+
+        Parameters
+        ----------
+        libname : str
+            name of the library
+        series : pandas.DataFrame or pandas.Series
+            data to write to the pystore
+        collection : str
+            name of the collection
+        item : str
+            name of the item
+        metadata : dict, optional
+            dictionary containing metadata, by default None
+        overwrite : bool, optional
+            overwrite existing dataset with the same name,
+            by default True
+
+        """
         lib = self.get_store(libname)
         coll = lib.collection(collection)
         coll.write(item, series, metadata=metadata, overwrite=overwrite)
 
     def add_oseries(self, series, collection, item, metadata=None,
                     overwrite=True):
+        """add oseries to the pystore
+
+        Parameters
+        ----------
+        series : pandas.DataFrame of pandas.Series
+            oseries data to write to the store
+        collection : str
+            name of the collection to store the data in
+        item : str
+            name of the item to store the data as
+        metadata : dict, optional
+            dictionary containing metadata, by default None
+        overwrite : bool, optional
+            overwrite existing dataset with the same name,
+            by default True
+
+        """
         self._add_series("oseries", series, collection, item,
                          metadata=metadata, overwrite=overwrite)
         PystorePastas.oseries.fget.cache_clear()
 
     def add_stress(self, series, collection, item, metadata=None,
                    overwrite=True):
+        """add stresses to the pystore
+
+        Parameters
+        ----------
+        series : pandas.DataFrame of pandas.Series
+            stress data to write to the store
+        collection : str
+            name of the collection to store the data in
+        item : str
+            name of the item to store the data as
+        metadata : dict, optional
+            dictionary containing metadata, by default None
+        overwrite : bool, optional
+            overwrite existing dataset with the same name,
+            by default True
+
+        """
         self._add_series("stresses", series, collection, item,
                          metadata=metadata, overwrite=overwrite)
         PystorePastas.stresses.fget.cache_clear()
 
     def add_model(self, ml, overwrite=True):
+        """add model to the pystore
+
+        Parameters
+        ----------
+        ml : pastas.Model
+            model to write to the store
+        overwrite : bool, optional
+            overwrite existing store model if it already exists,
+            by default True
+
+        """
         mldict = ml.to_dict(series=False)
         jsondict = json.loads(json.dumps(mldict, cls=PastasEncoder, indent=4))
 
@@ -87,15 +193,48 @@ class PystorePastas(BaseProject):
         #            series=False, verbose=False)
 
     def _del_item(self, libname, collection, item):
+        """internal method to delete data from the store
+
+        Parameters
+        ----------
+        libname : str
+            name of the library
+        collection : str
+            name of the collection to delete the item from
+        item : str
+            name of the item to delete
+
+        """
         lib = self.get_store(libname)
         c = lib.collection(collection)
         c.delete_item(item)
 
     def _del_collection(self, libname, collection):
+        """internal method to delete a collection
+
+        Parameters
+        ----------
+        libname : str
+            name of the library containing the collection
+        collection : str
+            name of the collection to delete
+
+        """
         lib = self.get_store(libname)
         lib.delete_collection(collection)
 
     def del_oseries(self, name, item=None):
+        """delete oseries
+
+        Parameters
+        ----------
+        name : str
+            name of the collection containing the data
+        item : str, optional
+            if provided, delete item, by default None,
+            which deletes the whole collection
+
+        """
         if item is None:
             self._del_collection("oseries", name)
         else:
@@ -103,6 +242,16 @@ class PystorePastas(BaseProject):
         PystorePastas.oseries.fget.cache_clear()
 
     def del_stress(self, name, item=None):
+        """delete stress
+
+        Parameters
+        ----------
+        name : str
+            name of the collection containing the data
+        item : str, optional
+            if provided delete item, by default None,
+            which deletes the whole collection
+        """
         if item is None:
             self._del_collection("stresses", name)
         else:
@@ -110,14 +259,61 @@ class PystorePastas(BaseProject):
         PystorePastas.stresses.fget.cache_clear()
 
     def del_model(self, name):
+        """delete model from store
+
+        Parameters
+        ----------
+        name : str
+            name of the model to delete
+
+        """
         self._del_collection("models", name)
         # os.remove(os.path.join(self.lib_models, name + ".pas"))
 
-    def get_store(self, kind):
-        return getattr(self, f"lib_{kind}")
+    def get_store(self, storename):
+        """get store handle
 
-    def _get_timeseries(self, storename, names, item=None, progressbar=True):
+        Parameters
+        ----------
+        storename : str
+            name of the store
 
+        Returns
+        -------
+        pystore.store
+            handle to the store
+
+        """
+        return getattr(self, f"lib_{storename}")
+
+    def _get_timeseries(self, storename, names, item=None,
+                        progressbar=True):
+        """internal method to load timeseries data
+
+        Parameters
+        ----------
+        storename : str
+            name of the store to load data from
+        names : str or list of str
+            name(s) of the timeseries to load
+        item : str, optional
+            name of the item to load in each collection, by default None,
+            which defaults to the first item in the collection
+        progressbar : bool, optional
+            show progressbar, by default True
+
+        Returns
+        -------
+        pandas.DataFrame or dict of pandas.DataFrames
+            returns data DataFrame or dictionary of DataFrames
+            if multiple names are provided
+
+        Raises
+        ------
+        FileNotFoundError
+            if no collection can be found with name(s)
+
+        """
         store = self.get_store(storename)
 
         if isinstance(names, str):
@@ -141,7 +337,26 @@ class PystorePastas(BaseProject):
         return ts
 
     def get_metadata(self, names, item=None, kind="oseries", progressbar=True):
+        """read metadata for dataset
 
+        Parameters
+        ----------
+        names : str or list of str
+            name(s) of collections to load metadata from
+        item : str, optional
+            name of the item to load from each collection, by default None,
+            which uses the first item in each collection
+        kind : str, optional
+            name of the store to load metadata from, by default "oseries"
+        progressbar : bool, optional
+            show progressbar, by default True
+
+        Returns
+        -------
+        dict or dict of dicts
+            dictionary containing metadata
+
+        """
         store = self.get_store(kind)
 
         if isinstance(names, str):
@@ -164,15 +379,67 @@ class PystorePastas(BaseProject):
         return meta
 
     def get_oseries(self, names, item=None, progressbar=True):
+        """load oseries from store
+
+        Parameters
+        ----------
+        names : str or list of str
+            name(s) of collections to load oseries data from
+        item : str, optional
+            name of the item to load from each collection, by default None,
+            which takes the first item from each collection
+        progressbar : bool, optional
+            show progressbar, by default True
+
+        Returns
+        -------
+        pandas.DataFrame or dict of pandas.DataFrames
+            returns data as a DataFrame or a dictionary of DataFrames
+            if multiple names are passed
+
+        """
         return self._get_timeseries("oseries", names, item,
                                     progressbar=progressbar)
 
     def get_stresses(self, names, item=None, progressbar=True):
+        """load stresses from store
+
+        Parameters
+        ----------
+        names : str or list of str
+            name(s) of collections to load stresses data from
+        item : str, optional
+            name of the item to load from each collection, by default None,
+            which takes the first item from each collection
+        progressbar : bool, optional
+            show progressbar, by default True
+
+        Returns
+        -------
+        pandas.DataFrame or dict of pandas.DataFrames
+            returns data as a DataFrame or a dictionary of DataFrames
+            if multiple names are passed
+
+        """
         return self._get_timeseries("stresses", names, item,
                                     progressbar=progressbar)
 
     def get_models(self, names, progressbar=False):
+        """load models from store
 
+        Parameters
+        ----------
+        names : str or list of str
+            name(s) of the models to load
+        progressbar : bool, optional
+            show progressbar, by default False
+
+        Returns
+        -------
+        list
+            list of models
+
+        """
         if isinstance(names, str):
             names = [names]
 
@@ -183,7 +450,7 @@ class PystorePastas(BaseProject):
         for n in (tqdm(names) if progressbar else names):
 
             c = lib.collection(n)
-            # data = load_mod.load(os.path.join(self.lib_models, n + ".pas"))
+
             jsonpath = c._item_path(n).joinpath("metadata.json")
             data = load_mod.load(jsonpath)
 
@@ -222,6 +489,16 @@ class PystorePastas(BaseProject):
             return models
 
     def add_recharge(self, ml, rfunc=ps.Gamma):
+        """method to add recharge to pastas Model
+
+        Parameters
+        ----------
+        ml : pastas.Model
+            model to add the recharge to
+        rfunc : pastas.rfunc, optional
+            response function for recharge, by default ps.Gamma
+
+        """
         # get nearest prec and evap stns
         names = []
         for var in ("prec", "evap"):
@@ -245,6 +522,25 @@ class PystorePastas(BaseProject):
         ml.add_stressmodel(rch)
 
     def create_model(self, name, item, add_recharge=True):
+        """create model for oseries
+
+        Parameters
+        ----------
+        name : str
+            name of the collection to load the oseries data from
+        item : str
+            name of the item
+        add_recharge : bool, optional
+            add recharge to the model based on the closest
+            evaporation and precipitation timeseries in the
+            pystore, by default True
+
+        Returns
+        -------
+        pastas.Model
+            model for the oseries
+
+        """
         # get oseries metadata
         meta = self.get_metadata(name, item=item, kind="oseries",
                                  progressbar=False)
@@ -265,7 +561,34 @@ class PystorePastas(BaseProject):
     def create_models(self, oseries=None, add_recharge=True, store=False,
                       solve=False, progressbar=True, return_models=False,
                       ignore_errors=True, **kwargs):
+        """create multiple models
 
+        Parameters
+        ----------
+        oseries : list of str, optional
+            list of oseries to create models for, by default None
+        add_recharge : bool, optional
+            add recharge to the models, by default True, uses the
+            closest precipitation and evaporation data in the pystore
+        store : bool, optional
+            store the models, by default False
+        solve : bool, optional
+            solve the models, by default False
+        progressbar : bool, optional
+            show progressbar, by default True
+        return_models : bool, optional
+            return dict containing models, by default False
+        ignore_errors : bool, optional
+            ignore errors when creating models, by default True
+
+        Returns
+        -------
+        dictionary of pastas.Models
+            if return_models is True, return models
+        errors : list
+            list of model names that could not be created
+
+        """
         if oseries is None:
             oseries = self.oseries.index
         elif isinstance(oseries, str):
@@ -299,7 +622,8 @@ class PystorePastas(BaseProject):
         """Solves the models in the library
 
         mls: list of str, optional
-            list of model names, if None all models in the project are solved.
+            list of model names, if None all models in the
+            project are solved.
         report: boolean, optional
             determines if a report is printed when the model is solved.
         ignore_solve_errors: boolean, optional

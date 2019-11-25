@@ -16,8 +16,30 @@ from .util import query_yes_no
 
 
 class ArcticPastas(BaseProject):
-    def __init__(self, connstr, projectname):
+    """Class that connects to a running Mongo database that can be used
+    to store timeseries and models for Pastas projects.
 
+    Parameters
+    ----------
+    connstr : str
+        connection string
+    projectname : name
+        name of the project
+
+    """
+
+    def __init__(self, connstr, projectname):
+        """Create an ArcticPastas object that connects to a
+        running Mongo database.
+
+        Parameters
+        ----------
+        connstr : str
+            connection string
+        projectname : name
+            name of the project
+
+        """
         self.connstr = connstr
         self.projectname = projectname
 
@@ -25,6 +47,8 @@ class ArcticPastas(BaseProject):
         self._initialize()
 
     def __repr__(self):
+        """representation string of the object.
+        """
         noseries = len(self.lib_oseries.list_symbols())
         nstresses = len(self.lib_stresses.list_symbols())
         nmodels = len(self.lib_models.list_symbols())
@@ -33,6 +57,8 @@ class ArcticPastas(BaseProject):
         )
 
     def _initialize(self):
+        """internal method to initalize the libraries.
+        """
         for libname in ["oseries", "stresses", "models"]:
             if self.projectname + "." + libname not in self.arc.list_libraries():
                 self.arc.initialize_library(self.projectname + "." + libname)
@@ -40,12 +66,48 @@ class ArcticPastas(BaseProject):
                     self.get_library(libname))
 
     def get_library(self, libname):
+        """Get Arctic library handle
+
+        Parameters
+        ----------
+        libname : str
+            name of the library
+
+        Returns
+        -------
+        Arctic.library handle
+            handle to the library
+
+        """
         # get library
         lib = self.arc.get_library(self.projectname + "." + libname)
         return lib
 
     def _add_series(self, libname, series, name, metadata=None,
                     add_version=False):
+        """internal method to add series to database
+
+        Parameters
+        ----------
+        libname : str
+            name of the library to add the series to
+        series : pandas.Series or pandas.DataFrame
+            data to add
+        name : str
+            name of the timeseries
+        metadata : dict, optional
+            dictionary containing metadata, by default None
+        add_version : bool, optional
+            if True, add a new version of the dataset to the database,
+            by default False
+
+        Raises
+        ------
+        Exception
+            if add_version is False and name is already in the database
+            raises an Exception.
+
+        """
         lib = self.get_library(libname)
         if name not in lib.list_symbols() or add_version:
             lib.write(name, series, metadata=metadata)
@@ -54,11 +116,44 @@ class ArcticPastas(BaseProject):
                             " in '{1}' library!".format(name, libname))
 
     def add_oseries(self, series, name, metadata=None, add_version=False):
+        """add oseries to the database
+
+        Parameters
+        ----------
+        series : pandas.Series or pandas.DataFrame
+            data to add
+        name : str
+            name of the timeseries
+        metadata : dict, optional
+            dictionary containing metadata, by default None
+        add_version : bool, optional
+            if True, add a new version of the dataset to the database,
+            by default False
+
+        """
         self._add_series("oseries", series, name=name,
                          metadata=metadata, add_version=add_version)
         ArcticPastas.oseries.fget.cache_clear()
 
     def add_stress(self, series, name, kind, metadata=None, add_version=False):
+        """add stress to the database
+
+        Parameters
+        ----------
+        series : pandas.Series or pandas.DataFrame
+            data to add
+        name : str
+            name of the timeseries
+        kind : str
+            category to identify type of stress, this label is added to the
+            metadata dictionary.
+        metadata : dict, optional
+            dictionary containing metadata, by default None
+        add_version : bool, optional
+            if True, add a new version of the dataset to the database,
+            by default False
+
+        """
         if metadata is None:
             metadata = {}
 
@@ -68,6 +163,22 @@ class ArcticPastas(BaseProject):
         ArcticPastas.stresses.fget.cache_clear()
 
     def add_model(self, ml, add_version=False):
+        """add model to the database
+
+        Parameters
+        ----------
+        ml : pastas.Model
+            pastas Model to add to the database
+        add_version : bool, optional
+            if True, add new version of existing model, by default False
+
+        Raises
+        ------
+        Exception
+            if add_version is False and model is already in the database
+            raises an Exception.
+
+        """
         lib = self.lib_models
         if ml.name not in lib.list_symbols() or add_version:
             mldict = ml.to_dict(series=False)
@@ -78,17 +189,49 @@ class ArcticPastas(BaseProject):
         ArcticPastas.models.fget.cache_clear()
 
     def del_model(self, name):
+        """delete model from the database
+
+        Parameters
+        ----------
+        name : str
+            name of the model to delete
+        """
         self.lib_models.delete(name)
 
     def del_oseries(self, name):
+        """delete oseries from the database
+
+        Parameters
+        ----------
+        name : str
+            name of the oseries to delete
+        """
         self.lib_oseries.delete(name)
         ArcticPastas.oseries.fget.cache_clear()
 
     def del_stress(self, name):
+        """delete stress from the database
+
+        Parameters
+        ----------
+        name : str
+            name of the stress to delete
+        """
         self.lib_stresses.delete(name)
         ArcticPastas.stresses.fget.cache_clear()
 
     def delete_library(self, lib=None):
+        """Delete entire library
+
+        Warning: this breaks a lot of methods in this object!
+
+        Parameters
+        ----------
+        lib : str, optional
+            name of the library to delete, by default None, which
+            deletes all libraries
+
+        """
         if libs is None:
             libs = ["oseries", "stresses", "models"]
         elif isinstance(libs, str):
@@ -99,7 +242,24 @@ class ArcticPastas(BaseProject):
             print("... deleted library '{}'!".format(lib))
 
     def _get_timeseries(self, libname, names, progressbar=True):
+        """internal method to get timeseries
 
+        Parameters
+        ----------
+        libname : str
+            name of the library
+        names : str or list of str
+            names of the timeseries to load
+        progressbar : bool, optional
+            show progressbar, by default True
+
+        Returns
+        -------
+        pandas.DataFrame or dict of pandas.DataFrames
+            either returns timeseries as pandas.DataFrame or
+            dictionary containing the timeseries.
+
+        """
         lib = self.get_library(libname)
 
         if isinstance(names, str):
@@ -111,7 +271,22 @@ class ArcticPastas(BaseProject):
         return ts
 
     def get_metadata(self, libname, names):
+        """read the metadata
 
+        Parameters
+        ----------
+        libname : str
+            name of the library containing the dataset
+        names : str or list of str
+            names of the datasets for which to read the metadata
+
+        Returns
+        -------
+        dict or pandas.DataFrame
+            returns metadata dictionary (for one item) or DataFrame
+            of metadata (for several datasets)
+
+        """
         lib = self.get_library(libname)
 
         # read only metadata
@@ -132,13 +307,60 @@ class ArcticPastas(BaseProject):
         return meta
 
     def get_oseries(self, names, progressbar=False):
+        """get oseries from database
+
+        Parameters
+        ----------
+        names : str or list of str
+            names of the oseries to load
+        progressbar : bool, optional
+            show progressbar, by default False
+
+        Returns
+        -------
+        pandas.DataFrame or dict of DataFrames
+            returns timeseries as DataFrame or dictionary of DataFrames if
+            multiple names were passed
+
+        """
         return self._get_timeseries("oseries", names, progressbar=progressbar)
 
     def get_stresses(self, names, progressbar=False):
+        """get stresses from database
+
+        Parameters
+        ----------
+        names : str or list of str
+            names of the stresses to load
+        progressbar : bool, optional
+            show progressbar, by default False
+
+        Returns
+        -------
+        pandas.DataFrame or dict of DataFrames
+            returns timeseries as DataFrame or dictionary of DataFrames if
+            multiple names were passed
+
+        """
         return self._get_timeseries("stresses", names, progressbar=progressbar)
 
     def get_models(self, names, progressbar=False):
+        """load models from database
 
+        Parameters
+        ----------
+        names : str or list of str
+            names of the models to load
+        progressbar : bool, optional
+            show progressbar, by default False
+
+        Returns
+        -------
+        pastas.Model or list of pastas.Model
+            return pastas model, or list of models if multiple names were
+            passed
+
+        """
         if isinstance(names, str):
             names = [names]
 
@@ -176,6 +398,28 @@ class ArcticPastas(BaseProject):
             return models
 
     def create_model(self, name, add_recharge=True):
+        """create a new pastas Model
+
+        Parameters
+        ----------
+        name : str
+            name of the oseries to create a model for
+        add_recharge : bool, optional
+            add recharge to the model by looking for the closest
+            precipitation and evaporation timeseries in the stresses
+            library, by default True
+
+        Returns
+        -------
+        pastas.Model
+            model for the oseries
+
+        Raises
+        ------
+        ValueError
+            if timeseries is empty
+
+        """
         # get oseries metadata
         meta = self.get_metadata("oseries", name)
         ts = self.get_oseries(name)
@@ -195,6 +439,36 @@ class ArcticPastas(BaseProject):
     def create_models(self, oseries=None, add_recharge=True, store=False,
                       solve=False, progressbar=True, return_models=False,
                       ignore_errors=True, **kwargs):
+        """batch creation of models
+
+        Parameters
+        ----------
+        oseries : list of str, optional
+            names of oseries to create models for, by default None,
+            which creates models for all oseries
+        add_recharge : bool, optional
+            add recharge to the models based on closest
+            precipitation and evaporation timeseries, by default True
+        store : bool, optional
+            store the model, by default False
+        solve : bool, optional
+            solve the model, by default False
+        progressbar : bool, optional
+            show progressbar, by default True
+        return_models : bool, optional
+            if True, return a list of models, by default False
+        ignore_errors : bool, optional
+            ignore errors while creating models, by default True
+
+        Returns
+        -------
+        models : dict, if return_models is True
+            dictionary of models
+
+        errors : list, always returned
+            list of model names that could not be created
+
+        """
         if oseries is None:
             oseries = self.oseries.index
         elif isinstance(oseries, str):
@@ -224,6 +498,19 @@ class ArcticPastas(BaseProject):
             return errors
 
     def add_recharge(self, ml, rfunc=ps.Gamma):
+        """add recharge to a pastas model using
+        closest precipitation and evaporation timeseries in database
+
+        Parameters
+        ----------
+        ml : pastas.Model
+            pastas.Model object
+        rfunc : pastas.rfunc, optional
+            response function to use for recharge in model,
+            by default ps.Gamma (for different response functions, see
+            pastas documentation)
+
+        """
         # get nearest prec and evap stns
         names = []
         for var in ("prec", "evap"):

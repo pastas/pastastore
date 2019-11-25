@@ -7,6 +7,7 @@ class BaseProject:
     """BaseProject class that holds methods
     that work for both Arctic-based and Pystore-based
     projects.
+
     """
 
     def get_distances(self, oseries=None, stresses=None, kind=None):
