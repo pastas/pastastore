@@ -9,7 +9,7 @@ import observations as obs
 
 # %% settings
 connstr = "mongodb://localhost:27017/"
-libname = "aaenmaas"
+libname = "vitens"
 pystore_path = r"C:\GitHub\traval\extracted_data\pystore"
 
 # %% load data

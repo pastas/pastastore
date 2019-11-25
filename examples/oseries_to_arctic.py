@@ -10,7 +10,7 @@ import observations as obs
 
 # %% settings
 connstr = "mongodb://localhost:27017/"
-storename = 'aaenmaas'
+storename = 'vitens'
 items = ["GW.meting.totaalcorrectie"]
 
 # %% connect to database
@@ -20,7 +20,7 @@ arc = arctic.Arctic(connstr)
 
 # read in data
 oc = obs.ObsCollection.from_pystore(storename,
-                                    "../traval/extracted_data/pystore",
+                                    "../../traval/extracted_data/pystore",
                                     nameby="collection",
                                     item_names=items,
                                     verbose=False,
