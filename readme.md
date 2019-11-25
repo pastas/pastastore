@@ -25,7 +25,7 @@ If using Docker for running MongoDB:
 ## Installation
 After installing Snappy, install the module by typing `pip install -e .` from the module root directory.
 
-## Projects
+## Types of Projects
 
 The structure and some background on the different types of Projects is detailed below.
 
