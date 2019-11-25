@@ -189,8 +189,6 @@ class PystorePastas(BaseProject):
         coll = lib.collection(ml.name)
         coll.write(ml.name, pd.DataFrame(), metadata=jsondict,
                    overwrite=overwrite)
-        # ml.to_file(os.path.join(self.lib_models, ml.name + ".pas"),
-        #            series=False, verbose=False)
 
     def _del_item(self, libname, collection, item):
         """internal method to delete data from the store
@@ -558,7 +556,7 @@ class PystorePastas(BaseProject):
         else:
             raise ValueError("Empty timeseries!")
 
-    def create_models(self, oseries=None, add_recharge=True, store=False,
+    def create_models(self, oseries=None, item=None, add_recharge=True, store=False,
                       solve=False, progressbar=True, return_models=False,
                       ignore_errors=True, **kwargs):
         """create multiple models
@@ -566,7 +564,10 @@ class PystorePastas(BaseProject):
         Parameters
         ----------
         oseries : list of str, optional
-            list of oseries to create models for, by default None
+            list of oseries to create models for, by default None,
+            which creates models for all the oseries in the database
+        item : str
+            name of item to use from each collection
         add_recharge : bool, optional
             add recharge to the models, by default True, uses the
             closest precipitation and evaporation data in the pystore
@@ -599,7 +600,7 @@ class PystorePastas(BaseProject):
         for o in (tqdm(oseries)
                   if progressbar else oseries):
             try:
-                iml = self.create_model(o, None, add_recharge=add_recharge)
+                iml = self.create_model(o, item, add_recharge=add_recharge)
             except Exception as e:
                 if ignore_errors:
                     errors.append(o)
@@ -681,7 +682,7 @@ class PystorePastas(BaseProject):
     @property
     # @functools.lru_cache()
     def models(self):
-        if hasattr(self, "lib_models"):
+        if self.lib_models is not None:
             lib = self.get_store("models")
             mls = lib.list_collections()
         else:

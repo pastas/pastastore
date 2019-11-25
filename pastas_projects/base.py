@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import pastas as ps
+from tqdm import tqdm
 
 
 class BaseProject:
