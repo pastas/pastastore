@@ -36,7 +36,7 @@ class PystorePastas(BaseProject):
     """
 
     def __init__(self, name, path, oseries_store=None, stresses_store=None,
-                 model_store=None):
+                 model_store=None, new_store=False):
         """Create a PystorePastas object that points to a Pystore.
 
         Parameters
@@ -58,20 +58,20 @@ class PystorePastas(BaseProject):
 
         pystore.set_path(self.path)
 
-        self._initialize(oseries_store, stresses_store, model_store)
+        self._initialize(oseries_store, stresses_store, model_store, new_store)
 
     def __repr__(self):
         """string representation of object
         """
         storename = self.name
-        noseries = len(self.lib_oseries.list_collections())
-        nstresses = len(self.lib_stresses.list_collections())
+        noseries = len(self.lib_oseries.list_collections()) if self.lib_oseries else 0
+        nstresses = len(self.lib_stresses.list_collections()) if self.lib_stresses else 0
         nmodels = len(self.models)
         return (f"<PystorePastas object> '{storename}': {noseries} oseries, "
                 f"{nstresses} stresses, {nmodels} models")
 
     def _initialize(self, oseries_store=None, stresses_store=None,
-                    model_store=None):
+                    model_store=None, new_store=False):
         """internal method to initialize links to stores (libraries)
 
         Parameters
@@ -84,16 +84,29 @@ class PystorePastas(BaseProject):
             name of the models store, by default None
 
         """
-        if oseries_store is None:
+        if oseries_store is None and new_store:
             oseries_store = "oseries"
-        self.lib_oseries = pystore.store(oseries_store)
+            self.lib_oseries = pystore.store(oseries_store)
+        elif oseries_store is not None:
+            self.lib_oseries = pystore.store(oseries_store)
+        else:
+            self.lib_oseries = None
 
-        if stresses_store is None:
+        if stresses_store is None and new_store:
             stresses_store = "stresses"
-        self.lib_stresses = pystore.store(stresses_store)
+            self.lib_stresses = pystore.store(stresses_store)
+        elif stresses_store is not None:
+            self.lib_stresses = pystore.store(stresses_store)
+        else:
+            self.lib_stresses = None
 
-        if model_store is not None:
+        if model_store is None and new_store:
+            model_store = "models"
             self.lib_models = pystore.store(model_store)
+        elif model_store is not None:
+            self.lib_models = pystore.store(model_store)
+        else:
+            self.lib_models = None
 
         self.info = {oseries_store: "oseries",
                      stresses_store: "stresses",
@@ -666,18 +679,24 @@ class PystorePastas(BaseProject):
     @property
     @functools.lru_cache()
     def oseries(self):
-        lib = self.lib_oseries
-        return GeoDataFrame(self.get_metadata(lib.list_collections(),
-                                              kind="oseries",
-                                              progressbar=False)).transpose()
+        if self.lib_oseries is not None:
+            lib = self.lib_oseries
+            return GeoDataFrame(self.get_metadata(lib.list_collections(),
+                                                kind="oseries",
+                                                progressbar=False)).transpose()
+        else:
+            return GeoDataFrame()
 
     @property
     @functools.lru_cache()
     def stresses(self):
-        lib = self.lib_stresses
-        return GeoDataFrame(self.get_metadata(lib.list_collections(),
-                                              kind="stresses",
-                                              progressbar=False)).transpose()
+        if self.lib_stresses is not None:
+            lib = self.lib_stresses
+            return GeoDataFrame(self.get_metadata(lib.list_collections(),
+                                                kind="stresses",
+                                                progressbar=False)).transpose()
+        else:
+            return GeoDataFrame()
 
     @property
     # @functools.lru_cache()

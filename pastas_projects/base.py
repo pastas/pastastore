@@ -11,6 +11,68 @@ class BaseProject:
 
     """
 
+    def get_oseries_distances(self, oseries=None):
+        """Method to obtain the distances in meters between the oseries.
+
+        Parameters
+        ----------
+        oseries: str or list of str
+            names of the oseries to calculate distances between
+
+        Returns
+        -------
+        distances: pandas.DataFrame
+            Pandas DataFrame with the distances between the oseries
+
+        """
+        oseries_df = self.oseries
+        other_df = self.oseries
+
+        if isinstance(oseries, str):
+            oseries = [oseries]
+        elif oseries is None:
+            oseries = oseries_df.index
+
+        xo = pd.to_numeric(oseries_df.loc[oseries, "x"])
+        xt = pd.to_numeric(other_df.loc[:, "x"])
+        yo = pd.to_numeric(oseries_df.loc[oseries, "y"])
+        yt = pd.to_numeric(other_df.loc[:, "y"])
+
+        xh, xi = np.meshgrid(xt, xo)
+        yh, yi = np.meshgrid(yt, yo)
+
+        distances = pd.DataFrame(np.sqrt((xh - xi) ** 2 + (yh - yi) ** 2),
+                                 index=oseries, columns=other_df.index)
+
+        return distances
+
+    def get_nearest_oseries(self, oseries=None, n=1):
+        """Method to obtain the nearest (n) oseries.
+
+        Parameters
+        ----------
+        oseries: str
+            String with the name of the oseries
+        n: int
+            Number of oseries to obtain
+
+        Returns
+        -------
+        oseries:
+            List with the names of the oseries.
+
+        """
+
+        distances = self.get_oseries_distances(oseries)
+
+        data = pd.DataFrame(columns=np.arange(n))
+
+        for series in distances.index:
+            series = pd.Series(distances.loc[series].sort_values().index[:n],
+                               name=series)
+            data = data.append(series)
+        return data
+
     def get_distances(self, oseries=None, stresses=None, kind=None):
         """Method to obtain the distances in meters between the stresses and
         oseries.
