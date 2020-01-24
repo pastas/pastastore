@@ -60,12 +60,12 @@ def test_solve_models(request, prj):
     return mls
 
 
-@pytest.mark.dependency()
-def test_model_results(request, prj):
-    depends(request, [f"test_create_models[{prj.type}]",
-                      f"test_solve_models[{prj.type}]"])
-    prj.model_results(["oseries1", "oseries2"], progressbar=False)
-    return
+# @pytest.mark.dependency()
+# def test_model_results(request, prj):
+#     depends(request, [f"test_create_models[{prj.type}]",
+#                       f"test_solve_models[{prj.type}]"])
+#     prj.model_results(["oseries1", "oseries2"], progressbar=False)
+#     return
 
 
 def test_oseries_distances(prj):

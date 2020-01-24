@@ -362,7 +362,7 @@ class PastasProject:
                 else:
                     raise e
 
-    def model_results(self, mls=None, progressbar=True):
+    def model_results(self, mls=None, progressbar=True):  # pragma: no cover
         """Get pastas model results
 
         Parameters
