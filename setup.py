@@ -27,8 +27,7 @@ setup(
         'Programming Language :: Python :: 3.6'
     ],
     platforms='Windows, Mac OS-X',
-    install_requires=['numpy>=1.15', 'pandas>=0.24', "geopandas", "tqdm",
-                      "pystore", "arctic", "shapely"],
+    install_requires=['numpy>=1.15', 'pandas>=0.24', "tqdm"],
     packages=find_packages(exclude=[]),
     include_package_data=True,
 )
