@@ -1,6 +1,9 @@
 #
 language: python
 
+services:
+  - mongodb
+
 env:
   global:
     - NO_NET=1
@@ -18,13 +21,20 @@ matrix:
       dist: xenial
       sudo: true
 
+before_install:
+  - sudo apt-get install libsnappy-dev
+
 # Install dependencies
 install:
+  - pip install python-snappy
+  - pip install pystore
+  - pip install arctic
   - pip install -r requirements.travis.txt
   - pip install -e .
   - pip install --upgrade pip
   - pip install codecov
   - pip install pytest-cov
+  - pip install pytest-dependency
 
 # command to run tests
 script:
