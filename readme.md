@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/ArtesiaWater/pastas_projects.svg?branch=master)](https://travis-ci.com/ArtesiaWater/pastas_projects)
+
 # pastas_projects
 
 This module contains a tool to manage [Pastas](https://pastas.readthedocs.io/en/latest/) timeseries and models on disk. The connection to the database/disk is managed by a connector object. Currently, two connectors are included:
