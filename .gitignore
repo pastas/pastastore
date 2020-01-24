@@ -114,3 +114,4 @@ venv.bak/
 .idea/vcs.xml
 .idea/workspace.xml
 
+*/_old
