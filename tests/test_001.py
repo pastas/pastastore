@@ -1,5 +1,8 @@
+import warnings
+
 
 def test_import():
-    import pastas_projects as prj
+    with warnings.catch_warnings():
+        warnings.simplefilter(action="ignore", category=FutureWarning)
+        import pastas_projects as pp
     return
-
