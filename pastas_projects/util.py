@@ -1,34 +1,30 @@
-import sys
+import pystore
+import arctic
 
 
-def query_yes_no(question, default="yes"):
-    """Ask a yes/no question via raw_input() and return their answer.
-
-    "question" is a string that is presented to the user.
-    "default" is the presumed answer if the user just hits <Enter>.
-        It must be "yes" (the default), "no" or None (meaning
-        an answer is required of the user).
-
-    The "answer" return value is True for "yes" or False for "no".
-    """
-    valid = {"yes": True, "y": True, "ye": True,
-             "no": False, "n": False}
-    if default is None:
-        prompt = " [y/n] "
-    elif default == "yes":
-        prompt = " [Y/n] "
-    elif default == "no":
-        prompt = " [y/N] "
+def delete_pystore(path, name, libraries=None):
+    pystore.set_path(path)
+    if libraries is None:
+        pystore.delete_store(name)
     else:
-        raise ValueError("invalid default answer: '%s'" % default)
+        store = pystore.store(name)
+        for lib in libraries:
+            store.delete_collection(lib)
 
-    while True:
-        sys.stdout.write(question + prompt)
-        choice = input().lower()
-        if default is not None and choice == '':
-            return valid[default]
-        elif choice in valid:
-            return valid[choice]
-        else:
-            sys.stdout.write("Please respond with 'yes' or 'no' "
-                             "(or 'y' or 'n').\n")
+
+def delete_arctic(connstr, name, libraries=None):
+
+    arc = arctic.Arctic(connstr)
+    print(f"Deleting database: '{name}' ...")
+    # get library names
+    if libraries is None:
+        libs = []
+        for ilib in arc.list_libraries():
+            if ilib.split(".")[0] == name:
+                libs.append(ilib)
+    else:
+        libs = [name + "." + ilib for ilib in libraries]
+
+    for l in libs:
+        arc.delete_library(l)
+        print(f" - deleted: {l}")

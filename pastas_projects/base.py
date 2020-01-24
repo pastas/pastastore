@@ -1,234 +1,78 @@
-import numpy as np
-import pandas as pd
-import pastas as ps
-from tqdm import tqdm
+from abc import ABC, abstractmethod, abstractproperty
 
 
-class BaseProject:
-    """BaseProject class that holds methods
-    that work for both Arctic-based and Pystore-based
-    projects.
+class BaseConnector(ABC):  # pragma: no cover
+    """Metaclass for connecting to data management sources,
+    i.e. MongoDB through Arctic, Pystore, or other databases.
+
+    Create your own connection to a data source by writing a
+    a class that inherits from this BaseConnector. Your class
+    has to override each method and property.
 
     """
+    _default_library_names = ["oseries", "stresses", "models"]
 
-    def get_oseries_distances(self, oseries=None):
-        """Method to obtain the distances in meters between the oseries.
+    @abstractmethod
+    def get_library(self, libname):
+        pass
 
-        Parameters
-        ----------
-        oseries: str or list of str
-            names of the oseries to calculate distances between
+    @abstractmethod
+    def _add_series(self, libname, series, name, metadata=None,
+                    add_version=False):
+        pass
 
-        Returns
-        -------
-        distances: pandas.DataFrame
-            Pandas DataFrame with the distances between the oseries
+    @abstractmethod
+    def add_oseries(self, series, name, metadata=None, add_version=False):
+        pass
 
-        """
-        oseries_df = self.oseries
-        other_df = self.oseries
+    @abstractmethod
+    def add_stress(self, series, name, kind, metadata=None, add_version=False):
+        pass
 
-        if isinstance(oseries, str):
-            oseries = [oseries]
-        elif oseries is None:
-            oseries = oseries_df.index
+    @abstractmethod
+    def add_model(self, ml, add_version=False):
+        pass
 
-        xo = pd.to_numeric(oseries_df.loc[oseries, "x"])
-        xt = pd.to_numeric(other_df.loc[:, "x"])
-        yo = pd.to_numeric(oseries_df.loc[oseries, "y"])
-        yt = pd.to_numeric(other_df.loc[:, "y"])
+    @abstractmethod
+    def del_models(self, names):
+        pass
 
-        xh, xi = np.meshgrid(xt, xo)
-        yh, yi = np.meshgrid(yt, yo)
+    @abstractmethod
+    def del_oseries(self, names):
+        pass
 
-        distances = pd.DataFrame(np.sqrt((xh - xi) ** 2 + (yh - yi) ** 2),
-                                 index=oseries, columns=other_df.index)
+    @abstractmethod
+    def del_stress(self, names):
+        pass
 
-        return distances
+    @abstractmethod
+    def _get_series(self, libname, names, progressbar=True):
+        pass
 
-    def get_nearest_oseries(self, oseries=None, n=1):
-        """Method to obtain the nearest (n) oseries.
+    @abstractmethod
+    def get_metadata(self, libname, names, progressbar=False, as_frame=True):
+        pass
 
-        Parameters
-        ----------
-        oseries: str
-            String with the name of the oseries
-        n: int
-            Number of oseries to obtain
+    @abstractmethod
+    def get_oseries(self, names, progressbar=False):
+        pass
 
-        Returns
-        -------
-        oseries:
-            List with the names of the oseries.
+    @abstractmethod
+    def get_stresses(self, names, progressbar=False):
+        pass
 
-        """
+    @abstractmethod
+    def get_models(self, names, progressbar=False):
+        pass
 
-        distances = self.get_oseries_distances(oseries)
+    @abstractproperty
+    def oseries(self):
+        pass
 
-        data = pd.DataFrame(columns=np.arange(n))
+    @abstractproperty
+    def stresses(self):
+        pass
 
-        for series in distances.index:
-            series = pd.Series(distances.loc[series].sort_values().index[:n],
-                               name=series)
-            data = data.append(series)
-        return data
-
-    def get_distances(self, oseries=None, stresses=None, kind=None):
-        """Method to obtain the distances in meters between the stresses and
-        oseries.
-
-        Parameters
-        ----------
-        oseries: str or list of str
-        stresses: str or list of str
-        kind: str
-
-        Returns
-        -------
-        distances: pandas.DataFrame
-            Pandas DataFrame with the distances between the oseries (index)
-            and the stresses (columns).
-
-        """
-        oseries_df = self.oseries
-        stresses_df = self.stresses
-
-        if isinstance(oseries, str):
-            oseries = [oseries]
-        elif oseries is None:
-            oseries = oseries_df.index
-
-        if stresses is None and kind is None:
-            stresses = stresses_df.index
-        elif stresses is None:
-            stresses = stresses_df[stresses_df.kind == kind].index
-        elif stresses is not None and kind is not None:
-            mask = stresses_df.kind == kind
-            stresses = stresses_df.loc[stresses].loc[mask].index
-
-        xo = pd.to_numeric(oseries_df.loc[oseries, "x"])
-        xt = pd.to_numeric(stresses_df.loc[stresses, "x"])
-        yo = pd.to_numeric(oseries_df.loc[oseries, "y"])
-        yt = pd.to_numeric(stresses_df.loc[stresses, "y"])
-
-        xh, xi = np.meshgrid(xt, xo)
-        yh, yi = np.meshgrid(yt, yo)
-
-        distances = pd.DataFrame(np.sqrt((xh - xi) ** 2 + (yh - yi) ** 2),
-                                 index=oseries, columns=stresses)
-
-        return distances
-
-    def get_nearest_stresses(self, oseries=None, stresses=None, kind=None,
-                             n=1):
-        """Method to obtain the nearest (n) stresses of a specific kind.
-
-        Parameters
-        ----------
-        oseries: str
-            String with the name of the oseries
-        stresses: str or list of str
-            String with the name of the stresses
-        kind:
-            String with the name of the stresses
-        n: int
-            Number of stresses to obtain
-
-        Returns
-        -------
-        stresses:
-            List with the names of the stresses.
-
-        """
-
-        distances = self.get_distances(oseries, stresses, kind)
-
-        data = pd.DataFrame(columns=np.arange(n))
-
-        for series in distances.index:
-            series = pd.Series(distances.loc[series].sort_values().index[:n],
-                               name=series)
-            data = data.append(series)
-        return data
-
-    def get_oseries_w_comments(self, comments, return_series=False,
-                               progressbar=False):
-        """Get oseries that contain certain comments in the 'comment'
-        column.
-
-        Parameters
-        ----------
-        comments : list of str
-            list of str containing comments to look for
-        return_series : bool, optional
-            return series, by default False
-        progressbar : bool, optional
-            show progressbar, by default False
-
-        Returns
-        -------
-        dict
-            dictionary containing either names or series that contain
-            one or more of the comments.
-
-        """
-        have_comments = {}
-        series = {}
-        for c in comments:
-            have_comments[c] = []
-            series[c] = []
-        for o in (tqdm(self.oseries.index) if progressbar else self.oseries.index):
-            oseries = self.get_oseries(o)
-            comment_series = oseries.comment
-            for c in comments:
-                if comment_series.str.contains(c).any():
-                    have_comments[c].append(o)
-                    if return_series:
-                        series[c].append(oseries)
-        if return_series:
-            return series
-        else:
-            return have_comments
-
-    def model_results(self, mls=None, progressbar=True):
-        """Get pastas model results
-
-        Parameters
-        ----------
-        mls : list of str, optional
-            list of model names, by default None which means results for
-            all models will be calculated
-        progressbar : bool, optional
-            show progressbar, by default True
-
-        Returns
-        -------
-        results : pd.DataFrame
-            dataframe containing parameters and other statistics
-            for each model
-
-        Raises
-        ------
-        ModuleNotFoundError
-            if the art_tools module is not available
-
-        """
-        try:
-            from art_tools import pastas_get_model_results, pastas_model_checks
-        except:
-            raise ModuleNotFoundError(
-                "You need 'art_tools' to use this method!")
-
-        if mls is None:
-            mls = self.models
-        elif isinstance(mls, ps.Model):
-            mls = [mls.name]
-
-        results_list = []
-        for mlname in (tqdm(mls) if progressbar else mls):
-            iml = self.get_models(mlname)
-            iresults = pastas_get_model_results(
-                iml, parameters='all', stats=('evp',), stderrors=True)
-            results_list.append(iresults)
-
-        return pd.concat(results_list, axis=1).transpose()
+    @abstractproperty
+    def models(self):
+        pass
