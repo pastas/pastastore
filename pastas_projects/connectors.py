@@ -979,12 +979,12 @@ class PystoreConnector(BaseConnector):
         lib = self.get_library("models")
 
         models = []
-        load_mod = import_module("pastas.io.pas")  # "type: ignore"
+        load_mod = import_module("pastas.io.pas")  # type: ignore
         names = self._parse_names(names)
         for n in (tqdm(names) if progressbar else names):
 
             jsonpath = lib._item_path(n).joinpath("metadata.json")
-            data = load_mod.load(jsonpath)  # "type: ignore"
+            data = load_mod.load(jsonpath)  # type: ignore
 
             if 'series' not in data['oseries']:
                 name = data["oseries"]['name']
