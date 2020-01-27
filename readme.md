@@ -64,7 +64,7 @@ series = pr.db.get_oseries("my_oseries")
 
 ## Types of Connectors
 
-The structure and some background on the different types of Projects is detailed below.
+The structure and some background on the different types of Connectors is detailed below.
 
 ### ArcticConnector
 The ArcticConnector is an object that creates a connection with a MongoDB database. This can be an existing or a new database. A database is created to hold the different datasets: observation timeseries, stresses timeseries and models. For each of these datasets a collection or library is created. These are named using the following convention: `<database name>.<collection name>`.
@@ -78,11 +78,11 @@ The PystoreConnector is an object that links to a location on disk. This can eit
 
 The Pystores have the following structure: `store / collections / items`. The timeseries data is stored as Dask DataFrames which can be easily converted to pandas DataFrames. The models are stored as JSON (not including the timeseries) in the metadata file belonging to an item. The actual data in the item is an empty DataFrame serving as a placeholder. This slightly 'hacky' design allows the models to be saved in a PyStore. The timeseries are picked up from their respective stores when the model is loaded from disk.
 
-PyStore supports so-called snapshots (which store the current state of the store) but this has not been actively implemented in this module. PystorePastas does not have the same versioning capabilities as Arctic.
+PyStore supports so-called snapshots (which store the current state of the store) but this has not been actively implemented in this module. Pystore does not have the same versioning capabilities as Arctic.
 
 ### Custom Connectors
 It should be relatively straightforward to write your own custom connector object. The
-pastas_project.base module contains the BaseConnector class that defines which methods and properties must be defined. Each Connector object must inherit from this class. The BaseConnector class also shows the expected call signature for each method. Extra keyword arguments can be used in the custom class.
+`pastas_project.base` module contains the `BaseConnector` class that defines which methods and properties _must_ be defined. Each Connector object should inherit from this class. The `BaseConnector` class also shows the expected call signature for each method. Following the same call signature should ensure that your new connector works directly with `PastasProject`. Though extra keyword arguments can be added in the custom class.
 
 ```python
 class MyCustomConnector(BaseConnector):
@@ -94,5 +94,4 @@ class MyCustomConnector(BaseConnector):
 ```
 
 ## Notes
-- The tests are run using a store/database on a local PC.
 - Test the versioning of data in Arctic.

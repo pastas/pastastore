@@ -115,3 +115,4 @@ venv.bak/
 .idea/workspace.xml
 
 */_old
+examples/notebooks/pystore
