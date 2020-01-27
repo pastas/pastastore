@@ -7,7 +7,7 @@ except:
     l_d = ''
 
 # Get the version.
-version = {}
+version: dict = {}
 with open("version.py") as fp:
     exec(fp.read(), version)
 setup(

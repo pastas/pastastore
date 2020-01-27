@@ -68,7 +68,7 @@ class ArcticConnector(BaseConnector):
         self.connstr = connstr
         self.name = name
 
-        self.libs = {}
+        self.libs: dict = {}
         self.arc = arctic.Arctic(connstr)
         self._initialize(library_map)
 
@@ -525,21 +525,21 @@ class ArcticConnector(BaseConnector):
         """
         getattr(ArcticConnector, libname).fget.cache_clear()
 
-    @property
+    @property  # type: ignore
     @functools.lru_cache()
     def oseries(self):
         lib = self.get_library("oseries")
         df = self.get_metadata("oseries", lib.list_symbols())
         return df
 
-    @property
+    @property  # type: ignore
     @functools.lru_cache()
     def stresses(self):
         lib = self.get_library("stresses")
         return self.get_metadata("stresses",
                                  lib.list_symbols())
 
-    @property
+    @property  # type: ignore
     @functools.lru_cache()
     def models(self):
         lib = self.get_library("models")
@@ -583,7 +583,7 @@ class PystoreConnector(BaseConnector):
         self.path = path
         pystore.set_path(self.path)
         self.store = pystore.store(self.name)
-        self.libs = {}
+        self.libs: dict = {}
         self._initialize(library_map)
 
     def __repr__(self):
@@ -710,6 +710,8 @@ class PystoreConnector(BaseConnector):
             by default True
 
         """
+        if metadata is None:
+            metadata = {}
         if kind not in metadata.keys():
             metadata["kind"] = kind
         self._add_series("stresses", series, name,
@@ -977,12 +979,12 @@ class PystoreConnector(BaseConnector):
         lib = self.get_library("models")
 
         models = []
-        load_mod = import_module("pastas.io.pas")
+        load_mod = import_module("pastas.io.pas")  # "type: ignore"
         names = self._parse_names(names)
         for n in (tqdm(names) if progressbar else names):
 
             jsonpath = lib._item_path(n).joinpath("metadata.json")
-            data = load_mod.load(jsonpath)
+            data = load_mod.load(jsonpath)  # "type: ignore"
 
             if 'series' not in data['oseries']:
                 name = data["oseries"]['name']
@@ -1021,21 +1023,21 @@ class PystoreConnector(BaseConnector):
         """
         getattr(PystoreConnector, libname).fget.cache_clear()
 
-    @property
+    @property  # type: ignore
     @functools.lru_cache()
     def oseries(self):
         lib = self.get_library("oseries")
         df = self.get_metadata("oseries", lib.list_items())
         return df
 
-    @property
+    @property  # type: ignore
     @functools.lru_cache()
     def stresses(self):
         lib = self.get_library("stresses")
         df = self.get_metadata("stresses", lib.list_items())
         return df
 
-    @property
+    @property  # type: ignore
     @functools.lru_cache()
     def models(self):
         lib = self.get_library("models")
