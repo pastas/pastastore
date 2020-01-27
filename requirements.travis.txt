@@ -2,3 +2,4 @@ numpy>=1.15
 pandas>=0.25
 tqdm>=4.36
 pastas>=0.13.0
+arctic

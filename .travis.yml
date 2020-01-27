@@ -32,7 +32,6 @@ install:
   - pip install fsspec>=0.3.3
   - pip install dask[dataframe] --upgrade
   - pip install pystore
-  - pip install arctic
   - pip install -r requirements.travis.txt
   - pip install -e .
   - pip install --upgrade pip

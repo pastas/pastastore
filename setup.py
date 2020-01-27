@@ -27,7 +27,8 @@ setup(
         'Programming Language :: Python :: 3.6'
     ],
     platforms='Windows, Mac OS-X',
-    install_requires=['numpy>=1.15', 'pandas>=0.24', "tqdm"],
+    install_requires=['numpy>=1.15', 'pandas>=0.24', "tqdm",
+                      "pastas>=0.13", "arctic"],
     packages=find_packages(exclude=[]),
     include_package_data=True,
 )

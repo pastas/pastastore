@@ -2,11 +2,13 @@
 
 # pastas_projects
 
-This module contains a tool to manage [Pastas](https://pastas.readthedocs.io/en/latest/) timeseries and models on disk. The connection to the database/disk is managed by a connector object. Currently, two connectors are included:
+This module contains a tool to manage [Pastas](https://pastas.readthedocs.io/en/latest/) timeseries and models in a database.
+
+The implementation is similar to pastas.Project, but instead of holding all the data in memory, all data is stored in a database or on disk instead. This gives the user a simple way to manage Pastas projects, and allows the user to pick up where they left off, without having to load everything into memory.
+
+The connection to the database/disk is managed by a connector object. Currently, two connectors are included. Both implementations are designed to have fast read/write operations, while also compressing the stored data.
 - [Arctic](https://arctic.readthedocs.io/en/latest/) is a timeseries/dataframe database that sits atop [MongoDB](https://www.mongodb.com). Arctic supports pandas.DataFrames.
 - [PyStore](https://github.com/ranaroussi/pystore) is a datastore (inspired by Arctic) created for storing pandas dataframes (especially timeseries) on disk. Data is stored using fastparquet and compressed with Snappy.
-
-The implementation is similar to pastas.Project, but instead of holding all the data in memory, all data is stored in a database or on disk instead. This gives the user a simple way to manage Pastas projects, and allows the user to pick up where they left off, without having to load everything into memory. Both implementations are designed to have fast read/write operations, while also compressing the stored data.
 
 ## Dependencies
 This module has several dependencies (depending on which connector is used):
@@ -25,7 +27,7 @@ Optional: if using Docker for running MongoDB:
 - View your running containers with `docker ps -a`
 
 ## Installation
-Install the module by typing `pip install pastas_projects`. Please note that pystore and arctic are not automatically installed as dependencies
+Install the module by typing `pip install pastas_projects`. Please note that pystore is not automatically installed as a dependency because it requires Snappy to be (manually) installed first (see previous section)!
 
 _For installing in development mode, clone the repository and install by typing `pip install -e .` from the module root directory._
 
@@ -95,3 +97,4 @@ class MyCustomConnector(BaseConnector):
 
 ## Notes
 - Test the versioning of data in Arctic.
+- Auto-generate docs
