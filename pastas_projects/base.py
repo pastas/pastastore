@@ -1,4 +1,11 @@
 from abc import ABC, abstractmethod, abstractproperty
+from typing import Union
+
+import pandas as pd
+
+from pastas import Model
+
+FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 
 
 class BaseConnector(ABC):  # pragma: no cover
@@ -13,56 +20,67 @@ class BaseConnector(ABC):  # pragma: no cover
     _default_library_names = ["oseries", "stresses", "models"]
 
     @abstractmethod
-    def get_library(self, libname):
+    def get_library(self, libname: str):
         pass
 
     @abstractmethod
-    def _add_series(self, libname, series, name, metadata=None,
-                    add_version=False):
+    def _add_series(self, libname: str, series: FrameorSeriesUnion,
+                    name: str, metadata: Union[dict, None] = None,
+                    add_version: bool = False) -> None:
         pass
 
     @abstractmethod
-    def add_oseries(self, series, name, metadata=None, add_version=False):
+    def add_oseries(self, series: FrameorSeriesUnion, name: str,
+                    metadata: Union[dict, None] = None,
+                    add_version: bool = False) -> None:
         pass
 
     @abstractmethod
-    def add_stress(self, series, name, kind, metadata=None, add_version=False):
+    def add_stress(self, series: FrameorSeriesUnion, name: str, kind: str,
+                   metadata: Union[dict, None] = None,
+                   add_version: bool = False) -> None:
         pass
 
     @abstractmethod
-    def add_model(self, ml, add_version=False):
+    def add_model(self, ml: Model, add_version: bool = False) -> None:
         pass
 
     @abstractmethod
-    def del_models(self, names):
+    def del_models(self, names: Union[list, str]) -> None:
         pass
 
     @abstractmethod
-    def del_oseries(self, names):
+    def del_oseries(self, names: Union[list, str]) -> None:
         pass
 
     @abstractmethod
-    def del_stress(self, names):
+    def del_stress(self, names: Union[list, str]) -> None:
         pass
 
     @abstractmethod
-    def _get_series(self, libname, names, progressbar=True):
+    def _get_series(self, libname: str, names: Union[list, str],
+                    progressbar: bool = True) -> FrameorSeriesUnion:
         pass
 
     @abstractmethod
-    def get_metadata(self, libname, names, progressbar=False, as_frame=True):
+    def get_metadata(self, libname: str, names: Union[list, str],
+                     progressbar: bool = False, as_frame: bool = True) -> \
+            Union[pd.DataFrame, dict]:
         pass
 
     @abstractmethod
-    def get_oseries(self, names, progressbar=False):
+    def get_oseries(self, names: Union[list, str],
+                    progressbar: bool = False) -> FrameorSeriesUnion:
         pass
 
     @abstractmethod
-    def get_stresses(self, names, progressbar=False):
+    def get_stresses(self, names: Union[list, str],
+                     progressbar: bool = False) -> FrameorSeriesUnion:
         pass
 
     @abstractmethod
-    def get_models(self, names, progressbar=False):
+    def get_models(self, names: Union[list, str],
+                   progressbar: bool = False) -> Union[Model, dict]:
         pass
 
     @abstractproperty

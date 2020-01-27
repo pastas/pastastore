@@ -83,18 +83,3 @@ def test_delete_db(prj):
     elif prj.db.conn_type == "pystore":
         util.delete_pystore(prj.db.path, prj.db.name)
     return
-
-
-if __name__ == "__main__":
-    connstr = "mongodb://localhost:27017/"
-    name = "test_project"
-    connector = ArcticConnector(name, connstr)
-    prj = initialize_project(connector)
-    t0 = test_create_model(prj)
-    t1 = test_store_model(prj)
-    t2 = test_get_model(prj)
-    t3 = test_del_model(prj)
-    t4 = test_create_models(prj)
-    t5 = test_solve_models(prj)
-    t6 = test_model_results(prj)
-    t7 = test_delete_db(prj)

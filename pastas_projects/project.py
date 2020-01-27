@@ -1,6 +1,12 @@
+from typing import Union, Tuple, Optional
+
+from tqdm import tqdm
 import numpy as np
 import pandas as pd
+
 import pastas as ps
+
+FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 
 
 class PastasProject:
@@ -23,7 +29,7 @@ class PastasProject:
 
     """
 
-    def __init__(self, name, connector):
+    def __init__(self, name: str, connector):
         """Initialize Pastas project for managing pastas
         timeseries and models.
 
@@ -41,7 +47,8 @@ class PastasProject:
     def __repr__(self):
         return f"<PastasProject> {self.name}: \n - " + self.db.__str__()
 
-    def get_oseries_distances(self, names=None):
+    def get_oseries_distances(self, names: Optional[Union[list, str]] = None) -> \
+            FrameorSeriesUnion:
         """Method to obtain the distances in meters between the oseries.
 
         Parameters
@@ -73,7 +80,8 @@ class PastasProject:
 
         return distances
 
-    def get_nearest_oseries(self, names=None, n=1):
+    def get_nearest_oseries(self, names: Optional[Union[list, str]] = None,
+                            n: int = 1) -> FrameorSeriesUnion:
         """Method to obtain the nearest (n) oseries.
 
         Parameters
@@ -100,7 +108,9 @@ class PastasProject:
             data = data.append(series)
         return data
 
-    def get_distances(self, oseries=None, stresses=None, kind=None):
+    def get_distances(self, oseries: Optional[Union[list, str]] = None,
+                      stresses: Optional[Union[list, str]] = None,
+                      kind: Optional[str] = None) -> FrameorSeriesUnion:
         """Method to obtain the distances in meters between the oseries and
         stresses.
 
@@ -143,8 +153,10 @@ class PastasProject:
 
         return distances
 
-    def get_nearest_stresses(self, oseries=None, stresses=None, kind=None,
-                             n=1):
+    def get_nearest_stresses(self, oseries: Optional[Union[list, str]] = None,
+                             stresses: Optional[Union[list, str]] = None,
+                             kind: Optional[str] = None, n: int = 1) -> \
+            FrameorSeriesUnion:
         """Method to obtain the nearest (n) stresses of a specific kind.
 
         Parameters
@@ -175,7 +187,7 @@ class PastasProject:
             data = data.append(series)
         return data
 
-    def create_model(self, name, add_recharge=True):
+    def create_model(self, name: str, add_recharge: bool = True) -> ps.Model:
         """create a new pastas Model
 
         Parameters
@@ -218,9 +230,11 @@ class PastasProject:
         else:
             raise ValueError("Empty timeseries!")
 
-    def create_models(self, oseries=None, add_recharge=True,
-                      store=False, solve=False, progressbar=True,
-                      return_models=False, ignore_errors=True, **kwargs):
+    def create_models(self, oseries: Optional[Union[list, str]] = None,
+                      add_recharge: bool = True, store: bool = False,
+                      solve: bool = False, progressbar: bool = True,
+                      return_models: bool = False, ignore_errors: bool = True,
+                      **kwargs) -> Union[Tuple[dict, list], list]:
         """batch creation of models
 
         Parameters
@@ -252,7 +266,7 @@ class PastasProject:
 
         """
         if oseries is None:
-            oseries = self.oseries.index
+            oseries = self.db.oseries.index
         elif isinstance(oseries, str):
             oseries = [oseries]
 
@@ -278,7 +292,7 @@ class PastasProject:
         else:
             return errors
 
-    def add_recharge(self, ml, rfunc=ps.Gamma):
+    def add_recharge(self, ml: ps.Model, rfunc=ps.Gamma) -> None:
         """add recharge to a pastas model using
         closest precipitation and evaporation timeseries in database
 
@@ -317,8 +331,10 @@ class PastasProject:
                               settings=("prec", "evap"))
         ml.add_stressmodel(rch)
 
-    def solve_models(self, mls=None, report=False, ignore_solve_errors=False,
-                     progressbar=True, store_result=True, **kwargs):
+    def solve_models(self, mls: Optional[Union[ps.Model, list, str]] = None,
+                     report: bool = False, ignore_solve_errors: bool = False,
+                     progressbar: bool = True, store_result: bool = True,
+                     **kwargs) -> None:
         """Solves the models in the library
 
         mls : list of str, optional
@@ -362,7 +378,8 @@ class PastasProject:
                 else:
                     raise e
 
-    def model_results(self, mls=None, progressbar=True):  # pragma: no cover
+    def model_results(self, mls: Optional[Union[ps.Model, list, str]] = None,
+                      progressbar: bool = True):  # pragma: no cover
         """Get pastas model results
 
         Parameters
@@ -393,7 +410,7 @@ class PastasProject:
                 "You need 'art_tools' to use this method!")
 
         if mls is None:
-            mls = self.models
+            mls = self.db.models
         elif isinstance(mls, ps.Model):
             mls = [mls.name]
 
