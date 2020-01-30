@@ -164,6 +164,7 @@ class ArcticConnector(BaseConnector):
         lib = self.get_library(libname)
         if name not in lib.list_symbols() or add_version:
             lib.write(name, series, metadata=metadata)
+            self._clear_cache(libname)
         else:
             raise Exception("Item with name '{0}' already"
                             " in '{1}' library!".format(name, libname))
@@ -187,11 +188,17 @@ class ArcticConnector(BaseConnector):
 
         """
         if isinstance(series, pd.DataFrame) and len(series.columns) > 1:
-            print("Data contains multiple columns, assuming values in column 0!")
-            metadata = {"value_col": 0}
+            if metadata is None:
+                print("Data contains multiple columns, "
+                      "assuming values in column 0!")
+                metadata = {"value_col": 0}
+            elif not "value_col" in metadata.keys():
+                print("Data contains multiple columns, "
+                      "assuming values in column 0!")
+                metadata["value_col"] = 0
+
         self._add_series("oseries", series, name=name,
                          metadata=metadata, add_version=add_version)
-        self._clear_cache("oseries")
 
     def add_stress(self, series: FrameorSeriesUnion, name: str, kind: str, metadata: Optional[dict] = None, add_version: bool = False) -> None:
         """add stress to the database
@@ -224,7 +231,6 @@ class ArcticConnector(BaseConnector):
         metadata["kind"] = kind
         self._add_series("stresses", series, name=name,
                          metadata=metadata, add_version=add_version)
-        self._clear_cache("stresses")
 
     def add_model(self, ml: ps.Model, add_version: bool = False) -> None:
         """add model to the database
@@ -687,6 +693,15 @@ class PystoreConnector(BaseConnector):
             by default True
 
         """
+        if isinstance(series, pd.DataFrame) and len(series.columns) > 1:
+            if metadata is None:
+                print("Data contains multiple columns, "
+                      "assuming values in column 0!")
+                metadata = {"value_col": 0}
+            elif not "value_col" in metadata.keys():
+                print("Data contains multiple columns, "
+                      "assuming values in column 0!")
+                metadata["value_col"] = 0
         self._add_series("oseries", series, name,
                          metadata=metadata, overwrite=overwrite)
 
