@@ -100,13 +100,21 @@ class ArcticConnector(BaseConnector):
     def _library_name(self, libname: str) -> str:
         return ".".join([self.name, libname])
 
-    def _parse_names(self, names: Union[list, str]) -> list:
+    def _parse_names(self, names: Union[list, str],
+                     libname: Optional[str] = "oseries") -> list:
         """internal method to parse names kwarg,
         returns iterable with name(s)
 
         """
         if names is None:
-            return self.oseries.index
+            if libname == "oseries":
+                return self.oseries.index.to_list()
+            elif libname == "stresses":
+                return self.stresses.index.to_list()
+            elif libname == "models":
+                return self.models
+            else:
+                raise ValueError(f"No library '{libname}'!")
         elif isinstance(names, str):
             return [names]
         elif isinstance(names, Iterable):
@@ -280,7 +288,7 @@ class ArcticConnector(BaseConnector):
         names : str or list of str
             name(s) of the model to delete
         """
-        for n in self._parse_names(names):
+        for n in self._parse_names(names, libname="models"):
             self._del_item("models", n)
         self._clear_cache("models")
 
@@ -292,7 +300,7 @@ class ArcticConnector(BaseConnector):
         names : str or list of str
             name(s) of the oseries to delete
         """
-        for n in self._parse_names(names):
+        for n in self._parse_names(names, libname="oseries"):
             self._del_item("oseries", n)
         self._clear_cache("oseries")
 
@@ -304,7 +312,7 @@ class ArcticConnector(BaseConnector):
         names : str or list of str
             name(s) of the stress to delete
         """
-        for n in self._parse_names(names):
+        for n in self._parse_names(names, libname="stresses"):
             self._del_item("stresses", n)
         self._clear_cache("stresses")
 
@@ -331,7 +339,7 @@ class ArcticConnector(BaseConnector):
         lib = self.get_library(libname)
 
         ts = {}
-        names = self._parse_names(names)
+        names = self._parse_names(names, libname=libname)
         for n in (tqdm(names) if progressbar else names):
             ts[n] = lib.read(n).data
         # return frame if len == 1
@@ -362,7 +370,7 @@ class ArcticConnector(BaseConnector):
         lib = self.get_library(libname)
 
         metalist = []
-        names = self._parse_names(names)
+        names = self._parse_names(names, libname=libname)
         for n in (tqdm(names) if progressbar else names):
             imeta = lib.read_metadata(n).metadata
             if "name" not in imeta.keys():
@@ -490,7 +498,7 @@ class ArcticConnector(BaseConnector):
         """
         lib = self.get_library("models")
         models = []
-        names = self._parse_names(names)
+        names = self._parse_names(names, libname="models")
 
         for n in (tqdm(names) if progressbar else names):
             item = lib.read(n)
@@ -614,13 +622,21 @@ class PystoreConnector(BaseConnector):
             lib = self.store.collection(libname)
             self.libs[libname] = lib
 
-    def _parse_names(self, names: Union[list, str]):
+    def _parse_names(self, names: Union[list, str],
+                     libname: Optional[str] = "oseries") -> list:
         """internal method to parse names kwarg,
         returns iterable with name(s)
 
         """
         if names is None:
-            return self.oseries.index
+            if libname == "oseries":
+                return self.oseries.index
+            elif libname == "stresses":
+                return self.stresses.index
+            elif libname == "models":
+                return self.models
+            else:
+                raise ValueError(f"No library '{libname}'!")
         elif isinstance(names, str):
             return [names]
         elif isinstance(names, Iterable):
@@ -779,7 +795,7 @@ class PystoreConnector(BaseConnector):
             which deletes the whole collection
 
         """
-        for n in self._parse_names(names):
+        for n in self._parse_names(names, libname="oseries"):
             self._del_series("oseries", names)
 
     def del_stress(self, names: Union[list, str]):
@@ -790,7 +806,7 @@ class PystoreConnector(BaseConnector):
         names : str or list of str
             name(s) of the series to delete
         """
-        for n in self._parse_names(names):
+        for n in self._parse_names(names, libname="stresses"):
             self._del_series("stresses", names)
 
     def del_models(self, names: Union[list, str]):
@@ -802,7 +818,7 @@ class PystoreConnector(BaseConnector):
             name(s) of the model(s) to delete
 
         """
-        for n in self._parse_names(names):
+        for n in self._parse_names(names, libname="models"):
             self._del_series("models", names)
 
     def _get_series(self, libname: str, names: Union[list, str],
@@ -829,7 +845,7 @@ class PystoreConnector(BaseConnector):
         lib = self.get_library(libname)
 
         ts = {}
-        names = self._parse_names(names)
+        names = self._parse_names(names, libname=libname)
         for n in (tqdm(names) if progressbar else names):
             ts[n] = lib.item(n).to_pandas()
         # return frame if len == 1
@@ -904,7 +920,7 @@ class PystoreConnector(BaseConnector):
         lib = self.get_library(libname)
 
         metalist = []
-        names = self._parse_names(names)
+        names = self._parse_names(names, libname=libname)
         for n in (tqdm(names) if progressbar else names):
             imeta = pystore.utils.read_metadata(lib._item_path(n))
             if "name" not in imeta.keys():
@@ -995,7 +1011,7 @@ class PystoreConnector(BaseConnector):
 
         models = []
         load_mod = import_module("pastas.io.pas")  # type: ignore
-        names = self._parse_names(names)
+        names = self._parse_names(names, libname="models")
         for n in (tqdm(names) if progressbar else names):
 
             jsonpath = lib._item_path(n).joinpath("metadata.json")
