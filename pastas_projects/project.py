@@ -187,6 +187,38 @@ class PastasProject:
             data = data.append(series)
         return data
 
+    def get_tmin_tmax(self, libname, names=None, progressbar=False):
+        """
+        get tmin and tmax for timeseries
+
+        Parameters
+        ----------
+        libname : str
+            name of the library containing the timeseries
+            ('oseries' or 'stresses')
+        names : str, list of str, or None, optional
+            names of the timeseries, by default None which
+            uses all the timeseries in the library
+        progressbar : bool, optional
+            show progressbar, by default False
+
+        Returns
+        -------
+        tmintmax : pd.dataframe
+            Dataframe containing tmin and tmax per timeseries
+
+        """
+
+        lib = self.db.get_library(libname)
+        names = self.db._parse_names(names, libname=libname)
+        tmintmax = pd.DataFrame(index=names, columns=["tmin", "tmax"],
+                                dtype='datetime64[ns]')
+        for n in (tqdm(names) if progressbar else names):
+            s = lib.read(n)
+            tmintmax.loc[n, "tmin"] = s.data.first_valid_index()
+            tmintmax.loc[n, "tmax"] = s.data.last_valid_index()
+        return tmintmax
+
     def create_model(self, name: str, add_recharge: bool = True) -> ps.Model:
         """create a new pastas Model
 
