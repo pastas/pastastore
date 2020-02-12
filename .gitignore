@@ -116,3 +116,4 @@ venv.bak/
 
 */_old
 examples/notebooks/pystore
+cov.xml
