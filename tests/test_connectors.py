@@ -87,7 +87,9 @@ def test_del_stress(request, pr):
 @pytest.mark.dependency()
 def test_delete(request, pr):
     if pr.conn_type == "arctic":
+        util.delete_arctic(pr.connstr, pr.name, libraries=["oseries"])
         util.delete_arctic(pr.connstr, pr.name)
     elif pr.conn_type == "pystore":
+        util.delete_pystore(pr.path, pr.name, libraries=["oseries"])
         util.delete_pystore(pr.path, pr.name)
     return
