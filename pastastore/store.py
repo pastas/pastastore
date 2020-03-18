@@ -440,7 +440,8 @@ class PastaStore:
 
     def model_results(self, mls: Optional[Union[ps.Model, list, str]] = None,
                       progressbar: bool = True):  # pragma: no cover
-        """Get pastas model results.
+        """
+        Get pastas model results.
 
         Parameters
         ----------

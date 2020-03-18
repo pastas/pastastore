@@ -112,7 +112,8 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         return ".".join([self.name, libname])
 
     def get_library(self, libname: str):
-        """Get Arctic library handle.
+        """
+        Get Arctic library handle.
 
         Parameters
         ----------
@@ -1336,7 +1337,8 @@ class DictConnector(BaseConnector, ConnectorUtil):
     @property  # type: ignore
     @functools.lru_cache()
     def stresses(self):
-        """Dataframe showing overview of stresses.
+        """
+        Dataframe showing overview of stresses.
 
         """
         lib = self.get_library("stresses")
