@@ -16,9 +16,9 @@ formats: all
 python:
   version: 3.7
   install:
-    - method: pip
-    - path: .
     - requirements: docs/requirements.txt
+    - method: setuptools
+      package: pastastore
 
 build:
   image: latest
