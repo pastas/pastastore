@@ -1,6 +1,3 @@
-import pystore
-import arctic
-
 from typing import Optional, List
 
 
@@ -19,7 +16,11 @@ def delete_pystore(path: str, name: str,
         all libraries
 
     """
-
+    try:
+        import pystore
+    except ModuleNotFoundError as e:
+        print("Please install `pystore`!")
+        raise e
     print(f"Deleting pystore: '{name}' ...", end="")
     pystore.set_path(path)
     if libraries is None:
@@ -48,6 +49,11 @@ def delete_arctic(connstr: str, name: str,
         all libraries
 
     """
+    try:
+        import arctic
+    except ModuleNotFoundError as e:
+        print("Please install `arctic`!")
+        raise e
     arc = arctic.Arctic(connstr)
     print(f"Deleting database: '{name}' ...")
     # get library names
