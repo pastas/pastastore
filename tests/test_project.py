@@ -42,6 +42,7 @@ def test_del_model(request, prj):
 def test_create_models(prj):
     mls = prj.create_models(["oseries1", "oseries2"], store=True,
                             progressbar=False)
+    _ = prj.conn.models
     return mls
 
 
