@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.com/ArtesiaWater/pastas_projects.svg?branch=master)](https://travis-ci.com/ArtesiaWater/pastas_projects)
 
-# pastas_projects
+# pastastore
 
 This module contains a tool to manage [Pastas](https://pastas.readthedocs.io/en/latest/) timeseries and models in a database.
 
@@ -19,12 +19,7 @@ If using Pystore:
 If using Arctic:
 - Arctic requires MongoDB, e.g. install the Community edition ([Windows](https://fastdl.mongodb.org/win32/mongodb-win32-x86_64-2012plus-4.2.1-signed.msi), [MacOS](https://fastdl.mongodb.org/osx/mongodb-macos-x86_64-4.2.1.tgz)).
 
-Optional: if using Docker for running MongoDB:
-- Install [Docker](https://www.docker.com/products/docker-desktop)
-- Pull the mongodb image by typing `docker pull mongo` in a terminal.
-- To ensure a persistent volume (i.e. your data is kept even if you shutdown your docker container running mongodb) run the following command before starting the mongo database, e.g. `docker volume create --name=mongodata`
-- Start the docker container on localhost by running e.g. `docker run --mongodb -v mongodata:/data/db -d -p 27017:27017 mongo`
-- View your running containers with `docker ps -a`
+*Optional*: if using Docker for running MongoDB see the installation instructions [here]() .
 
 ## Installation
 Install the module by typing `pip install pastas_projects`. Please note that pystore is not automatically installed as a dependency because it requires Snappy to be (manually) installed first (see previous section)!
