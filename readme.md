@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/ArtesiaWater/pastastore.svg?branch=master)](https://travis-ci.com/ArtesiaWater/pastastore)
+[![Build Status](https://travis-ci.org/pastas/pastastore.svg?branch=master)](https://travis-ci.org/pastas/pastastore)
 
 # pastastore
 
@@ -19,7 +19,7 @@ If using Pystore:
 If using Arctic:
 - Arctic requires MongoDB, e.g. install the Community edition ([Windows](https://fastdl.mongodb.org/win32/mongodb-win32-x86_64-2012plus-4.2.1-signed.msi), [MacOS](https://fastdl.mongodb.org/osx/mongodb-macos-x86_64-4.2.1.tgz)).
 
-*Optional*: if using Docker for running MongoDB see the installation instructions [here]() .
+*Optional*: if using Docker for running MongoDB see the installation instructions [here](https://github.com/pastas/pastastore/tree/master/dockerfiles#running-mongodb-from-docker) .
 
 ## Installation
 Install the module by typing `pip install .` from the module root directory. Please note that pystore is _not_ automatically installed as a dependency because it requires Snappy to be (manually) installed first (see previous section)!
@@ -89,7 +89,3 @@ class MyCustomConnector(BaseConnector):
         # your code to get oseries from database here
         pass
 ```
-
-## Notes
-- Test the versioning of data in Arctic.
-- Auto-generate docs
