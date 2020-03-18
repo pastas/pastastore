@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/ArtesiaWater/pastas_projects.svg?branch=master)](https://travis-ci.com/ArtesiaWater/pastas_projects)
+[![Build Status](https://travis-ci.com/ArtesiaWater/pastastore.svg?branch=master)](https://travis-ci.com/ArtesiaWater/pastastore)
 
 # pastastore
 
@@ -22,7 +22,7 @@ If using Arctic:
 *Optional*: if using Docker for running MongoDB see the installation instructions [here]() .
 
 ## Installation
-Install the module by typing `pip install pastas_projects`. Please note that pystore is not automatically installed as a dependency because it requires Snappy to be (manually) installed first (see previous section)!
+Install the module by typing `pip install .` from the module root directory. Please note that pystore is _not_ automatically installed as a dependency because it requires Snappy to be (manually) installed first (see previous section)!
 
 _For installing in development mode, clone the repository and install by typing `pip install -e .` from the module root directory._
 
@@ -32,31 +32,31 @@ The following snippets show typical usage. The general idea is to first define t
 ### Using Arctic
 
 ```python
-import pastas_projects as pp
+import pastastore as pst
 
 # define arctic connector
 connstr = "mongodb://localhost:27017/"
-conn = pp.ArcticConnector("my_connector", connstr)
+conn = pst.ArcticConnector("my_connector", connstr)
 
 # create project for managing Pastas data and models
-pr = pp.PastasProject("my_project", conn)
+store = pst.PastasProject("my_project", conn)
 ```
 ### Using Pystore
 
 ```python
-import pastas_projects as pp
+import pastastore as pst
 
 # define pystore connector
 path = "./data/pystore"
-conn = pp.PystoreConnector("my_connector", path)
+conn = pst.PystoreConnector("my_connector", path)
 
 # create project for managing Pastas data and models
-pr = pp.PastasProject("my_project", conn)
+store = pst.PastasProject("my_project", conn)
 ```
 
 The database read/write/delete methods are always accessed through `pr.db` i.e.:
 ```python
-series = pr.conn.get_oseries("my_oseries")
+series = store.conn.get_oseries("my_oseries")
 ```
 
 ## Types of Connectors

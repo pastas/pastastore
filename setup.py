@@ -11,9 +11,9 @@ version: dict = {}
 with open("version.py") as fp:
     exec(fp.read(), version)
 setup(
-    name='pastas_projects',
+    name='pastastore',
     version=version['__version__'],
-    description='pastas_projects module by Artesia',
+    description='pastastore module by Artesia',
     long_description=l_d,
     url='https://artesia-water.nl',
     author='Artesia',

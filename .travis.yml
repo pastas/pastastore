@@ -41,4 +41,4 @@ install:
 
 # command to run tests
 script:
-  - py.test ./tests --cov=pastas_projects --cov-report=html
+  - py.test ./tests --cov=pastastore --cov-report=html

@@ -24,7 +24,7 @@ class PastaStore:
         name of the project
     connector : Connector object
         object that provides the interface to the
-        database, e.g. ArcticConnector (see pastas_projects.connectors)
+        database, e.g. ArcticConnector (see pastastore.connectors)
     """
 
     def __init__(self, name: str, connector):
