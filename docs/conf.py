@@ -107,7 +107,8 @@ html_theme_options = {
     'sticky_navigation': False,
     'navigation_depth': 4,
     'includehidden': True,
-    'titles_only': False
+    'titles_only': False,
+    "github_url": "https://github.com/pastas/pastastore",
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
