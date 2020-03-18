@@ -9,7 +9,7 @@ import pastas as ps
 
 with warnings.catch_warnings():
     warnings.simplefilter(action="ignore", category=FutureWarning)
-    from pastas_projects import util
+    import pastastore as pst
 
 ps.set_log_level("ERROR")
 
@@ -87,9 +87,9 @@ def test_del_stress(request, pr):
 @pytest.mark.dependency()
 def test_delete(request, pr):
     if pr.conn_type == "arctic":
-        util.delete_arctic(pr.connstr, pr.name, libraries=["oseries"])
-        util.delete_arctic(pr.connstr, pr.name)
+        pst.util.delete_arctic(pr.connstr, pr.name, libraries=["oseries"])
+        pst.util.delete_arctic(pr.connstr, pr.name)
     elif pr.conn_type == "pystore":
-        util.delete_pystore(pr.path, pr.name, libraries=["oseries"])
-        util.delete_pystore(pr.path, pr.name)
+        pst.util.delete_pystore(pr.path, pr.name, libraries=["oseries"])
+        pst.util.delete_pystore(pr.path, pr.name)
     return

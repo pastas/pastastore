@@ -9,7 +9,7 @@ import pastas as ps
 
 with warnings.catch_warnings():
     warnings.simplefilter(action="ignore", category=FutureWarning)
-    from pastas_projects import PastasProject, ArcticConnector, util
+    import pastastore as pst
 
 
 @pytest.mark.dependency()
@@ -79,7 +79,7 @@ def test_repr(prj):
 
 def test_delete_db(prj):
     if prj.db.conn_type == "arctic":
-        util.delete_arctic(prj.db.connstr, prj.db.name)
+        pst.util.delete_arctic(prj.db.connstr, prj.db.name)
     elif prj.db.conn_type == "pystore":
-        util.delete_pystore(prj.db.path, prj.db.name)
+        pst.util.delete_pystore(prj.db.path, prj.db.name)
     return
