@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/pastas/pastastore.svg?branch=master)](https://travis-ci.org/pastas/pastastore)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/fc474698ae2f4f558a78b68244f211fb)](https://www.codacy.com/gh/pastas/pastastore?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=pastas/pastastore&amp;utm_campaign=Badge_Grade)
 [![Documentation Status](https://readthedocs.org/projects/pastastore/badge/?version=latest)](https://pastastore.readthedocs.io/en/latest/?badge=latest)
 
 # pastastore
