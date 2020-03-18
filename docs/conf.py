@@ -26,9 +26,9 @@ copyright = '2020, D.A. Brakenhoff'
 author = 'D.A. Brakenhoff'
 
 # The short X.Y version
-version = '0.1'
+version = __version__
 # The full version, including alpha/beta/rc tags
-release = '0.1'
+release = __version__
 
 
 # -- General configuration ---------------------------------------------------
