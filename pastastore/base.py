@@ -11,7 +11,8 @@ FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 
 
 class BaseConnector(ABC):  # pragma: no cover
-    """Metaclass for connecting to data management sources.
+    """
+    Metaclass for connecting to data management sources.
 
     For example, MongoDB through Arctic, Pystore, or other databases.
     Create your own connection to a data source by writing a
@@ -23,7 +24,8 @@ class BaseConnector(ABC):  # pragma: no cover
 
     @abstractmethod
     def get_library(self, libname: str):
-        """Get library handle.
+        """
+        Get library handle.
 
         Parameters
         ----------
@@ -37,7 +39,8 @@ class BaseConnector(ABC):  # pragma: no cover
     def add_oseries(self, series: FrameorSeriesUnion, name: str,
                     metadata: Union[dict, None] = None,
                     add_version: bool = False) -> None:
-        """Add oseries.
+        """
+        Add oseries.
 
         Parameters
         ----------
@@ -55,7 +58,8 @@ class BaseConnector(ABC):  # pragma: no cover
     def add_stress(self, series: FrameorSeriesUnion, name: str, kind: str,
                    metadata: Union[dict, None] = None,
                    add_version: bool = False) -> None:
-        """Add stress.
+        """
+        Add stress.
 
         Parameters
         ----------
@@ -72,8 +76,9 @@ class BaseConnector(ABC):  # pragma: no cover
         pass
 
     @abstractmethod
-    def add_model(self, ml: Model) -> None:
-        """Add model.
+    def add_model(self, ml: Model, **kwargs) -> None:
+        """
+        Add model.
 
         Parameters
         ----------
@@ -85,7 +90,8 @@ class BaseConnector(ABC):  # pragma: no cover
 
     @abstractmethod
     def del_models(self, names: Union[list, str]) -> None:
-        """Delete model.
+        """
+        Delete model.
 
         Parameters
         ----------
@@ -97,7 +103,8 @@ class BaseConnector(ABC):  # pragma: no cover
 
     @abstractmethod
     def del_oseries(self, names: Union[list, str]) -> None:
-        """Delete oseries.
+        """
+        Delete oseries.
 
         Parameters
         ----------
@@ -109,7 +116,8 @@ class BaseConnector(ABC):  # pragma: no cover
 
     @abstractmethod
     def del_stress(self, names: Union[list, str]) -> None:
-        """Delete stresses.
+        """
+        Delete stresses.
 
         Parameters
         ----------
@@ -122,7 +130,8 @@ class BaseConnector(ABC):  # pragma: no cover
     @abstractmethod
     def get_metadata(self, libname: str, names: Union[list, str],
                      progressbar: bool = False, as_frame: bool = True) -> Union[pd.DataFrame, dict]:
-        """Get metadata for oseries or stress.
+        """
+        Get metadata for oseries or stress.
 
         Parameters
         ----------
@@ -146,7 +155,8 @@ class BaseConnector(ABC):  # pragma: no cover
     @abstractmethod
     def get_oseries(self, names: Union[list, str],
                     progressbar: bool = False) -> FrameorSeriesUnion:
-        """Get oseries.
+        """
+        Get oseries.
 
         Parameters
         ----------
@@ -167,7 +177,8 @@ class BaseConnector(ABC):  # pragma: no cover
     @abstractmethod
     def get_stresses(self, names: Union[list, str],
                      progressbar: bool = False) -> FrameorSeriesUnion:
-        """Get stresses.
+        """
+        Get stresses.
 
         Parameters
         ----------
@@ -188,7 +199,8 @@ class BaseConnector(ABC):  # pragma: no cover
     @abstractmethod
     def get_models(self, names: Union[list, str],
                    progressbar: bool = False) -> Union[Model, dict]:
-        """Get models.
+        """
+        Get models.
 
         Parameters
         ----------
@@ -207,33 +219,38 @@ class BaseConnector(ABC):  # pragma: no cover
 
     @abstractproperty
     def oseries(self):
-        """Dataframe containing oseries overview.
+        """
+        Dataframe containing oseries overview.
 
         """
         pass
 
     @abstractproperty
     def stresses(self):
-        """Dataframe containing stresses overview.
+        """
+        Dataframe containing stresses overview.
 
         """
         pass
 
     @abstractproperty
     def models(self):
-        """List of model names.
+        """
+        List of model names.
 
         """
         pass
 
 
 class ConnectorUtil:
-    """Mix-in class for general Connector helper functions.
+    """
+    Mix-in class for general Connector helper functions.
     """
 
     def _parse_names(self, names: Optional[Union[list, str]] = None,
                      libname: Optional[str] = "oseries") -> list:
-        """Internal method to parse names kwarg, returns iterable with name(s).
+        """
+        Internal method to parse names kwarg, returns iterable with name(s).
 
         Parameters
         ----------
@@ -266,7 +283,8 @@ class ConnectorUtil:
 
     @staticmethod
     def _meta_list_to_frame(metalist: list, names: list):
-        """Convert list of metadata dictionaries to DataFrame.
+        """
+        Convert list of metadata dictionaries to DataFrame.
 
         Parameters
         ----------
@@ -300,7 +318,8 @@ class ConnectorUtil:
         return meta
 
     def _parse_model_dict(self, mdict: dict):
-        """Internal method to parse dictionary describing pastas models.
+        """
+        Internal method to parse dictionary describing pastas models.
 
         Parameters
         ----------
@@ -341,7 +360,8 @@ class ConnectorUtil:
                               series: FrameorSeriesUnion,
                               metadata: Optional[dict] = None) \
             -> FrameorSeriesUnion:
-        """Internal method to get column containing values from data.
+        """
+        Internal method to get column containing values from data.
 
         Parameters
         ----------

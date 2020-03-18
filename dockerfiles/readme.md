@@ -12,7 +12,6 @@ The `docker-compose.yml` file describes the container.
    `docker-compose.yml` file by default.
 4. View your runing containers with `docker ps -a`.
 
-
 To stop the container run `docker-compose stop` in a terminal.
 
 Once the docker container exists, starting it using the `docker-compose up`

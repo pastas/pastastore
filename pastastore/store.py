@@ -10,7 +10,8 @@ FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 
 
 class PastaStore:
-    """Pastas project for managing pastas timeseries and models.
+    """
+    Pastas project for managing pastas timeseries and models.
 
     Requires a Connector object to provide the interface to
     the database. Different Connectors are available, e.g.:
@@ -29,7 +30,8 @@ class PastaStore:
     """
 
     def __init__(self, name: str, connector):
-        """Initialize PastaStore for managing pastas timeseries and models.
+        """
+        Initialize PastaStore for managing pastas timeseries and models.
 
         Parameters
         ----------
@@ -44,18 +46,20 @@ class PastaStore:
         self.conn = connector
 
     def __repr__(self):
-        """Representation string of the object
+        """
+        Representation string of the object
 
         """
         return f"<PastasProject> {self.name}: \n - " + self.conn.__str__()
 
     def get_oseries_distances(self, names: Optional[Union[list, str]] = None) \
             -> FrameorSeriesUnion:
-        """Method to obtain the distances in meters between the oseries.
+        """
+        Method to obtain the distances in meters between the oseries.
 
         Parameters
         ----------
-        oseries: str or list of str
+        names: str or list of str
             names of the oseries to calculate distances between
 
         Returns
@@ -84,7 +88,8 @@ class PastaStore:
 
     def get_nearest_oseries(self, names: Optional[Union[list, str]] = None,
                             n: int = 1) -> FrameorSeriesUnion:
-        """Method to obtain the nearest (n) oseries.
+        """
+        Method to obtain the nearest (n) oseries.
 
         Parameters
         ----------
@@ -113,7 +118,8 @@ class PastaStore:
     def get_distances(self, oseries: Optional[Union[list, str]] = None,
                       stresses: Optional[Union[list, str]] = None,
                       kind: Optional[str] = None) -> FrameorSeriesUnion:
-        """Method to obtain the distances in meters between the oseries and
+        """
+        Method to obtain the distances in meters between the oseries and
         stresses.
 
         Parameters
@@ -162,7 +168,8 @@ class PastaStore:
                              stresses: Optional[Union[list, str]] = None,
                              kind: Optional[str] = None, n: int = 1) -> \
             FrameorSeriesUnion:
-        """Method to obtain the nearest (n) stresses of a specific kind.
+        """
+        Method to obtain the nearest (n) stresses of a specific kind.
 
         Parameters
         ----------
@@ -193,7 +200,8 @@ class PastaStore:
         return data
 
     def get_tmin_tmax(self, libname, names=None, progressbar=False):
-        """Get tmin and tmax for timeseries
+        """
+        Get tmin and tmax for timeseries
 
         Parameters
         ----------
@@ -224,7 +232,8 @@ class PastaStore:
         return tmintmax
 
     def create_model(self, name: str, add_recharge: bool = True) -> ps.Model:
-        """Create a new pastas Model
+        """
+        Create a new pastas Model
 
         Parameters
         ----------
@@ -272,7 +281,8 @@ class PastaStore:
                       solve: bool = False, progressbar: bool = True,
                       return_models: bool = False, ignore_errors: bool = True,
                       **kwargs) -> Union[Tuple[dict, list], list]:
-        """Bulk creation of pastas models
+        """
+        Bulk creation of pastas models
 
         Parameters
         ----------
@@ -329,7 +339,8 @@ class PastaStore:
             return errors
 
     def add_recharge(self, ml: ps.Model, rfunc=ps.Gamma) -> None:
-        """Add recharge to a pastas model using closest precipitation and
+        """
+        Add recharge to a pastas model using closest precipitation and
         evaporation timeseries in database. These are assumed to be
         labeled with kind = 'prec' or 'evap'.
 
@@ -371,9 +382,10 @@ class PastaStore:
 
     def solve_models(self, mls: Optional[Union[ps.Model, list, str]] = None,
                      report: bool = False, ignore_solve_errors: bool = False,
-                     progressbar: bool = True, store_result: bool = True,
+                     store_result: bool = True, progressbar: bool = True,
                      **kwargs) -> None:
-        """Solves the models in the library
+        """
+        Solves the models in the store
 
         Parameters
         ----------
@@ -381,9 +393,16 @@ class PastaStore:
             list of model names, if None all models in the project
             are solved.
         report : boolean, optional
-            determines if a report is printed when the model is solved.
+            determines if a report is printed when the model is solved,
+            default is False
         ignore_solve_errors : boolean, optional
-            if True errors emerging from the solve method are ignored.
+            if True, errors emerging from the solve method are ignored,
+            default is False which will raise an exception when a model
+            cannot be optimized
+        store_result : bool, optional
+            if True save optimized models, default is True
+        progressbar : bool, optional
+            show progressbar, default is True
         **kwargs :
             arguments are passed to the solve method.
 
@@ -420,7 +439,8 @@ class PastaStore:
 
     def model_results(self, mls: Optional[Union[ps.Model, list, str]] = None,
                       progressbar: bool = True):  # pragma: no cover
-        """Get pastas model results
+        """
+        Get pastas model results
 
         Parameters
         ----------
