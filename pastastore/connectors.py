@@ -1,22 +1,22 @@
 import functools
 import json
-from collections.abc import Iterable
 from importlib import import_module
-from typing import Union, Optional
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
 import pastas as ps
+from pastas import Model
 from pastas.io.pas import PastasEncoder
 
-from .base import BaseConnector
+from .base import BaseConnector, ConnectorUtil
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 
 
-class ArcticConnector(BaseConnector):
+class ArcticConnector(BaseConnector, ConnectorUtil):
     """Object to serve as the interface between MongoDB and Python
     using the Arctic module. Provides all the methods to read, write,
     or delete data from the database.
@@ -35,9 +35,8 @@ class ArcticConnector(BaseConnector):
         keys ('oseries', 'stresses', 'models') and the user
         specified library names as corresponding values.
         Allows user defined library names.
-
     """
-    # _default_library_names = ["oseries", "stresses", "models"]
+
     conn_type = "arctic"
 
     def __init__(self, name: str, connstr: str,
@@ -56,14 +55,15 @@ class ArcticConnector(BaseConnector):
             keys ('oseries', 'stresses', 'models') and the user
             specified library names as corresponding values.
             Allows user defined library names.
-
         """
         try:
             import arctic
         except ModuleNotFoundError as e:
             print("Please install arctic (also requires "
-                  "a MongoDB instance running somewhere, e.g. MongoDB Community: \n"
-                  "https://docs.mongodb.com/manual/administration/install-community/)!")
+                  "a MongoDB instance running somewhere, e.g. "
+                  "MongoDB Community: \n"
+                  "https://docs.mongodb.com/manual/administration"
+                  "/install-community/)!")
             raise e
         self.connstr = connstr
         self.name = name
@@ -73,17 +73,17 @@ class ArcticConnector(BaseConnector):
         self._initialize(library_map)
 
     def __repr__(self):
-        """representation string of the object.
+        """Representation string of the object.
         """
         noseries = len(self.get_library("oseries").list_symbols())
         nstresses = len(self.get_library("stresses").list_symbols())
         nmodels = len(self.get_library("models").list_symbols())
-        return "<ArcticConnector object> '{0}': {1} oseries, {2} stresses, {3} models".format(
-            self.name, noseries, nstresses, nmodels
-        )
+        return ("<ArcticConnector object> '{0}': {1} oseries, "
+                "{2} stresses, {3} models".format(
+                    self.name, noseries, nstresses, nmodels))
 
     def _initialize(self, library_map: Optional[dict]) -> None:
-        """internal method to initalize the libraries.
+        """Internal method to initalize the libraries.
         """
         if library_map is None:
             libmap = {i: i for i in self._default_library_names}
@@ -98,29 +98,8 @@ class ArcticConnector(BaseConnector):
             self.libs[libname] = self.get_library(libname)
 
     def _library_name(self, libname: str) -> str:
+        """Internal method to get full library name according to Arctic"""
         return ".".join([self.name, libname])
-
-    def _parse_names(self, names: Union[list, str],
-                     libname: Optional[str] = "oseries") -> list:
-        """internal method to parse names kwarg,
-        returns iterable with name(s)
-
-        """
-        if names is None:
-            if libname == "oseries":
-                return self.oseries.index.to_list()
-            elif libname == "stresses":
-                return self.stresses.index.to_list()
-            elif libname == "models":
-                return self.models
-            else:
-                raise ValueError(f"No library '{libname}'!")
-        elif isinstance(names, str):
-            return [names]
-        elif isinstance(names, Iterable):
-            return names
-        else:
-            raise NotImplementedError(f"Cannot parse 'names': {names}")
 
     def get_library(self, libname: str):
         """Get Arctic library handle
@@ -134,7 +113,6 @@ class ArcticConnector(BaseConnector):
         -------
         Arctic.library handle
             handle to the library
-
         """
         # get custom library name if necessary
         real_libname = self.library_map[libname]
@@ -144,9 +122,9 @@ class ArcticConnector(BaseConnector):
         return lib
 
     def _add_series(self, libname: str, series: FrameorSeriesUnion, name: str,
-                    metadata: Optional[dict] = None, add_version: bool = False) \
-            -> None:
-        """internal method to add series to database
+                    metadata: Optional[dict] = None,
+                    add_version: bool = False) -> None:
+        """Internal method to add series to database
 
         Parameters
         ----------
@@ -167,7 +145,6 @@ class ArcticConnector(BaseConnector):
         Exception
             if add_version is False and name is already in the database
             raises an Exception.
-
         """
         lib = self.get_library(libname)
         if name not in lib.list_symbols() or add_version:
@@ -180,7 +157,7 @@ class ArcticConnector(BaseConnector):
     def add_oseries(self, series: FrameorSeriesUnion, name: str,
                     metadata: Optional[dict] = None,
                     add_version: bool = False) -> None:
-        """add oseries to the database
+        """Add oseries to the database
 
         Parameters
         ----------
@@ -193,7 +170,6 @@ class ArcticConnector(BaseConnector):
         add_version : bool, optional
             if True, add a new version of the dataset to the database,
             by default False
-
         """
         if isinstance(series, pd.DataFrame) and len(series.columns) > 1:
             if metadata is None:
@@ -208,8 +184,10 @@ class ArcticConnector(BaseConnector):
         self._add_series("oseries", series, name=name,
                          metadata=metadata, add_version=add_version)
 
-    def add_stress(self, series: FrameorSeriesUnion, name: str, kind: str, metadata: Optional[dict] = None, add_version: bool = False) -> None:
-        """add stress to the database
+    def add_stress(self, series: FrameorSeriesUnion, name: str, kind: str,
+                   metadata: Optional[dict] = None,
+                   add_version: bool = False) -> None:
+        """Add stress to the database
 
         Parameters
         ----------
@@ -227,13 +205,13 @@ class ArcticConnector(BaseConnector):
         add_version : bool, optional
             if True, add a new version of the dataset to the database,
             by default False
-
         """
         if metadata is None:
             metadata = {}
 
         if isinstance(series, pd.DataFrame) and len(series.columns) > 1:
-            print("Data contains multiple columns, assuming values in column 0!")
+            print("Data contains multiple columns, "
+                  "assuming values in column 0!")
             metadata["value_col"] = 0
 
         metadata["kind"] = kind
@@ -241,7 +219,7 @@ class ArcticConnector(BaseConnector):
                          metadata=metadata, add_version=add_version)
 
     def add_model(self, ml: ps.Model, add_version: bool = False) -> None:
-        """add model to the database
+        """Add model to the database
 
         Parameters
         ----------
@@ -255,7 +233,6 @@ class ArcticConnector(BaseConnector):
         Exception
             if add_version is False and model is already in the database
             raises an Exception.
-
         """
         lib = self.get_library("models")
         if ml.name not in lib.list_symbols() or add_version:
@@ -267,7 +244,7 @@ class ArcticConnector(BaseConnector):
         self._clear_cache("models")
 
     def _del_item(self, libname: str, name: str) -> None:
-        """internal method to delete items (series or models)
+        """Internal method to delete items (series or models)
 
         Parameters
         ----------
@@ -275,13 +252,12 @@ class ArcticConnector(BaseConnector):
             name of library to delete item from
         name : str
             name of item to delete
-
         """
         lib = self.get_library(libname)
         lib.delete(name)
 
     def del_models(self, names: Union[list, str]) -> None:
-        """delete model(s) from the database
+        """Delete model(s) from the database
 
         Parameters
         ----------
@@ -293,7 +269,7 @@ class ArcticConnector(BaseConnector):
         self._clear_cache("models")
 
     def del_oseries(self, names: Union[list, str]):
-        """delete oseries from the database
+        """Delete oseries from the database
 
         Parameters
         ----------
@@ -305,7 +281,7 @@ class ArcticConnector(BaseConnector):
         self._clear_cache("oseries")
 
     def del_stress(self, names: Union[list, str]):
-        """delete stress from the database
+        """Delete stress from the database
 
         Parameters
         ----------
@@ -318,7 +294,7 @@ class ArcticConnector(BaseConnector):
 
     def _get_series(self, libname: str, names: Union[list, str],
                     progressbar: bool = True) -> FrameorSeriesUnion:
-        """internal method to get timeseries
+        """Internal method to get timeseries
 
         Parameters
         ----------
@@ -351,7 +327,7 @@ class ArcticConnector(BaseConnector):
     def get_metadata(self, libname: str, names: Union[list, str],
                      progressbar: bool = False, as_frame: bool = True) -> \
             Union[dict, pd.DataFrame]:
-        """read the metadata
+        """Read metadata from database
 
         Parameters
         ----------
@@ -365,7 +341,6 @@ class ArcticConnector(BaseConnector):
         dict or pandas.DataFrame
             returns metadata dictionary (for one item) or DataFrame
             of metadata (for several datasets)
-
         """
         lib = self.get_library(libname)
 
@@ -377,22 +352,7 @@ class ArcticConnector(BaseConnector):
                 imeta["name"] = n
             metalist.append(imeta)
         if as_frame:
-            # convert to frame if len > 1 else return dict
-            if len(metalist) > 1:
-                meta = pd.DataFrame(metalist)
-                if len({"x", "y"}.difference(meta.columns)) == 0:
-                    meta["x"] = meta["x"].astype(float)
-                    meta["y"] = meta["y"].astype(float)
-                    # meta = gpd.GeoDataFrame(meta, geometry=[Point(
-                    #     (s["x"], s["y"])) for i, s in meta.iterrows()])
-            elif len(metalist) == 1:
-                meta = pd.DataFrame(metalist)
-            elif len(metalist) == 0:
-                meta = pd.DataFrame()
-            if "name" in meta.columns:
-                meta.set_index("name", inplace=True)
-            else:
-                meta.index = names
+            meta = self._meta_list_to_frame(metalist, names=names)
             return meta
         else:
             if len(metalist) == 1:
@@ -402,7 +362,7 @@ class ArcticConnector(BaseConnector):
 
     def get_oseries(self, names: Union[list, str],
                     progressbar: bool = False) -> FrameorSeriesUnion:
-        """get oseries from database
+        """Get oseries from database
 
         Parameters
         ----------
@@ -416,13 +376,12 @@ class ArcticConnector(BaseConnector):
         pandas.DataFrame or dict of DataFrames
             returns timeseries as DataFrame or dictionary of DataFrames if
             multiple names were passed
-
         """
         return self._get_series("oseries", names, progressbar=progressbar)
 
     def get_stresses(self, names: Union[list, str],
                      progressbar: bool = False) -> FrameorSeriesUnion:
-        """get stresses from database
+        """Get stresses from database
 
         Parameters
         ----------
@@ -436,51 +395,784 @@ class ArcticConnector(BaseConnector):
         pandas.DataFrame or dict of DataFrames
             returns timeseries as DataFrame or dictionary of DataFrames if
             multiple names were passed
-
         """
         return self._get_series("stresses", names, progressbar=progressbar)
 
-    def _get_values(self, libname: str, name: str, series: FrameorSeriesUnion,
-                    metadata: Optional[dict] = None) -> FrameorSeriesUnion:
-        """internal method to get column containing values from data
+    def get_models(self, names: Union[list, str],
+                   progressbar: bool = False) -> Union[ps.Model, dict]:
+        """Load models from database
+
+        Parameters
+        ----------
+        names : str or list of str
+            names of the models to load
+        progressbar : bool, optional
+            show progressbar, by default False
+
+        Returns
+        -------
+        pastas.Model or list of pastas.Model
+            return pastas model, or list of models if multiple names were
+            passed
+        """
+        lib = self.get_library("models")
+        models = []
+        names = self._parse_names(names, libname="models")
+
+        for n in (tqdm(names) if progressbar else names):
+            item = lib.read(n)
+            data = item.data
+            ml = self._parse_model_dict(data)
+            models.append(ml)
+        if len(models) == 1:
+            return models[0]
+        else:
+            return models
+
+    @staticmethod
+    def _clear_cache(libname: str) -> None:
+        """Clear cached property
+        """
+        getattr(ArcticConnector, libname).fget.cache_clear()
+
+    @property  # type: ignore
+    @functools.lru_cache()
+    def oseries(self):
+        """DataFrame with overview of oseries
+        """
+        lib = self.get_library("oseries")
+        df = self.get_metadata("oseries", lib.list_symbols())
+        return df
+
+    @property  # type: ignore
+    @functools.lru_cache()
+    def stresses(self):
+        """DataFrame with overview of stresses
+        """
+        lib = self.get_library("stresses")
+        return self.get_metadata("stresses",
+                                 lib.list_symbols())
+
+    @property  # type: ignore
+    @functools.lru_cache()
+    def models(self):
+        """List of model names
+        """
+        lib = self.get_library("models")
+        return lib.list_symbols()
+
+
+class PystoreConnector(BaseConnector, ConnectorUtil):
+    """Object to serve as the interface between storage and Python
+    using the Pystore module. Provides all the methods to read, write,
+    or delete data from the pystore.
+
+    Create as PystoreConnector object that connects to a folder on disk
+    containing a Pystore.
+
+    Parameters
+    ----------
+    name : str
+        name of the store
+    path : str
+        path to the pystore directory
+    library_map: dict, optional
+        dictionary containing the default library names as
+        keys ('oseries', 'stresses', 'models') and the user
+        specified library names as corresponding values.
+        Allows user defined library names.
+    """
+    conn_type = "pystore"
+
+    def __init__(self, name: str, path: str,
+                 library_map: Optional[dict] = None):
+        """Create a PystoreConnector object that points to a Pystore.
+
+        Parameters
+        ----------
+        name : str
+            name of the store
+        path : str
+            path to the pystore directory
+        library_map : dict, optional
+            dictionary containing the default library names as
+            keys ('oseries', 'stresses', 'models') and the user
+            specified library names as corresponding values.
+            Allows user defined library names.
+        """
+        try:
+            import pystore
+        except ModuleNotFoundError as e:
+            print("Install pystore, follow instructions at "
+                  "https://github.com/ranaroussi/pystore#dependencies")
+            raise e
+        self.name = name
+        self.path = path
+        pystore.set_path(self.path)
+        self.store = pystore.store(self.name)
+        self.libs: dict = {}
+        self._initialize(library_map)
+
+    def __repr__(self):
+        """Representation string of the object
+        """
+        storename = self.name
+        noseries = len(self.get_library("oseries").list_items())
+        nstresses = len(self.get_library("stresses").list_items())
+        nmodels = len(self.get_library("models").list_items())
+        return (f"<PystoreConnector object> '{storename}': {noseries} oseries,"
+                f" {nstresses} stresses, {nmodels} models")
+
+    def _initialize(self, library_map: Optional[dict]):
+        """Internal method to initalize the libraries (stores).
+        """
+        if library_map is None:
+            self.library_map = {i: i for i in self._default_library_names}
+        else:
+            self.library_map = library_map
+
+        for libname in self.library_map.values():
+            lib = self.store.collection(libname)
+            self.libs[libname] = lib
+
+    def get_library(self, libname: str):
+        """Get Pystore library handle
 
         Parameters
         ----------
         libname : str
-            name of the library the data is stored in
+            name of the library
+
+        Returns
+        -------
+        Pystore.Collection handle
+            handle to the library
+        """
+        # get custom library name if necessary
+        real_libname = self.library_map[libname]
+
+        # get library handle
+        lib = self.store.collection(real_libname)
+        return lib
+
+    def _add_series(self, libname: str, series: FrameorSeriesUnion, name: str,
+                    metadata: Optional[dict] = None,
+                    overwrite=True):
+        """Internal method to add series to a library/store
+
+        Parameters
+        ----------
+        libname : str
+            name of the library
+        series : pandas.DataFrame or pandas.Series
+            data to write to the pystore
         name : str
             name of the series
-        series : pd.Series or pd.DataFrame
-            data
         metadata : dict, optional
-            if passed avoids retrieving dict from database,
-            default is None, in which case data will be read
-            from database.
-
+            dictionary containing metadata, by default None
+        overwrite : bool, optional
+            overwrite existing dataset with the same name,
+            by default True
         """
-        if isinstance(series, pd.Series):
-            return series
-        elif len(series.columns) == 1:
-            return series.iloc[:, 0]
-        else:
+        lib = self.get_library(libname)
+        lib.write(name, series, metadata=metadata, overwrite=overwrite)
+        self._clear_cache(libname)
+
+    def add_oseries(self, series: FrameorSeriesUnion, name: str,
+                    metadata: Optional[dict] = None,
+                    overwrite=True):
+        """Add oseries to the pystore
+
+        Parameters
+        ----------
+        series : pandas.DataFrame of pandas.Series
+            oseries data to write to the store
+        collection : str
+            name of the collection to store the data in
+        item : str
+            name of the item to store the data as
+        metadata : dict, optional
+            dictionary containing metadata, by default None
+        overwrite : bool, optional
+            overwrite existing dataset with the same name,
+            by default True
+        """
+        if isinstance(series, pd.DataFrame) and len(series.columns) > 1:
             if metadata is None:
-                meta = self.get_metadata(libname, name, as_frame=False)
+                print("Data contains multiple columns, "
+                      "assuming values in column 0!")
+                metadata = {"value_col": 0}
+            elif not "value_col" in metadata.keys():
+                print("Data contains multiple columns, "
+                      "assuming values in column 0!")
+                metadata["value_col"] = 0
+        self._add_series("oseries", series, name,
+                         metadata=metadata, overwrite=overwrite)
+
+    def add_stress(self, series: FrameorSeriesUnion, name: str, kind,
+                   metadata: Optional[dict] = None,
+                   overwrite=True):
+        """Add stresses to the pystore
+
+        Parameters
+        ----------
+        series : pandas.DataFrame of pandas.Series
+            stress data to write to the store
+        collection : str
+            name of the collection to store the data in
+        item : str
+            name of the item to store the data as
+        metadata : dict, optional
+            dictionary containing metadata, by default None
+        overwrite : bool, optional
+            overwrite existing dataset with the same name,
+            by default True
+        """
+        if metadata is None:
+            metadata = {}
+        if kind not in metadata.keys():
+            metadata["kind"] = kind
+        self._add_series("stresses", series, name,
+                         metadata=metadata, overwrite=overwrite)
+
+    def add_model(self, ml: ps.Model, add_version: bool = True):
+        """Add model to the pystore
+
+        Parameters
+        ----------
+        ml : pastas.Model
+            model to write to the store
+        overwrite : bool, optional
+            overwrite existing store model if it already exists,
+            by default True
+        """
+        mldict = ml.to_dict(series=False)
+        jsondict = json.loads(json.dumps(mldict, cls=PastasEncoder, indent=4))
+
+        collection = self.get_library("models")
+        collection.write(ml.name, pd.DataFrame(), metadata=jsondict,
+                         overwrite=add_version)
+        self._clear_cache("models")
+
+    def _del_series(self, libname: str, name):
+        """Internal method to delete data from the store
+
+        Parameters
+        ----------
+        libname : str
+            name of the library
+        name : str
+            name of the series to delete
+        """
+        lib = self.get_library(libname)
+        lib.delete_item(name)
+        self._clear_cache(libname)
+
+    def del_oseries(self, names: Union[list, str]):
+        """Delete oseries from pystore
+
+        Parameters
+        ----------
+        name : str
+            name of the collection containing the data
+        names : str or list of str, optional
+            name(s) of oseries to delete
+        """
+        for n in self._parse_names(names, libname="oseries"):
+            self._del_series("oseries", names)
+
+    def del_stress(self, names: Union[list, str]):
+        """Delete stresses from pystore
+
+        Parameters
+        ----------
+        names : str or list of str
+            name(s) of the series to delete
+        """
+        for n in self._parse_names(names, libname="stresses"):
+            self._del_series("stresses", names)
+
+    def del_models(self, names: Union[list, str]):
+        """Delete model(s) from pystore
+
+        Parameters
+        ----------
+        names : str
+            name(s) of the model(s) to delete
+        """
+        for n in self._parse_names(names, libname="models"):
+            self._del_series("models", names)
+
+    def _get_series(self, libname: str, names: Union[list, str],
+                    progressbar: bool = True):
+        """Internal method to load timeseries data
+
+        Parameters
+        ----------
+        libname : str
+            name of the store to load data from
+        names : str or list of str
+            name(s) of the timeseries to load
+        progressbar : bool, optional
+            show progressbar, by default True
+
+        Returns
+        -------
+        pandas.DataFrame or dict of pandas.DataFrames
+            returns data DataFrame or dictionary of DataFrames
+            if multiple names are provided
+        """
+        lib = self.get_library(libname)
+
+        ts = {}
+        names = self._parse_names(names, libname=libname)
+        for n in (tqdm(names) if progressbar else names):
+            ts[n] = lib.item(n).to_pandas()
+        # return frame if len == 1
+        if len(ts) == 1:
+            return ts[n]
+        else:
+            return ts
+
+    def get_metadata(self, libname: str, names: Union[list, str],
+                     progressbar: bool = False, as_frame=True) \
+            -> Union[dict, pd.DataFrame]:
+        """Read metadata from pystore
+
+        Parameters
+        ----------
+        libname : str
+            name of the library the series are in,
+            usually ("oseries" or "stresses")
+        names : str or list of str
+            name(s) of series to load metadata for
+        progressbar : bool, optional
+            show progressbar, by default True
+        as_frame : bool, optional
+            return metadata as dataframe, default is
+            True, otherwise return as dict or list of
+            dict
+
+        Returns
+        -------
+        list or pandas.DataFrame
+            list or pandas.DataFrame containing metadata
+        """
+        import pystore
+        lib = self.get_library(libname)
+
+        metalist = []
+        names = self._parse_names(names, libname=libname)
+        for n in (tqdm(names) if progressbar else names):
+            imeta = pystore.utils.read_metadata(lib._item_path(n))
+            if "name" not in imeta.keys():
+                imeta["name"] = n
+            metalist.append(imeta)
+        if as_frame:
+            meta = self._meta_list_to_frame(metalist, names=names)
+            return meta
+        else:
+            if len(metalist) == 1:
+                return metalist[0]
             else:
-                meta = metadata
-            if "value_col" not in meta.keys():
-                raise KeyError("Please provide 'value_col' to metadata "
-                               "dictionary to point to column containing "
-                               "timeseries values!")
-            value_col = meta["value_col"]
-            if isinstance(value_col, str):
-                series = series.loc[:, value_col]
-            elif isinstance(value_col, int):
-                series = series.iloc[:, value_col]
-            return series
+                return metalist
+
+    def get_oseries(self, names: Union[list, str],
+                    progressbar: bool = False) -> FrameorSeriesUnion:
+        """Retrieve oseries from pystore
+
+        Parameters
+        ----------
+        names : str or list of str
+            name(s) of collections to load oseries data from
+        progressbar : bool, optional
+            show progressbar, by default True
+
+        Returns
+        -------
+        pandas.DataFrame or dict of pandas.DataFrames
+            returns data as a DataFrame or a dictionary of DataFrames
+            if multiple names are passed
+        """
+        return self._get_series("oseries", names, progressbar=progressbar)
+
+    def get_stresses(self, names: Union[list, str],
+                     progressbar: bool = False) -> FrameorSeriesUnion:
+        """Retrieve stresses from pystore
+
+        Parameters
+        ----------
+        names : str or list of str
+            name(s) of collections to load stresses data from
+        progressbar : bool, optional
+            show progressbar, by default True
+
+        Returns
+        -------
+        pandas.DataFrame or dict of pandas.DataFrames
+            returns data as a DataFrame or a dictionary of DataFrames
+            if multiple names are passed
+        """
+        return self._get_series("stresses", names, progressbar=progressbar)
 
     def get_models(self, names: Union[list, str],
                    progressbar: bool = False) -> Union[ps.Model, dict]:
-        """load models from database
+        """Load models from pystore
+
+        Parameters
+        ----------
+        names : str or list of str
+            name(s) of the models to load
+        progressbar : bool, optional
+            show progressbar, by default False
+
+        Returns
+        -------
+        list or pastas.Model
+            model or list of models
+
+        """
+        lib = self.get_library("models")
+
+        models = []
+        load_mod = import_module("pastas.io.pas")  # type: ignore
+        names = self._parse_names(names, libname="models")
+        for n in (tqdm(names) if progressbar else names):
+
+            jsonpath = lib._item_path(n).joinpath("metadata.json")
+            data = load_mod.load(jsonpath)  # type: ignore
+
+            ml = self._parse_model_dict(data)
+            models.append(ml)
+
+        if len(models) == 1:
+            return models[0]
+        else:
+            return models
+
+    @staticmethod
+    def _clear_cache(libname: str) -> None:
+        """Clear cached property
+        """
+        getattr(PystoreConnector, libname).fget.cache_clear()
+
+    @property  # type: ignore
+    @functools.lru_cache()
+    def oseries(self):
+        """DataFrame with overview of oseries
+        """
+        lib = self.get_library("oseries")
+        df = self.get_metadata("oseries", lib.list_items())
+        return df
+
+    @property  # type: ignore
+    @functools.lru_cache()
+    def stresses(self):
+        """DataFrame with overview of stresses
+        """
+        lib = self.get_library("stresses")
+        df = self.get_metadata("stresses", lib.list_items())
+        return df
+
+    @property  # type: ignore
+    @functools.lru_cache()
+    def models(self):
+        """List of model names
+        """
+        lib = self.get_library("models")
+        if lib is not None:
+            mls = lib.list_items()
+        else:
+            mls = []
+        return mls
+
+
+class DictConnector(BaseConnector, ConnectorUtil):
+    """Object to store timeseries and pastas models in-memory. Provides
+    methods to read, write, or delete data from the object. Data is stored
+    in dictionaries.
+
+    Parameters
+    ----------
+    name : str
+        user-specified name of the connector
+    library_map : dict, optional
+        dictionary containing the default library names as
+        keys ('oseries', 'stresses', 'models') and the user
+        specified library names as corresponding values.
+        Allows user defined library names.
+    """
+    conn_type = "dict"
+
+    def __init__(self, name: str, library_map: Optional[dict] = None):
+        """Create DictConnector object that stores all data in dictionaries
+        (in-memory).
+
+        Parameters
+        ----------
+        name : str
+            user-specified name of the connector
+        library_map : dict, optional
+            dictionary containing the default library names as
+            keys ('oseries', 'stresses', 'models') and the user
+            specified library names as corresponding values.
+            Allows user defined library names.
+        """
+        self.name = name
+
+        # allow custom library names
+        if library_map is None:
+            libmap = {i: i for i in self._default_library_names}
+        else:
+            libmap = library_map
+
+        self.library_map = libmap
+
+        # set empty dictionaries for series
+        for val in self.library_map.values():
+            setattr(self, "lib_" + val, {})
+
+    def __repr__(self):
+        """Representation string of the object.
+        """
+        noseries = len(self.get_library("oseries").keys())
+        nstresses = len(self.get_library("stresses").keys())
+        nmodels = len(self.get_library("models").keys())
+        return "<DictConnector object> '{0}': {1} oseries, {2} stresses, {3} models".format(
+            self.name, noseries, nstresses, nmodels
+        )
+
+    def get_library(self, libname: str):
+        """Get reference to dictionary holding data
+
+        Parameters
+        ----------
+        libname : str
+            name of the library
+        """
+        # get custom library name
+        real_libname = "lib_" + self.library_map[libname]
+        return getattr(self, real_libname)
+
+    def _add_series(self, libname: str, series: FrameorSeriesUnion,
+                    name: str, metadata: Union[dict, None] = None) -> None:
+        """Internal method to obtain series
+
+        Parameters
+        ----------
+        libname : str
+            name of library
+        series : FrameorSeriesUnion
+            pandas.Series or pandas.DataFrame containing data
+        name : str
+            name of the series
+        metadata : dict, optional
+            dictionary containing metadata, by default None
+        """
+        lib = self.get_library(libname)
+        lib[name] = (metadata, series)
+        self._clear_cache(libname)
+
+    def add_oseries(self, series: FrameorSeriesUnion, name: str,
+                    metadata: Union[dict, None] = None, **kwargs) -> None:
+        """Add oseries to object
+
+        Parameters
+        ----------
+        series : FrameorSeriesUnion
+            pandas.Series or pandas.DataFrame containing data
+        name : str
+            name of the oseries
+        metadata : dict, optional
+            dictionary with metadata, by default None
+        """
+        self._add_series("oseries", series, name, metadata=metadata)
+
+    def add_stress(self, series: FrameorSeriesUnion, name: str, kind: str,
+                   metadata: Union[dict, None] = None, **kwargs) -> None:
+        """Add stress to object
+
+        Parameters
+        ----------
+        series : FrameorSeriesUnion
+            pandas.Series or pandas.DataFrame containing data
+        name : str
+            name of the stress
+        kind : str
+            type of stress (i.e. 'prec', 'evap', 'well', etc.)
+        metadata : dict, optional
+            dictionary containing metadata, by default None
+        """
+        if metadata is None:
+            metadata = {}
+        if kind not in metadata.keys():
+            metadata["kind"] = kind
+        self._add_series("stresses", series, name, metadata=metadata)
+
+    def add_model(self, ml: Model, **kwargs) -> None:
+        """Add model to object
+
+        Parameters
+        ----------
+        ml : Model
+            pastas.Model to add
+        """
+        lib = self.get_library("models")
+        mldict = ml.to_dict(series=False)
+        lib[ml.name] = mldict
+        self._clear_cache("models")
+
+    def del_models(self, names: Union[list, str]) -> None:
+        """Delete models from object
+
+        Parameters
+        ----------
+        names : Union[list, str]
+            str or list of str of model names to remove
+        """
+        lib = self.get_library("models")
+        for n in self._parse_names(names, libname="models"):
+            _ = lib.pop(n)
+        self._clear_cache("models")
+
+    def del_oseries(self, names: Union[list, str]) -> None:
+        """Delete oseries from object
+
+        Parameters
+        ----------
+        names : Union[list, str]
+            str or list of str of oseries to remove
+        """
+        lib = self.get_library("oseries")
+        for n in self._parse_names(names, libname="oseries"):
+            _ = lib.pop(n)
+        self._clear_cache("oseries")
+
+    def del_stress(self, names: Union[list, str]) -> None:
+        """Delete stresses from object
+
+        Parameters
+        ----------
+        names : Union[list, str]
+            str or list of str of stresses to remove
+        """
+        lib = self.get_library("stresses")
+        for n in self._parse_names(names, libname="stresses"):
+            _ = lib.pop(n)
+        self._clear_cache("stresses")
+
+    def _get_series(self, libname: str, names: Union[list, str],
+                    progressbar: bool = True) -> FrameorSeriesUnion:
+        """Internal method to get oseries or stresses
+
+        Parameters
+        ----------
+        libname : str
+            name of library
+        names : Union[list, str]
+            str or list of string
+        progressbar : bool, optional
+            show progressbar, by default True
+
+        Returns
+        -------
+        dict, FrameorSeriesUnion
+            returns DataFrame or Series if only one name is passed, else
+            returns dict with all the data
+
+        """
+        lib = self.get_library(libname)
+        ts = {}
+        names = self._parse_names(names, libname=libname)
+        for n in (tqdm(names) if progressbar else names):
+            ts[n] = lib[n][1]
+        # return frame if len == 1
+        if len(ts) == 1:
+            return ts[n]
+        else:
+            return ts
+
+    def get_metadata(self, libname: str, names: Union[list, str],
+                     progressbar: bool = False, as_frame: bool = True) \
+            -> Union[pd.DataFrame, list]:
+        """Get metadata from object
+
+        Parameters
+        ----------
+        libname : str
+            name of library
+        names : Union[list, str]
+            str or list of str of names to get metadata for
+        progressbar : bool, optional
+            show progressbar, by default False
+        as_frame : bool, optional
+            return as DataFrame, by default True
+
+        Returns
+        -------
+        Union[pd.DataFrame, list]
+            returns list of metadata or pandas.DataFrame depending on value
+            of `as_frame`
+        """
+        lib = self.get_library(libname)
+        metalist = []
+        names = self._parse_names(names, libname=libname)
+        for n in (tqdm(names) if progressbar else names):
+            imeta = lib[n][0]
+            if "name" not in imeta.keys():
+                imeta["name"] = n
+            metalist.append(imeta)
+
+        if as_frame:
+            meta = self._meta_list_to_frame(metalist, names=names)
+            return meta
+        else:
+            if len(metalist) == 1:
+                return metalist[0]
+            else:
+                return metalist
+
+    def get_oseries(self, names: Union[list, str],
+                    progressbar: bool = False) -> FrameorSeriesUnion:
+        """Retrieve oseries from object
+
+        Parameters
+        ----------
+        names : Union[list, str]
+            name or list of names to retrieve
+        progressbar : bool, optional
+            show progressbar, by default False
+
+        Returns
+        -------
+        dict, FrameorSeriesUnion
+            returns dictionary or DataFrame/Series depending on number of
+            names passed
+        """
+        return self._get_series("oseries", names, progressbar=progressbar)
+
+    def get_stresses(self, names: Union[list, str],
+                     progressbar: bool = False) -> FrameorSeriesUnion:
+        """Retrieve stresses from object
+
+        Parameters
+        ----------
+        names : Union[list, str]
+            name or list of names of stresses to retrieve
+        progressbar : bool, optional
+            show progressbar, by default False
+
+        Returns
+        -------
+        dict, FrameorSeriesUnion
+            returns dictionary or DataFrame/Series depending on number of
+            names passed
+        """
+        return self._get_series("stresses", names, progressbar=progressbar)
+
+    def get_models(self, names: Union[list, str],
+                   progressbar: bool = False) -> Union[Model, dict]:
+        """Load models from object
 
         Parameters
         ----------
@@ -501,32 +1193,8 @@ class ArcticConnector(BaseConnector):
         names = self._parse_names(names, libname="models")
 
         for n in (tqdm(names) if progressbar else names):
-            item = lib.read(n)
-            data = item.data
-
-            if 'series' not in data['oseries']:
-                name = data["oseries"]['name']
-                if name not in self.oseries.index:
-                    msg = 'oseries {} not present in project'.format(name)
-                    raise(LookupError(msg))
-                s = self.get_oseries(name)
-                data['oseries']['series'] = self._get_values(
-                    "oseries", name, s)
-            for ts in data["stressmodels"].values():
-                if "stress" in ts.keys():
-                    for stress in ts["stress"]:
-                        if 'series' not in stress:
-                            name = stress['name']
-                            if name in self.stresses.index:
-                                s = self.get_stresses(name)
-                                stress['series'] = self._get_values(
-                                    "stresses", name, s)
-                            else:
-                                msg = "stress '{}' not present in project".format(
-                                    name)
-                                raise KeyError(msg)
-
-            ml = ps.io.base.load_model(data)
+            data = lib[n]
+            ml = self._parse_model_dict(data)
             models.append(ml)
         if len(models) == 1:
             return models[0]
@@ -535,545 +1203,30 @@ class ArcticConnector(BaseConnector):
 
     @staticmethod
     def _clear_cache(libname: str) -> None:
-        """clear cache
+        """Clear cached property
         """
-        getattr(ArcticConnector, libname).fget.cache_clear()
+        getattr(DictConnector, libname).fget.cache_clear()
 
     @property  # type: ignore
     @functools.lru_cache()
     def oseries(self):
+        """DataFrame showing overview of oseries
+        """
         lib = self.get_library("oseries")
-        df = self.get_metadata("oseries", lib.list_symbols())
-        return df
+        return self.get_metadata("oseries", names=list(lib.keys()))
 
     @property  # type: ignore
     @functools.lru_cache()
     def stresses(self):
+        """DataFrame showing overview of stresses
+        """
         lib = self.get_library("stresses")
-        return self.get_metadata("stresses",
-                                 lib.list_symbols())
+        return self.get_metadata("stresses", names=list(lib.keys()))
 
     @property  # type: ignore
     @functools.lru_cache()
     def models(self):
-        lib = self.get_library("models")
-        return lib.list_symbols()
-
-
-class PystoreConnector(BaseConnector):
-
-    conn_type = "pystore"
-
-    def __init__(self, name: str, path: str,
-                 library_map: Optional[dict] = None):
-        """Create a PystoreConnector object that points to a Pystore.
-
-        Parameters
-        ----------
-        name : str
-            name of the Project
-        path : str
-            path to the pystore directory
-        library_map : dict, optional
-            dictionary containing the default library names as
-            keys ('oseries', 'stresses', 'models') and the user
-            specified library names as corresponding values.
-            Allows user defined library names.
-
-        Note
-        ----
-        - Pystore uses the terminology Store > Collection > Item,
-          but in this code 'Collection' is referred to as 'Library'
-          (same as Arctic).
-
-        """
-        try:
-            import pystore
-        except ModuleNotFoundError as e:
-            print("Install pystore, follow instructions at "
-                  "https://github.com/ranaroussi/pystore#dependencies")
-            raise e
-        self.name = name
-        self.path = path
-        pystore.set_path(self.path)
-        self.store = pystore.store(self.name)
-        self.libs: dict = {}
-        self._initialize(library_map)
-
-    def __repr__(self):
-        """string representation of object
-        """
-        storename = self.name
-        noseries = len(self.get_library("oseries").list_items())
-        nstresses = len(self.get_library("stresses").list_items())
-        nmodels = len(self.get_library("models").list_items())
-        return (f"<PystoreConnector object> '{storename}': {noseries} oseries, "
-                f"{nstresses} stresses, {nmodels} models")
-
-    def _initialize(self, library_map: Optional[dict]):
-        """internal method to initalize the libraries (stores).
-        """
-        if library_map is None:
-            self.library_map = {i: i for i in self._default_library_names}
-        else:
-            self.library_map = library_map
-
-        for libname in self.library_map.values():
-            lib = self.store.collection(libname)
-            self.libs[libname] = lib
-
-    def _parse_names(self, names: Union[list, str],
-                     libname: Optional[str] = "oseries") -> list:
-        """internal method to parse names kwarg,
-        returns iterable with name(s)
-
-        """
-        if names is None:
-            if libname == "oseries":
-                return self.oseries.index
-            elif libname == "stresses":
-                return self.stresses.index
-            elif libname == "models":
-                return self.models
-            else:
-                raise ValueError(f"No library '{libname}'!")
-        elif isinstance(names, str):
-            return [names]
-        elif isinstance(names, Iterable):
-            return names
-        else:
-            raise NotImplementedError(f"Cannot parse 'names': {names}")
-
-    def get_library(self, libname: str):
-        """Get Pystore library handle
-
-        Parameters
-        ----------
-        libname : str
-            name of the library
-
-        Returns
-        -------
-        Pystore.Collection handle
-            handle to the library
-
-        """
-        # get custom library name if necessary
-        real_libname = self.library_map[libname]
-
-        # get library handle
-        lib = self.store.collection(real_libname)
-        return lib
-
-    def _add_series(self, libname: str, series: FrameorSeriesUnion, name: str,
-                    metadata: Optional[dict] = None,
-                    overwrite=True):
-        """internal method to add series to a library/store
-
-        Parameters
-        ----------
-        libname : str
-            name of the library
-        series : pandas.DataFrame or pandas.Series
-            data to write to the pystore
-        name : str
-            name of the series
-        metadata : dict, optional
-            dictionary containing metadata, by default None
-        overwrite : bool, optional
-            overwrite existing dataset with the same name,
-            by default True
-
-        """
-        lib = self.get_library(libname)
-        lib.write(name, series, metadata=metadata, overwrite=overwrite)
-        self._clear_cache(libname)
-
-    def add_oseries(self, series: FrameorSeriesUnion, name: str,
-                    metadata: Optional[dict] = None,
-                    overwrite=True):
-        """add oseries to the pystore
-
-        Parameters
-        ----------
-        series : pandas.DataFrame of pandas.Series
-            oseries data to write to the store
-        collection : str
-            name of the collection to store the data in
-        item : str
-            name of the item to store the data as
-        metadata : dict, optional
-            dictionary containing metadata, by default None
-        overwrite : bool, optional
-            overwrite existing dataset with the same name,
-            by default True
-
-        """
-        if isinstance(series, pd.DataFrame) and len(series.columns) > 1:
-            if metadata is None:
-                print("Data contains multiple columns, "
-                      "assuming values in column 0!")
-                metadata = {"value_col": 0}
-            elif not "value_col" in metadata.keys():
-                print("Data contains multiple columns, "
-                      "assuming values in column 0!")
-                metadata["value_col"] = 0
-        self._add_series("oseries", series, name,
-                         metadata=metadata, overwrite=overwrite)
-
-    def add_stress(self, series: FrameorSeriesUnion, name: str, kind,
-                   metadata: Optional[dict] = None,
-                   overwrite=True):
-        """add stresses to the pystore
-
-        Parameters
-        ----------
-        series : pandas.DataFrame of pandas.Series
-            stress data to write to the store
-        collection : str
-            name of the collection to store the data in
-        item : str
-            name of the item to store the data as
-        metadata : dict, optional
-            dictionary containing metadata, by default None
-        overwrite : bool, optional
-            overwrite existing dataset with the same name,
-            by default True
-
-        """
-        if metadata is None:
-            metadata = {}
-        if kind not in metadata.keys():
-            metadata["kind"] = kind
-        self._add_series("stresses", series, name,
-                         metadata=metadata, overwrite=overwrite)
-
-    def add_model(self, ml: ps.Model, add_version: bool = True):
-        """add model to the pystore
-
-        Parameters
-        ----------
-        ml : pastas.Model
-            model to write to the store
-        overwrite : bool, optional
-            overwrite existing store model if it already exists,
-            by default True
-
-        """
-        mldict = ml.to_dict(series=False)
-        jsondict = json.loads(json.dumps(mldict, cls=PastasEncoder, indent=4))
-
-        collection = self.get_library("models")
-        collection.write(ml.name, pd.DataFrame(), metadata=jsondict,
-                         overwrite=add_version)
-        self._clear_cache("models")
-
-    def _del_series(self, libname: str, name):
-        """internal method to delete data from the store
-
-        Parameters
-        ----------
-        libname : str
-            name of the library
-        name : str
-            name of the series to delete
-
-        """
-        lib = self.get_library(libname)
-        lib.delete_item(name)
-        self._clear_cache(libname)
-
-    def del_oseries(self, names: Union[list, str]):
-        """delete oseries
-
-        Parameters
-        ----------
-        name : str
-            name of the collection containing the data
-        item : str, optional
-            if provided, delete item, by default None,
-            which deletes the whole collection
-
-        """
-        for n in self._parse_names(names, libname="oseries"):
-            self._del_series("oseries", names)
-
-    def del_stress(self, names: Union[list, str]):
-        """delete stresses
-
-        Parameters
-        ----------
-        names : str or list of str
-            name(s) of the series to delete
-        """
-        for n in self._parse_names(names, libname="stresses"):
-            self._del_series("stresses", names)
-
-    def del_models(self, names: Union[list, str]):
-        """delete model from store
-
-        Parameters
-        ----------
-        names : str
-            name(s) of the model(s) to delete
-
-        """
-        for n in self._parse_names(names, libname="models"):
-            self._del_series("models", names)
-
-    def _get_series(self, libname: str, names: Union[list, str],
-                    progressbar: bool = True):
-        """internal method to load timeseries data
-
-        Parameters
-        ----------
-        libname : str
-            name of the store to load data from
-        names : str or list of str
-            name(s) of the timeseries to load
-        progressbar : bool, optional
-            show progressbar, by default True
-
-        Returns
-        -------
-        pandas.DataFrame or dict of pandas.DataFrames
-            returns data DataFrame or dictionary of DataFrames
-            if multiple names are provided
-
-        """
-
-        lib = self.get_library(libname)
-
-        ts = {}
-        names = self._parse_names(names, libname=libname)
-        for n in (tqdm(names) if progressbar else names):
-            ts[n] = lib.item(n).to_pandas()
-        # return frame if len == 1
-        if len(ts) == 1:
-            return ts[n]
-        else:
-            return ts
-
-    def _get_values(self, libname: str, name, series: FrameorSeriesUnion,
-                    metadata=None) -> FrameorSeriesUnion:
-        """internal method to get column containing values from data
-
-        Parameters
-        ----------
-        libname : str
-            name of the library the data is stored in
-        name : str
-            name of the series
-        series : pd.Series or pd.DataFrame
-            data
-        metadata : dict, optional
-            if passed avoids retrieving dict from database,
-            default is None, in which case data will be read
-            from database.
-
-        """
-        if isinstance(series, pd.Series):
-            return series
-        elif len(series.columns) == 1:
-            return series.iloc[:, 0]
-        else:
-            if metadata is None:
-                meta = self.get_metadata(libname, name, as_frame=False)
-            else:
-                meta = metadata
-            if "value_col" not in meta.keys():
-                raise KeyError("Please provide 'value_col' to metadata "
-                               "dictionary to point to column containing "
-                               "timeseries values!")
-            value_col = meta["value_col"]
-            if isinstance(value_col, str):
-                series = series.loc[:, value_col]
-            elif isinstance(value_col, int):
-                series = series.iloc[:, value_col]
-            return series
-
-    def get_metadata(self, libname: str, names: Union[list, str],
-                     progressbar: bool = False, as_frame=True) -> Union[dict, pd.DataFrame]:
-        """read metadata for dataset
-
-        Parameters
-        ----------
-        libname : str
-            name of the library the series are in,
-            usually ("oseries" or "stresses")
-        names : str or list of str
-            name(s) of series to load metadata for
-        progressbar : bool, optional
-            show progressbar, by default True
-        as_frame : bool, optional
-            return metadata as dataframe, default is
-            True, otherwise return as dict or list of
-            dict
-
-        Returns
-        -------
-        dict or dict of dicts
-            dictionary containing metadata
-
-        """
-        import pystore
-        lib = self.get_library(libname)
-
-        metalist = []
-        names = self._parse_names(names, libname=libname)
-        for n in (tqdm(names) if progressbar else names):
-            imeta = pystore.utils.read_metadata(lib._item_path(n))
-            if "name" not in imeta.keys():
-                imeta["name"] = n
-            metalist.append(imeta)
-        if as_frame:
-            # convert to frame
-            if len(metalist) > 1:
-                meta = pd.DataFrame(metalist)
-                if len({"x", "y"}.difference(meta.columns)) == 0:
-                    meta["x"] = meta["x"].astype(float)
-                    meta["y"] = meta["y"].astype(float)
-                    # meta = gpd.GeoDataFrame(meta, geometry=[Point(
-                    #     (s["x"], s["y"])) for i, s in meta.iterrows()])
-            elif len(metalist) == 1:
-                meta = pd.DataFrame(metalist)
-            elif len(metalist) == 0:
-                meta = pd.DataFrame()
-            if "name" in meta.columns:
-                meta.set_index("name", inplace=True)
-            else:
-                meta.index = names
-            return meta
-        else:
-            if len(metalist) == 1:
-                return metalist[0]
-            else:
-                return metalist
-
-    def get_oseries(self, names: Union[list, str],
-                    progressbar: bool = False) -> FrameorSeriesUnion:
-        """load oseries from store
-
-        Parameters
-        ----------
-        names : str or list of str
-            name(s) of collections to load oseries data from
-        progressbar : bool, optional
-            show progressbar, by default True
-
-        Returns
-        -------
-        pandas.DataFrame or dict of pandas.DataFrames
-            returns data as a DataFrame or a dictionary of DataFrames
-            if multiple names are passed
-
-        """
-        return self._get_series("oseries", names, progressbar=progressbar)
-
-    def get_stresses(self, names: Union[list, str],
-                     progressbar: bool = False) -> FrameorSeriesUnion:
-        """load stresses from store
-
-        Parameters
-        ----------
-        names : str or list of str
-            name(s) of collections to load stresses data from
-        progressbar : bool, optional
-            show progressbar, by default True
-
-        Returns
-        -------
-        pandas.DataFrame or dict of pandas.DataFrames
-            returns data as a DataFrame or a dictionary of DataFrames
-            if multiple names are passed
-
-        """
-        return self._get_series("stresses", names, progressbar=progressbar)
-
-    def get_models(self, names: Union[list, str],
-                   progressbar: bool = False) -> Union[ps.Model, dict]:
-        """load models from store
-
-        Parameters
-        ----------
-        names : str or list of str
-            name(s) of the models to load
-        progressbar : bool, optional
-            show progressbar, by default False
-
-        Returns
-        -------
-        list
-            list of models
-
+        """List of model names
         """
         lib = self.get_library("models")
-
-        models = []
-        load_mod = import_module("pastas.io.pas")  # type: ignore
-        names = self._parse_names(names, libname="models")
-        for n in (tqdm(names) if progressbar else names):
-
-            jsonpath = lib._item_path(n).joinpath("metadata.json")
-            data = load_mod.load(jsonpath)  # type: ignore
-
-            if 'series' not in data['oseries']:
-                name = data["oseries"]['name']
-                if name not in self.oseries.index:
-                    msg = 'oseries {} not present in project'.format(name)
-                    raise(LookupError(msg))
-                s = self.get_oseries(name, progressbar=False)
-                data['oseries']['series'] = self._get_values(
-                    "oseries", name, s)
-            for ts in data["stressmodels"].values():
-                if "stress" in ts.keys():
-                    for stress in ts["stress"]:
-                        if 'series' not in stress:
-                            name = stress['name']
-                            if name in self.stresses.index:
-                                s = self.get_stresses(
-                                    name, progressbar=False)
-                            else:
-                                msg = 'stress {} not present in project'.format(
-                                    name)
-                                raise KeyError(msg)
-                            stress['series'] = self._get_values(
-                                "stresses", name, s)
-
-            ml = ps.io.base.load_model(data)
-            models.append(ml)
-
-        if len(models) == 1:
-            return models[0]
-        else:
-            return models
-
-    @staticmethod
-    def _clear_cache(libname: str) -> None:
-        """clear cache
-        """
-        getattr(PystoreConnector, libname).fget.cache_clear()
-
-    @property  # type: ignore
-    @functools.lru_cache()
-    def oseries(self):
-        lib = self.get_library("oseries")
-        df = self.get_metadata("oseries", lib.list_items())
-        return df
-
-    @property  # type: ignore
-    @functools.lru_cache()
-    def stresses(self):
-        lib = self.get_library("stresses")
-        df = self.get_metadata("stresses", lib.list_items())
-        return df
-
-    @property  # type: ignore
-    @functools.lru_cache()
-    def models(self):
-        lib = self.get_library("models")
-        if lib is not None:
-            mls = lib.list_items()
-        else:
-            mls = []
-        return mls
+        return list(lib.keys())
