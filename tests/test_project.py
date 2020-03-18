@@ -1,7 +1,4 @@
-import os
 import warnings
-import arctic
-import pandas as pd
 import pytest
 from pytest_dependency import depends
 

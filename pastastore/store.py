@@ -25,6 +25,7 @@ class PastaStore:
     connector : Connector object
         object that provides the interface to the
         database, e.g. ArcticConnector (see pastastore.connectors)
+
     """
 
     def __init__(self, name: str, connector):
@@ -37,12 +38,14 @@ class PastaStore:
         connector : Connector object
             object that provides the interface to the
             database
+
         """
         self.name = name
         self.conn = connector
 
     def __repr__(self):
         """Representation string of the object
+
         """
         return f"<PastasProject> {self.name}: \n - " + self.conn.__str__()
 
@@ -59,6 +62,7 @@ class PastaStore:
         -------
         distances: pandas.DataFrame
             Pandas DataFrame with the distances between the oseries
+
         """
         oseries_df = self.conn.oseries
         other_df = self.conn.oseries
@@ -93,6 +97,7 @@ class PastaStore:
         -------
         oseries:
             list with the names of the oseries.
+
         """
 
         distances = self.get_oseries_distances(names)
@@ -125,6 +130,7 @@ class PastaStore:
         distances: pandas.DataFrame
             Pandas DataFrame with the distances between the oseries (index)
             and the stresses (columns).
+
         """
         oseries_df = self.conn.oseries
         stresses_df = self.conn.stresses
@@ -173,6 +179,7 @@ class PastaStore:
         -------
         stresses:
             list with the names of the stresses.
+
         """
 
         distances = self.get_distances(oseries, stresses, kind)
@@ -203,6 +210,7 @@ class PastaStore:
         -------
         tmintmax : pd.dataframe
             Dataframe containing tmin and tmax per timeseries
+
         """
 
         lib = self.conn.get_library(libname)
@@ -238,6 +246,7 @@ class PastaStore:
             if data is stored as dataframe and no column is provided
         ValueError
             if timeseries is empty
+
         """
         # get oseries metadata
         meta = self.conn.get_metadata("oseries", name, as_frame=False)
@@ -288,9 +297,9 @@ class PastaStore:
         -------
         models : dict, if return_models is True
             dictionary of models
-
         errors : list, always returned
             list of model names that could not be created
+
         """
         if oseries is None:
             oseries = self.conn.oseries.index
@@ -332,6 +341,7 @@ class PastaStore:
             response function to use for recharge in model,
             by default ps.Gamma (for different response functions, see
             pastas documentation)
+
         """
         # get nearest prec and evap stns
         names = []
@@ -376,6 +386,7 @@ class PastaStore:
             if True errors emerging from the solve method are ignored.
         **kwargs :
             arguments are passed to the solve method.
+
         """
         if mls is None:
             mls = self.conn.models
@@ -429,6 +440,7 @@ class PastaStore:
         ------
         ModuleNotFoundError
             if the art_tools module is not available
+
         """
         try:
             from art_tools import (

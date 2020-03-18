@@ -35,6 +35,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         keys ('oseries', 'stresses', 'models') and the user
         specified library names as corresponding values.
         Allows user defined library names.
+
     """
 
     conn_type = "arctic"
@@ -55,6 +56,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
             keys ('oseries', 'stresses', 'models') and the user
             specified library names as corresponding values.
             Allows user defined library names.
+
         """
         try:
             import arctic
@@ -74,6 +76,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
 
     def __repr__(self):
         """Representation string of the object.
+
         """
         noseries = len(self.get_library("oseries").list_symbols())
         nstresses = len(self.get_library("stresses").list_symbols())
@@ -84,6 +87,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
 
     def _initialize(self, library_map: Optional[dict]) -> None:
         """Internal method to initalize the libraries.
+
         """
         if library_map is None:
             libmap = {i: i for i in self._default_library_names}
@@ -98,7 +102,9 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
             self.libs[libname] = self.get_library(libname)
 
     def _library_name(self, libname: str) -> str:
-        """Internal method to get full library name according to Arctic"""
+        """Internal method to get full library name according to Arctic.
+
+        """
         return ".".join([self.name, libname])
 
     def get_library(self, libname: str):
@@ -113,6 +119,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         -------
         Arctic.library handle
             handle to the library
+
         """
         # get custom library name if necessary
         real_libname = self.library_map[libname]
@@ -124,7 +131,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
     def _add_series(self, libname: str, series: FrameorSeriesUnion, name: str,
                     metadata: Optional[dict] = None,
                     add_version: bool = False) -> None:
-        """Internal method to add series to database
+        """Internal method to add series to database.
 
         Parameters
         ----------
@@ -145,6 +152,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         Exception
             if add_version is False and name is already in the database
             raises an Exception.
+
         """
         lib = self.get_library(libname)
         if name not in lib.list_symbols() or add_version:
@@ -157,7 +165,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
     def add_oseries(self, series: FrameorSeriesUnion, name: str,
                     metadata: Optional[dict] = None,
                     add_version: bool = False) -> None:
-        """Add oseries to the database
+        """Add oseries to the database.
 
         Parameters
         ----------
@@ -170,6 +178,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         add_version : bool, optional
             if True, add a new version of the dataset to the database,
             by default False
+
         """
         if isinstance(series, pd.DataFrame) and len(series.columns) > 1:
             if metadata is None:
@@ -187,7 +196,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
     def add_stress(self, series: FrameorSeriesUnion, name: str, kind: str,
                    metadata: Optional[dict] = None,
                    add_version: bool = False) -> None:
-        """Add stress to the database
+        """Add stress to the database.
 
         Parameters
         ----------
@@ -205,6 +214,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         add_version : bool, optional
             if True, add a new version of the dataset to the database,
             by default False
+
         """
         if metadata is None:
             metadata = {}
@@ -219,7 +229,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
                          metadata=metadata, add_version=add_version)
 
     def add_model(self, ml: ps.Model, add_version: bool = False) -> None:
-        """Add model to the database
+        """Add model to the database.
 
         Parameters
         ----------
@@ -233,6 +243,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         Exception
             if add_version is False and model is already in the database
             raises an Exception.
+
         """
         lib = self.get_library("models")
         if ml.name not in lib.list_symbols() or add_version:
@@ -244,7 +255,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         self._clear_cache("models")
 
     def _del_item(self, libname: str, name: str) -> None:
-        """Internal method to delete items (series or models)
+        """Internal method to delete items (series or models).
 
         Parameters
         ----------
@@ -252,41 +263,45 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
             name of library to delete item from
         name : str
             name of item to delete
+
         """
         lib = self.get_library(libname)
         lib.delete(name)
 
     def del_models(self, names: Union[list, str]) -> None:
-        """Delete model(s) from the database
+        """Delete model(s) from the database.
 
         Parameters
         ----------
         names : str or list of str
             name(s) of the model to delete
+
         """
         for n in self._parse_names(names, libname="models"):
             self._del_item("models", n)
         self._clear_cache("models")
 
     def del_oseries(self, names: Union[list, str]):
-        """Delete oseries from the database
+        """Delete oseries from the database.
 
         Parameters
         ----------
         names : str or list of str
             name(s) of the oseries to delete
+
         """
         for n in self._parse_names(names, libname="oseries"):
             self._del_item("oseries", n)
         self._clear_cache("oseries")
 
     def del_stress(self, names: Union[list, str]):
-        """Delete stress from the database
+        """Delete stress from the database.
 
         Parameters
         ----------
         names : str or list of str
             name(s) of the stress to delete
+
         """
         for n in self._parse_names(names, libname="stresses"):
             self._del_item("stresses", n)
@@ -294,7 +309,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
 
     def _get_series(self, libname: str, names: Union[list, str],
                     progressbar: bool = True) -> FrameorSeriesUnion:
-        """Internal method to get timeseries
+        """Internal method to get timeseries.
 
         Parameters
         ----------
@@ -327,7 +342,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
     def get_metadata(self, libname: str, names: Union[list, str],
                      progressbar: bool = False, as_frame: bool = True) -> \
             Union[dict, pd.DataFrame]:
-        """Read metadata from database
+        """Read metadata from database.
 
         Parameters
         ----------
@@ -341,6 +356,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         dict or pandas.DataFrame
             returns metadata dictionary (for one item) or DataFrame
             of metadata (for several datasets)
+
         """
         lib = self.get_library(libname)
 
@@ -362,7 +378,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
 
     def get_oseries(self, names: Union[list, str],
                     progressbar: bool = False) -> FrameorSeriesUnion:
-        """Get oseries from database
+        """Get oseries from database.
 
         Parameters
         ----------
@@ -376,12 +392,13 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         pandas.DataFrame or dict of DataFrames
             returns timeseries as DataFrame or dictionary of DataFrames if
             multiple names were passed
+
         """
         return self._get_series("oseries", names, progressbar=progressbar)
 
     def get_stresses(self, names: Union[list, str],
                      progressbar: bool = False) -> FrameorSeriesUnion:
-        """Get stresses from database
+        """Get stresses from database.
 
         Parameters
         ----------
@@ -395,12 +412,13 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         pandas.DataFrame or dict of DataFrames
             returns timeseries as DataFrame or dictionary of DataFrames if
             multiple names were passed
+
         """
         return self._get_series("stresses", names, progressbar=progressbar)
 
     def get_models(self, names: Union[list, str],
                    progressbar: bool = False) -> Union[ps.Model, dict]:
-        """Load models from database
+        """Load models from database.
 
         Parameters
         ----------
@@ -414,6 +432,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         pastas.Model or list of pastas.Model
             return pastas model, or list of models if multiple names were
             passed
+
         """
         lib = self.get_library("models")
         models = []
@@ -431,14 +450,16 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
 
     @staticmethod
     def _clear_cache(libname: str) -> None:
-        """Clear cached property
+        """Clear cached property.
+
         """
         getattr(ArcticConnector, libname).fget.cache_clear()
 
     @property  # type: ignore
     @functools.lru_cache()
     def oseries(self):
-        """DataFrame with overview of oseries
+        """DataFrame with overview of oseries.
+
         """
         lib = self.get_library("oseries")
         df = self.get_metadata("oseries", lib.list_symbols())
@@ -447,7 +468,8 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
     @property  # type: ignore
     @functools.lru_cache()
     def stresses(self):
-        """DataFrame with overview of stresses
+        """DataFrame with overview of stresses.
+
         """
         lib = self.get_library("stresses")
         return self.get_metadata("stresses",
@@ -456,7 +478,8 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
     @property  # type: ignore
     @functools.lru_cache()
     def models(self):
-        """List of model names
+        """List of model names.
+
         """
         lib = self.get_library("models")
         return lib.list_symbols()
@@ -481,6 +504,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         keys ('oseries', 'stresses', 'models') and the user
         specified library names as corresponding values.
         Allows user defined library names.
+
     """
     conn_type = "pystore"
 
@@ -499,6 +523,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             keys ('oseries', 'stresses', 'models') and the user
             specified library names as corresponding values.
             Allows user defined library names.
+
         """
         try:
             import pystore
@@ -514,7 +539,8 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         self._initialize(library_map)
 
     def __repr__(self):
-        """Representation string of the object
+        """Representation string of the object.
+
         """
         storename = self.name
         noseries = len(self.get_library("oseries").list_items())
@@ -525,6 +551,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
 
     def _initialize(self, library_map: Optional[dict]):
         """Internal method to initalize the libraries (stores).
+
         """
         if library_map is None:
             self.library_map = {i: i for i in self._default_library_names}
@@ -536,7 +563,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             self.libs[libname] = lib
 
     def get_library(self, libname: str):
-        """Get Pystore library handle
+        """Get Pystore library handle.
 
         Parameters
         ----------
@@ -547,6 +574,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         -------
         Pystore.Collection handle
             handle to the library
+
         """
         # get custom library name if necessary
         real_libname = self.library_map[libname]
@@ -558,7 +586,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
     def _add_series(self, libname: str, series: FrameorSeriesUnion, name: str,
                     metadata: Optional[dict] = None,
                     overwrite=True):
-        """Internal method to add series to a library/store
+        """Internal method to add series to a library/store.
 
         Parameters
         ----------
@@ -573,6 +601,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         overwrite : bool, optional
             overwrite existing dataset with the same name,
             by default True
+
         """
         lib = self.get_library(libname)
         lib.write(name, series, metadata=metadata, overwrite=overwrite)
@@ -581,7 +610,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
     def add_oseries(self, series: FrameorSeriesUnion, name: str,
                     metadata: Optional[dict] = None,
                     overwrite=True):
-        """Add oseries to the pystore
+        """Add oseries to the pystore.
 
         Parameters
         ----------
@@ -596,6 +625,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         overwrite : bool, optional
             overwrite existing dataset with the same name,
             by default True
+
         """
         if isinstance(series, pd.DataFrame) and len(series.columns) > 1:
             if metadata is None:
@@ -612,7 +642,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
     def add_stress(self, series: FrameorSeriesUnion, name: str, kind,
                    metadata: Optional[dict] = None,
                    overwrite=True):
-        """Add stresses to the pystore
+        """Add stresses to the pystore.
 
         Parameters
         ----------
@@ -627,6 +657,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         overwrite : bool, optional
             overwrite existing dataset with the same name,
             by default True
+
         """
         if metadata is None:
             metadata = {}
@@ -636,7 +667,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
                          metadata=metadata, overwrite=overwrite)
 
     def add_model(self, ml: ps.Model, add_version: bool = True):
-        """Add model to the pystore
+        """Add model to the pystore.
 
         Parameters
         ----------
@@ -645,6 +676,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         overwrite : bool, optional
             overwrite existing store model if it already exists,
             by default True
+
         """
         mldict = ml.to_dict(series=False)
         jsondict = json.loads(json.dumps(mldict, cls=PastasEncoder, indent=4))
@@ -655,7 +687,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         self._clear_cache("models")
 
     def _del_series(self, libname: str, name):
-        """Internal method to delete data from the store
+        """Internal method to delete data from the store.
 
         Parameters
         ----------
@@ -663,13 +695,14 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             name of the library
         name : str
             name of the series to delete
+
         """
         lib = self.get_library(libname)
         lib.delete_item(name)
         self._clear_cache(libname)
 
     def del_oseries(self, names: Union[list, str]):
-        """Delete oseries from pystore
+        """Delete oseries from pystore.
 
         Parameters
         ----------
@@ -677,35 +710,38 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             name of the collection containing the data
         names : str or list of str, optional
             name(s) of oseries to delete
+
         """
         for n in self._parse_names(names, libname="oseries"):
             self._del_series("oseries", names)
 
     def del_stress(self, names: Union[list, str]):
-        """Delete stresses from pystore
+        """Delete stresses from pystore.
 
         Parameters
         ----------
         names : str or list of str
             name(s) of the series to delete
+
         """
         for n in self._parse_names(names, libname="stresses"):
             self._del_series("stresses", names)
 
     def del_models(self, names: Union[list, str]):
-        """Delete model(s) from pystore
+        """Delete model(s) from pystore.
 
         Parameters
         ----------
         names : str
             name(s) of the model(s) to delete
+
         """
         for n in self._parse_names(names, libname="models"):
             self._del_series("models", names)
 
     def _get_series(self, libname: str, names: Union[list, str],
                     progressbar: bool = True):
-        """Internal method to load timeseries data
+        """Internal method to load timeseries data.
 
         Parameters
         ----------
@@ -721,6 +757,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         pandas.DataFrame or dict of pandas.DataFrames
             returns data DataFrame or dictionary of DataFrames
             if multiple names are provided
+
         """
         lib = self.get_library(libname)
 
@@ -737,7 +774,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
     def get_metadata(self, libname: str, names: Union[list, str],
                      progressbar: bool = False, as_frame=True) \
             -> Union[dict, pd.DataFrame]:
-        """Read metadata from pystore
+        """Read metadata from pystore.
 
         Parameters
         ----------
@@ -757,6 +794,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         -------
         list or pandas.DataFrame
             list or pandas.DataFrame containing metadata
+
         """
         import pystore
         lib = self.get_library(libname)
@@ -779,7 +817,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
 
     def get_oseries(self, names: Union[list, str],
                     progressbar: bool = False) -> FrameorSeriesUnion:
-        """Retrieve oseries from pystore
+        """Retrieve oseries from pystore.
 
         Parameters
         ----------
@@ -793,12 +831,13 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         pandas.DataFrame or dict of pandas.DataFrames
             returns data as a DataFrame or a dictionary of DataFrames
             if multiple names are passed
+
         """
         return self._get_series("oseries", names, progressbar=progressbar)
 
     def get_stresses(self, names: Union[list, str],
                      progressbar: bool = False) -> FrameorSeriesUnion:
-        """Retrieve stresses from pystore
+        """Retrieve stresses from pystore.
 
         Parameters
         ----------
@@ -812,12 +851,13 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         pandas.DataFrame or dict of pandas.DataFrames
             returns data as a DataFrame or a dictionary of DataFrames
             if multiple names are passed
+
         """
         return self._get_series("stresses", names, progressbar=progressbar)
 
     def get_models(self, names: Union[list, str],
                    progressbar: bool = False) -> Union[ps.Model, dict]:
-        """Load models from pystore
+        """Load models from pystore.
 
         Parameters
         ----------
@@ -852,14 +892,16 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
 
     @staticmethod
     def _clear_cache(libname: str) -> None:
-        """Clear cached property
+        """Clear cached property.
+
         """
         getattr(PystoreConnector, libname).fget.cache_clear()
 
     @property  # type: ignore
     @functools.lru_cache()
     def oseries(self):
-        """DataFrame with overview of oseries
+        """Dataframe with overview of oseries.
+
         """
         lib = self.get_library("oseries")
         df = self.get_metadata("oseries", lib.list_items())
@@ -868,7 +910,8 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
     @property  # type: ignore
     @functools.lru_cache()
     def stresses(self):
-        """DataFrame with overview of stresses
+        """Dataframe with overview of stresses.
+
         """
         lib = self.get_library("stresses")
         df = self.get_metadata("stresses", lib.list_items())
@@ -877,7 +920,8 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
     @property  # type: ignore
     @functools.lru_cache()
     def models(self):
-        """List of model names
+        """List of model names.
+
         """
         lib = self.get_library("models")
         if lib is not None:
@@ -901,6 +945,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         keys ('oseries', 'stresses', 'models') and the user
         specified library names as corresponding values.
         Allows user defined library names.
+
     """
     conn_type = "dict"
 
@@ -917,6 +962,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
             keys ('oseries', 'stresses', 'models') and the user
             specified library names as corresponding values.
             Allows user defined library names.
+
         """
         self.name = name
 
@@ -934,6 +980,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
 
     def __repr__(self):
         """Representation string of the object.
+
         """
         noseries = len(self.get_library("oseries").keys())
         nstresses = len(self.get_library("stresses").keys())
@@ -943,12 +990,13 @@ class DictConnector(BaseConnector, ConnectorUtil):
         )
 
     def get_library(self, libname: str):
-        """Get reference to dictionary holding data
+        """Get reference to dictionary holding data.
 
         Parameters
         ----------
         libname : str
             name of the library
+
         """
         # get custom library name
         real_libname = "lib_" + self.library_map[libname]
@@ -956,7 +1004,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
 
     def _add_series(self, libname: str, series: FrameorSeriesUnion,
                     name: str, metadata: Union[dict, None] = None) -> None:
-        """Internal method to obtain series
+        """Internal method to obtain series.
 
         Parameters
         ----------
@@ -968,6 +1016,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
             name of the series
         metadata : dict, optional
             dictionary containing metadata, by default None
+
         """
         lib = self.get_library(libname)
         lib[name] = (metadata, series)
@@ -975,7 +1024,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
 
     def add_oseries(self, series: FrameorSeriesUnion, name: str,
                     metadata: Union[dict, None] = None, **kwargs) -> None:
-        """Add oseries to object
+        """Add oseries to object.
 
         Parameters
         ----------
@@ -985,12 +1034,13 @@ class DictConnector(BaseConnector, ConnectorUtil):
             name of the oseries
         metadata : dict, optional
             dictionary with metadata, by default None
+
         """
         self._add_series("oseries", series, name, metadata=metadata)
 
     def add_stress(self, series: FrameorSeriesUnion, name: str, kind: str,
                    metadata: Union[dict, None] = None, **kwargs) -> None:
-        """Add stress to object
+        """Add stress to object.
 
         Parameters
         ----------
@@ -1002,6 +1052,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
             type of stress (i.e. 'prec', 'evap', 'well', etc.)
         metadata : dict, optional
             dictionary containing metadata, by default None
+
         """
         if metadata is None:
             metadata = {}
@@ -1010,12 +1061,13 @@ class DictConnector(BaseConnector, ConnectorUtil):
         self._add_series("stresses", series, name, metadata=metadata)
 
     def add_model(self, ml: Model, **kwargs) -> None:
-        """Add model to object
+        """Add model to object.
 
         Parameters
         ----------
         ml : Model
             pastas.Model to add
+
         """
         lib = self.get_library("models")
         mldict = ml.to_dict(series=False)
@@ -1023,12 +1075,13 @@ class DictConnector(BaseConnector, ConnectorUtil):
         self._clear_cache("models")
 
     def del_models(self, names: Union[list, str]) -> None:
-        """Delete models from object
+        """Delete models from object.
 
         Parameters
         ----------
         names : Union[list, str]
             str or list of str of model names to remove
+
         """
         lib = self.get_library("models")
         for n in self._parse_names(names, libname="models"):
@@ -1036,12 +1089,13 @@ class DictConnector(BaseConnector, ConnectorUtil):
         self._clear_cache("models")
 
     def del_oseries(self, names: Union[list, str]) -> None:
-        """Delete oseries from object
+        """Delete oseries from object.
 
         Parameters
         ----------
         names : Union[list, str]
             str or list of str of oseries to remove
+
         """
         lib = self.get_library("oseries")
         for n in self._parse_names(names, libname="oseries"):
@@ -1049,12 +1103,13 @@ class DictConnector(BaseConnector, ConnectorUtil):
         self._clear_cache("oseries")
 
     def del_stress(self, names: Union[list, str]) -> None:
-        """Delete stresses from object
+        """Delete stresses from object.
 
         Parameters
         ----------
         names : Union[list, str]
             str or list of str of stresses to remove
+
         """
         lib = self.get_library("stresses")
         for n in self._parse_names(names, libname="stresses"):
@@ -1063,7 +1118,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
 
     def _get_series(self, libname: str, names: Union[list, str],
                     progressbar: bool = True) -> FrameorSeriesUnion:
-        """Internal method to get oseries or stresses
+        """Internal method to get oseries or stresses.
 
         Parameters
         ----------
@@ -1095,7 +1150,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
     def get_metadata(self, libname: str, names: Union[list, str],
                      progressbar: bool = False, as_frame: bool = True) \
             -> Union[pd.DataFrame, list]:
-        """Get metadata from object
+        """Get metadata from object.
 
         Parameters
         ----------
@@ -1113,6 +1168,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         Union[pd.DataFrame, list]
             returns list of metadata or pandas.DataFrame depending on value
             of `as_frame`
+
         """
         lib = self.get_library(libname)
         metalist = []
@@ -1134,7 +1190,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
 
     def get_oseries(self, names: Union[list, str],
                     progressbar: bool = False) -> FrameorSeriesUnion:
-        """Retrieve oseries from object
+        """Retrieve oseries from object.
 
         Parameters
         ----------
@@ -1148,12 +1204,13 @@ class DictConnector(BaseConnector, ConnectorUtil):
         dict, FrameorSeriesUnion
             returns dictionary or DataFrame/Series depending on number of
             names passed
+
         """
         return self._get_series("oseries", names, progressbar=progressbar)
 
     def get_stresses(self, names: Union[list, str],
                      progressbar: bool = False) -> FrameorSeriesUnion:
-        """Retrieve stresses from object
+        """Retrieve stresses from object.
 
         Parameters
         ----------
@@ -1167,12 +1224,13 @@ class DictConnector(BaseConnector, ConnectorUtil):
         dict, FrameorSeriesUnion
             returns dictionary or DataFrame/Series depending on number of
             names passed
+
         """
         return self._get_series("stresses", names, progressbar=progressbar)
 
     def get_models(self, names: Union[list, str],
                    progressbar: bool = False) -> Union[Model, dict]:
-        """Load models from object
+        """Load models from object.
 
         Parameters
         ----------
@@ -1203,14 +1261,16 @@ class DictConnector(BaseConnector, ConnectorUtil):
 
     @staticmethod
     def _clear_cache(libname: str) -> None:
-        """Clear cached property
+        """Clear cached property.
+
         """
         getattr(DictConnector, libname).fget.cache_clear()
 
     @property  # type: ignore
     @functools.lru_cache()
     def oseries(self):
-        """DataFrame showing overview of oseries
+        """DataFrame showing overview of oseries.
+
         """
         lib = self.get_library("oseries")
         return self.get_metadata("oseries", names=list(lib.keys()))
@@ -1218,7 +1278,8 @@ class DictConnector(BaseConnector, ConnectorUtil):
     @property  # type: ignore
     @functools.lru_cache()
     def stresses(self):
-        """DataFrame showing overview of stresses
+        """DataFrame showing overview of stresses.
+
         """
         lib = self.get_library("stresses")
         return self.get_metadata("stresses", names=list(lib.keys()))
@@ -1226,7 +1287,8 @@ class DictConnector(BaseConnector, ConnectorUtil):
     @property  # type: ignore
     @functools.lru_cache()
     def models(self):
-        """List of model names
+        """List of model names.
+
         """
         lib = self.get_library("models")
         return list(lib.keys())
