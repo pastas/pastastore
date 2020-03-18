@@ -64,7 +64,7 @@ def test_solve_models(request, prj):
 
 
 def test_oseries_distances(prj):
-    nearest = prj.get_nearest_oseries()
+    _ = prj.get_nearest_oseries()
     return
 
 

@@ -318,8 +318,7 @@ class ConnectorUtil:
         return meta
 
     def _parse_model_dict(self, mdict: dict):
-        """
-        Internal method to parse dictionary describing pastas models.
+        """Internal method to parse dictionary describing pastas models.
 
         Parameters
         ----------

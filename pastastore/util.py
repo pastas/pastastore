@@ -3,8 +3,7 @@ from typing import Optional, List
 
 def delete_pystore(path: str, name: str,
                    libraries: Optional[List[str]] = None) -> None:
-    """
-    Delete libraries from pystore.
+    """Delete libraries from pystore.
 
     Parameters
     ----------

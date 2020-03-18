@@ -112,7 +112,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         return ".".join([self.name, libname])
 
     def get_library(self, libname: str):
-        """Get Arctic library handle
+        """Get Arctic library handle.
 
         Parameters
         ----------
@@ -278,7 +278,8 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         lib.delete(name)
 
     def del_models(self, names: Union[list, str]) -> None:
-        """Delete model(s) from the database.
+        """
+        Delete model(s) from the database.
 
         Parameters
         ----------
@@ -560,7 +561,8 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         self._initialize(library_map)
 
     def __repr__(self):
-        """Representation string of the object.
+        """
+        Representation string of the object.
 
         """
         storename = self.name
@@ -1334,8 +1336,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
     @property  # type: ignore
     @functools.lru_cache()
     def stresses(self):
-        """
-        Dataframe showing overview of stresses.
+        """Dataframe showing overview of stresses.
 
         """
         lib = self.get_library("stresses")
@@ -1344,7 +1345,8 @@ class DictConnector(BaseConnector, ConnectorUtil):
     @property  # type: ignore
     @functools.lru_cache()
     def models(self):
-        """List of model names.
+        """
+        List of model names.
 
         """
         lib = self.get_library("models")

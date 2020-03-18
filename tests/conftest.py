@@ -45,7 +45,7 @@ def initialize_project(conn):
 
 @pytest.fixture(scope="module", params=["arctic", "pystore", "dict"])
 def pr(request):
-    """ fixture that yields connection object
+    """Fixture that yields connection object.
     """
     name = f"test_{request.param}"
     # connect to dbase
