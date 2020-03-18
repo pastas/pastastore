@@ -37,8 +37,7 @@ class BaseConnector(ABC):  # pragma: no cover
 
     @abstractmethod
     def add_oseries(self, series: FrameorSeriesUnion, name: str,
-                    metadata: Union[dict, None] = None,
-                    add_version: bool = False) -> None:
+                    metadata: Union[dict, None] = None, **kwargs) -> None:
         """
         Add oseries.
 
@@ -56,8 +55,7 @@ class BaseConnector(ABC):  # pragma: no cover
 
     @abstractmethod
     def add_stress(self, series: FrameorSeriesUnion, name: str, kind: str,
-                   metadata: Union[dict, None] = None,
-                   add_version: bool = False) -> None:
+                   metadata: Optional[dict] = None, **kwargs) -> None:
         """
         Add stress.
 

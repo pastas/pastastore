@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 try:
     import pypandoc
     l_d = pypandoc.convert('README.md')
-except:
+except ModuleNotFoundError:
     l_d = ''
 
 # Get the version.

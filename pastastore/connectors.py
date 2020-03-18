@@ -667,9 +667,8 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         self._add_series("oseries", series, name,
                          metadata=metadata, overwrite=overwrite)
 
-    def add_stress(self, series: FrameorSeriesUnion, name: str, kind,
-                   metadata: Optional[dict] = None,
-                   overwrite=True):
+    def add_stress(self, series: FrameorSeriesUnion, name: str, kind: str,
+                   metadata: Optional[dict] = None, overwrite=True):
         """
         Add stresses to the pystore.
 
