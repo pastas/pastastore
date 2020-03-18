@@ -56,7 +56,7 @@ pr = pp.PastasProject("my_project", conn)
 
 The database read/write/delete methods are always accessed through `pr.db` i.e.:
 ```python
-series = pr.db.get_oseries("my_oseries")
+series = pr.conn.get_oseries("my_oseries")
 ```
 
 ## Types of Connectors
