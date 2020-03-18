@@ -38,7 +38,10 @@ install:
   - pip install codecov
   - pip install pytest-cov
   - pip install pytest-dependency
+  - pip install codacy-coverage
 
 # command to run tests
 script:
   - py.test ./tests --cov=pastastore --cov-report=html
+after_success:
+  - python-codacy-coverage -r coverage.xml

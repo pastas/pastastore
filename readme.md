@@ -16,28 +16,29 @@ where they left off, without having to load everything into memory.
 The connection to the database/disk is managed by a connector object.
 Currently, two connectors are included. Both implementations are designed to
 have fast read/write operations, while also compressing the stored data.
-- [Arctic](<https://arctic.readthedocs.io/en/latest/>) is a timeseries/dataframe
-  database that sits atop [MongoDB](<https://www.mongodb.com>). Arctic supports
-  pandas.DataFrames.
 
-- [PyStore](<https://github.com/ranaroussi/pystore>) is a datastore (inspired
-  by Arctic) created for storing pandas dataframes (especially timeseries) on
-  disk. Data is stored using fastparquet and compressed with Snappy.
+  - [Arctic](<https://arctic.readthedocs.io/en/latest/>) is a timeseries/dataframe
+    database that sits atop [MongoDB](<https://www.mongodb.com>). Arctic supports
+    pandas.DataFrames.
+
+  - [PyStore](<https://github.com/ranaroussi/pystore>) is a datastore (inspired
+    by Arctic) created for storing pandas dataframes (especially timeseries) on
+    disk. Data is stored using fastparquet and compressed with Snappy.
 
 ## Dependencies
 This module has several dependencies (depending on which connector is used):
 
 If using Pystore:
-- PyStore uses [Snappy](<http://google.github.io/snappy/>), a fast and
-  efficient compression/decompression library from Google. You'll need to
-  install Snappy on your system before installing PyStore. See links for
-  installation instructions here:
-  <https://github.com/ranaroussi/pystore#dependencies>
+  - PyStore uses [Snappy](<http://google.github.io/snappy/>), a fast and
+    efficient compression/decompression library from Google. You'll need to
+    install Snappy on your system before installing PyStore. See links for
+    installation instructions here:
+    <https://github.com/ranaroussi/pystore#dependencies>
 
 If using Arctic:
-- Arctic requires MongoDB, e.g. install the Community edition
-  ([Windows](<https://fastdl.mongodb.org/win32/mongodb-win32-x86_64-2012plus-4.2.1-signed.msi>),
-  [MacOS](<https://fastdl.mongodb.org/osx/mongodb-macos-x86_64-4.2.1.tgz>)).
+  - Arctic requires MongoDB, e.g. install the Community edition
+    ([Windows](<https://fastdl.mongodb.org/win32/mongodb-win32-x86_64-2012plus-4.2.1-signed.msi>),
+    [MacOS](<https://fastdl.mongodb.org/osx/mongodb-macos-x86_64-4.2.1.tgz>)).
 
 *Optional*: if using Docker for running MongoDB see the installation
 instructions [here](<https://github.com/pastas/pastastore/tree/master/dockerfiles#running-mongodb-from-docker>) .

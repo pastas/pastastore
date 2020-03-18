@@ -47,7 +47,7 @@ class PastaStore:
 
     def __repr__(self):
         """
-        Representation string of the object
+        Representation string of the object.
 
         """
         return f"<PastasProject> {self.name}: \n - " + self.conn.__str__()
@@ -201,7 +201,7 @@ class PastaStore:
 
     def get_tmin_tmax(self, libname, names=None, progressbar=False):
         """
-        Get tmin and tmax for timeseries
+        Get tmin and tmax for timeseries.
 
         Parameters
         ----------
@@ -233,7 +233,7 @@ class PastaStore:
 
     def create_model(self, name: str, add_recharge: bool = True) -> ps.Model:
         """
-        Create a new pastas Model
+        Create a new pastas Model.
 
         Parameters
         ----------
@@ -282,7 +282,7 @@ class PastaStore:
                       return_models: bool = False, ignore_errors: bool = True,
                       **kwargs) -> Union[Tuple[dict, list], list]:
         """
-        Bulk creation of pastas models
+        Bulk creation of pastas models.
 
         Parameters
         ----------
@@ -340,9 +340,10 @@ class PastaStore:
 
     def add_recharge(self, ml: ps.Model, rfunc=ps.Gamma) -> None:
         """
-        Add recharge to a pastas model using closest precipitation and
-        evaporation timeseries in database. These are assumed to be
-        labeled with kind = 'prec' or 'evap'.
+        Add recharge to a pastas model.
+
+        Uses closest precipitation and evaporation timeseries in database.
+        These are assumed to be labeled with kind = 'prec' or 'evap'.
 
         Parameters
         ----------

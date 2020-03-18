@@ -1344,8 +1344,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
     @property  # type: ignore
     @functools.lru_cache()
     def models(self):
-        """
-        List of model names.
+        """List of model names.
 
         """
         lib = self.get_library("models")

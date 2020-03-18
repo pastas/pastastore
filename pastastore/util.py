@@ -37,8 +37,7 @@ def delete_pystore(path: str, name: str,
 
 def delete_arctic(connstr: str, name: str,
                   libraries: Optional[List[str]] = None) -> None:
-    """
-    Delete libraries from arctic database.
+    """Delete libraries from arctic database.
 
     Parameters
     ----------

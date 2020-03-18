@@ -360,8 +360,7 @@ class ConnectorUtil:
                               series: FrameorSeriesUnion,
                               metadata: Optional[dict] = None) \
             -> FrameorSeriesUnion:
-        """
-        Internal method to get column containing values from data.
+        """Internal method to get column containing values from data.
 
         Parameters
         ----------
