@@ -1,10 +1,10 @@
 from setuptools import setup, find_packages
 
-try:
-    import pypandoc
-    l_d = pypandoc.convert('README.md')
-except ModuleNotFoundError:
-    l_d = ''
+# try:
+#     import pypandoc
+#     l_d = pypandoc.convert('README.md', )
+# except ModuleNotFoundError:
+l_d = ''
 
 # Get the version.
 version: dict = {}
