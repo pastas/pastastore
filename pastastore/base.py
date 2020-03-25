@@ -396,6 +396,18 @@ class ConnectorUtil:
 
     @staticmethod
     def _validate_input_series(series):
+        """check if series is pandas.DataFrame or pandas.Series
+
+        Parameters
+        ----------
+        series : object
+            object to validate
+
+        Raises
+        ------
+        TypeError
+            if object is not of type pandas.DataFrame or pandas.Series
+        """
         if not (isinstance(series, pd.DataFrame) or
                 isinstance(series, pd.Series)):
             raise TypeError("Please provide pandas.DataFrame"
