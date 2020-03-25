@@ -393,3 +393,10 @@ class ConnectorUtil:
             elif isinstance(value_col, int):
                 series = series.iloc[:, value_col]
             return series
+
+    @staticmethod
+    def _validate_input_series(series):
+        if not (isinstance(series, pd.DataFrame) or
+                isinstance(series, pd.Series)):
+            raise TypeError("Please provide pandas.DataFrame"
+                            " or pandas.Series!")

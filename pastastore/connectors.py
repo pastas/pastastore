@@ -160,6 +160,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
             raises an Exception.
 
         """
+        self._validate_input_series(series)
         lib = self.get_library(libname)
         if name not in lib.list_symbols() or add_version:
             lib.write(name, series, metadata=metadata)
@@ -630,6 +631,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             by default True
 
         """
+        self._validate_input_series(series)
         lib = self.get_library(libname)
         lib.write(name, series, metadata=metadata, overwrite=overwrite)
         self._clear_cache(libname)
@@ -1063,6 +1065,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
             dictionary containing metadata, by default None
 
         """
+        self._validate_input_series(series)
         lib = self.get_library(libname)
         lib[name] = (metadata, series)
         self._clear_cache(libname)
