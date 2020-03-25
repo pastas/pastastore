@@ -279,7 +279,7 @@ class PastaStore:
     def create_models(self, oseries: Optional[Union[list, str]] = None,
                       add_recharge: bool = True, store: bool = False,
                       solve: bool = False, progressbar: bool = True,
-                      return_models: bool = False, ignore_errors: bool = True,
+                      return_models: bool = False, ignore_errors: bool = False,
                       **kwargs) -> Union[Tuple[dict, list], list]:
         """
         Bulk creation of pastas models.
@@ -301,7 +301,7 @@ class PastaStore:
         return_models : bool, optional
             if True, return a list of models, by default False
         ignore_errors : bool, optional
-            ignore errors while creating models, by default True
+            ignore errors while creating models, by default False
 
         Returns
         -------
@@ -333,6 +333,8 @@ class PastaStore:
                 self.conn.add_model(iml, add_version=True)
             if return_models:
                 models[o] = iml
+        if len(errors) > 0:
+            print("Warning! Errors occurred while creating models!")
         if return_models:
             return models, errors
         else:
