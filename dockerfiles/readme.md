@@ -10,7 +10,7 @@ The `docker-compose.yml` file describes the container.
 3. Run `docker-compose up -d` to start the docker container running MongoDB.
    The `-d` flag runs the container in the background. This command uses the
    `docker-compose.yml` file by default.
-4. View your runing containers with `docker ps -a`.
+4. View your running containers with `docker ps -a`.
 
 To stop the container run `docker-compose stop` in a terminal.
 

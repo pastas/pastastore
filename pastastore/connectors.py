@@ -2,6 +2,7 @@ import functools
 import json
 from importlib import import_module
 from typing import Optional, Union
+from copy import deepcopy
 
 import pandas as pd
 from tqdm import tqdm
@@ -1312,7 +1313,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         names = self._parse_names(names, libname="models")
 
         for n in (tqdm(names) if progressbar else names):
-            data = lib[n]
+            data = deepcopy(lib[n])
             ml = self._parse_model_dict(data)
             models.append(ml)
         if len(models) == 1:
