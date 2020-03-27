@@ -221,14 +221,16 @@ class PastaStore:
 
         """
 
-        lib = self.conn.get_library(libname)
         names = self.conn._parse_names(names, libname=libname)
         tmintmax = pd.DataFrame(index=names, columns=["tmin", "tmax"],
                                 dtype='datetime64[ns]')
         for n in (tqdm(names) if progressbar else names):
-            s = lib.read(n)
-            tmintmax.loc[n, "tmin"] = s.data.first_valid_index()
-            tmintmax.loc[n, "tmax"] = s.data.last_valid_index()
+            if libname == "oseries":
+                s = self.conn.get_oseries(n)
+            else:
+                s = self.conn.get_stresses(n)
+            tmintmax.loc[n, "tmin"] = s.first_valid_index()
+            tmintmax.loc[n, "tmax"] = s.last_valid_index()
         return tmintmax
 
     def create_model(self, name: str, add_recharge: bool = True) -> ps.Model:
