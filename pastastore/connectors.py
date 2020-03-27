@@ -2,6 +2,7 @@ import functools
 import json
 from importlib import import_module
 from typing import Optional, Union
+from copy import deepcopy
 
 import pandas as pd
 from tqdm import tqdm
@@ -160,6 +161,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
             raises an Exception.
 
         """
+        self._validate_input_series(series)
         lib = self.get_library(libname)
         if name not in lib.list_symbols() or add_version:
             lib.write(name, series, metadata=metadata)
@@ -630,6 +632,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             by default True
 
         """
+        self._validate_input_series(series)
         lib = self.get_library(libname)
         lib.write(name, series, metadata=metadata, overwrite=overwrite)
         self._clear_cache(libname)
@@ -1063,6 +1066,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
             dictionary containing metadata, by default None
 
         """
+        self._validate_input_series(series)
         lib = self.get_library(libname)
         lib[name] = (metadata, series)
         self._clear_cache(libname)
@@ -1228,6 +1232,8 @@ class DictConnector(BaseConnector, ConnectorUtil):
         names = self._parse_names(names, libname=libname)
         for n in (tqdm(names) if progressbar else names):
             imeta = lib[n][0]
+            if imeta is None:
+                imeta = {}
             if "name" not in imeta.keys():
                 imeta["name"] = n
             metalist.append(imeta)
@@ -1307,7 +1313,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         names = self._parse_names(names, libname="models")
 
         for n in (tqdm(names) if progressbar else names):
-            data = lib[n]
+            data = deepcopy(lib[n])
             ml = self._parse_model_dict(data)
             models.append(ml)
         if len(models) == 1:
