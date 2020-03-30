@@ -435,7 +435,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         """
         return self._get_series("stresses", names, progressbar=progressbar)
 
-    def get_models(self, names: Union[list, str],
+    def get_models(self, names: Union[list, str], return_dict: bool = False,
                    progressbar: bool = False) -> Union[ps.Model, dict]:
         """
         Load models from database.
@@ -444,6 +444,9 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         ----------
         names : str or list of str
             names of the models to load
+        return_dict : bool, optional
+            return model dictionary instead of pastas.Model (much
+            faster for obtaining parameters, for example)
         progressbar : bool, optional
             show progressbar, by default False
 
@@ -461,7 +464,10 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         for n in (tqdm(names) if progressbar else names):
             item = lib.read(n)
             data = item.data
-            ml = self._parse_model_dict(data)
+            if return_dict:
+                ml = item.data
+            else:
+                ml = self._parse_model_dict(data)
             models.append(ml)
         if len(models) == 1:
             return models[0]
@@ -894,7 +900,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         """
         return self._get_series("stresses", names, progressbar=progressbar)
 
-    def get_models(self, names: Union[list, str],
+    def get_models(self, names: Union[list, str], return_dict : bool = False,
                    progressbar: bool = False) -> Union[ps.Model, dict]:
         """
         Load models from pystore.
@@ -903,6 +909,9 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         ----------
         names : str or list of str
             name(s) of the models to load
+        return_dict : bool, optional
+            return model dictionary instead of pastas.Model object
+            (much faster for obtaining parameters, for example)
         progressbar : bool, optional
             show progressbar, by default False
 
@@ -921,10 +930,11 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
 
             jsonpath = lib._item_path(n).joinpath("metadata.json")
             data = load_mod.load(jsonpath)  # type: ignore
-
-            ml = self._parse_model_dict(data)
+            if return_dict:
+                ml = data
+            else:
+                ml = self._parse_model_dict(data)
             models.append(ml)
-
         if len(models) == 1:
             return models[0]
         else:
@@ -1289,7 +1299,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         """
         return self._get_series("stresses", names, progressbar=progressbar)
 
-    def get_models(self, names: Union[list, str],
+    def get_models(self, names: Union[list, str], return_dict : bool = False,
                    progressbar: bool = False) -> Union[Model, dict]:
         """
         Load models from object.
@@ -1298,6 +1308,9 @@ class DictConnector(BaseConnector, ConnectorUtil):
         ----------
         names : str or list of str
             names of the models to load
+        return_dict : bool, optional
+            return model dictionary instead of pastas.Model object
+            (much faster for obtaining parameters, for example)
         progressbar : bool, optional
             show progressbar, by default False
 
@@ -1314,7 +1327,10 @@ class DictConnector(BaseConnector, ConnectorUtil):
 
         for n in (tqdm(names) if progressbar else names):
             data = deepcopy(lib[n])
-            ml = self._parse_model_dict(data)
+            if return_dict:
+                ml = data
+            else:
+                ml = self._parse_model_dict(data)
             models.append(ml)
         if len(models) == 1:
             return models[0]
