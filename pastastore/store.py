@@ -1,3 +1,5 @@
+import json
+import os
 from typing import Union, Tuple, Optional
 
 from tqdm import tqdm
@@ -44,6 +46,16 @@ class PastaStore:
         """
         self.name = name
         self.conn = connector
+        self._register_connector_methods()
+
+    def _register_connector_methods(self):
+        """Internal method for registering connector methods
+        """
+        methods = [func for func in dir(self.conn) if
+                   callable(getattr(self.conn, func)) and
+                   not func.startswith("_")]
+        for meth in methods:
+            setattr(self, meth, getattr(self.conn, meth))
 
     def __repr__(self):
         """
@@ -491,3 +503,71 @@ class PastaStore:
             results_list.append(iresults)
 
         return pd.concat(results_list, axis=1).transpose()
+
+    def to_zip(self, fname: str, progressbar: bool = True):
+        """Write data to zipfile.
+
+        Parameters
+        ----------
+        fname : str
+            name of zipfile
+        progressbar : bool, optional
+            show progressbar, by default True
+
+        """
+        from zipfile import ZipFile, ZIP_DEFLATED
+        with ZipFile(fname, "w", compression=ZIP_DEFLATED) as archive:
+            # oseries
+            self.conn._series_to_archive(archive, "oseries",
+                                         progressbar=progressbar)
+            # stresses
+            self.conn._series_to_archive(archive, "stresses",
+                                         progressbar=progressbar)
+            # models
+            self.conn._models_to_archive(archive, progressbar=progressbar)
+
+    @classmethod
+    def from_zip(cls, fname: str, conn, storename: Optional[str] = None):
+        """Load PastaStore from zipfile.
+
+        Parameters
+        ----------
+        fname : str
+            pathname of zipfile
+        conn : Connector object
+            connector for storing loaded data
+        storename : str, optional
+            name of the PastaStore, by default None, which
+            defaults to the name of the Connector.
+
+        Returns
+        -------
+        pastastore.PastaStore
+            return PastaStore containing data from zipfile
+
+        """
+        from zipfile import ZipFile
+        with ZipFile(fname, "r") as archive:
+            for f in archive.namelist():
+                libname, fjson = os.path.split(f)
+                if libname in ["stresses", "oseries"]:
+                    s = pd.read_json(archive.open(f))
+                    conn._add_series(libname, s, fjson.split(".")[0])
+                elif libname in ["models"]:
+                    ml = json.load(archive.open(f))
+                    conn.add_model(ml)
+        if storename is None:
+            storename = conn.name
+        return cls(storename, conn)
+
+    @property
+    def oseries(self):
+        return self.conn.oseries
+
+    @property
+    def stresses(self):
+        return self.conn.stresses
+
+    @property
+    def models(self):
+        return self.conn.models
