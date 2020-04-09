@@ -1,3 +1,4 @@
+import os
 import warnings
 import pytest
 from pytest_dependency import depends
@@ -11,6 +12,14 @@ with warnings.catch_warnings():
 def test_create_model(prj):
     ml = prj.create_model("oseries1")
     return ml
+
+
+@pytest.mark.dependency()
+def test_properties(prj):
+    _ = prj.oseries
+    _ = prj.stresses
+    _ = prj.models
+    return
 
 
 @pytest.mark.dependency()
@@ -71,6 +80,16 @@ def test_oseries_distances(prj):
 
 def test_repr(prj):
     return prj.__repr__()
+
+def test_to_from_zip(request, prj):
+    zipname = f"test_{prj.type}.zip"
+    prj.to_zip(zipname, progressbar=False)
+    conn = pst.DictConnector("test")
+    try:
+        _ = pst.PastaStore.from_zip(zipname, conn)
+    finally:
+        os.remove(zipname)
+    return
 
 
 def test_delete_db(prj):
