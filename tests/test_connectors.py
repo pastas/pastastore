@@ -18,6 +18,32 @@ def test_get_library(pr):
     return olib
 
 
+def test_add_get_series(request, pr):
+    o1 = pd.Series(index=range(10), data=1.0)
+    o1.name = "test_series"
+    pr.add_oseries(o1, "test_series", metadata=None)
+    o2 = pr.get_oseries("test_series")
+    try:
+        assert isinstance(o2, pd.Series)
+        assert (o1 == o2).all()
+    finally:
+        pr.del_oseries("test_series")
+    return
+
+
+def test_add_get_dataframe(request, pr):
+    o1 = pd.DataFrame(data=1.0, columns=["test_df"], index=range(10))
+    o1.index.name = "test_idx"
+    pr.add_oseries(o1, "test_df", metadata=None)
+    o2 = pr.get_oseries("test_df")
+    try:
+        assert isinstance(o2, pd.DataFrame)
+        assert (o1 == o2).all().all()
+    finally:
+        pr.del_oseries("test_df")
+    return
+
+
 @pytest.mark.dependency()
 def test_add_oseries(pr):
     o = pd.read_csv("./tests/data/obs.csv", index_col=0, parse_dates=True)
