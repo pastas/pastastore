@@ -1,8 +1,8 @@
 import functools
 import json
+from copy import deepcopy
 from importlib import import_module
 from typing import Optional, Union
-from copy import deepcopy
 
 import pandas as pd
 from tqdm import tqdm
@@ -238,14 +238,15 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         self._add_series("stresses", series, name=name,
                          metadata=metadata, add_version=add_version)
 
-    def add_model(self, ml: ps.Model, add_version: bool = False) -> None:
+    def add_model(self, ml: Union[ps.Model, dict],
+                  add_version: bool = False) -> None:
         """
         Add model to the database.
 
         Parameters
         ----------
-        ml : pastas.Model
-            pastas Model to add to the database
+        ml : pastas.Model or dict
+            pastas Model or dictionary to add to the database
         add_version : bool, optional
             if True, add new version of existing model, by default False
 
@@ -258,8 +259,17 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         """
         lib = self.get_library("models")
         if ml.name not in lib.list_symbols() or add_version:
-            mldict = ml.to_dict(series=False)
-            lib.write(ml.name, mldict, metadata=ml.oseries.metadata)
+            if isinstance(ml, ps.Model):
+                mldict = ml.to_dict(series=False)
+                name = ml.name
+                metadata = ml.oseries.metadata
+            elif isinstance(ml, dict):
+                mldict = ml
+                name = ml["name"]
+                metadata = None
+            else:
+                raise TypeError("Expected pastas.Model or dict!")
+            lib.write(name, mldict, metadata=metadata)
         else:
             raise Exception("Model with name '{}' already in store!".format(
                 ml.name))
@@ -639,8 +649,24 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
 
         """
         self._validate_input_series(series)
+        # convert to DataFrame because pystore doesn't accept pandas.Series
+        # (maybe has an easy fix, but converting to_frame for now)
+        if isinstance(series, pd.Series):
+            s = series.to_frame(name=name)
+            is_series = True
+        else:
+            s = series
+            is_series = False
+        # store info about input series to ensure same type is returned
+        if metadata is None:
+            metadata = {"_is_series": is_series}
+        else:
+            metadata["_is_series"] = is_series
+        # check if value column is passed when dataframe has multiple cols
+        if s.columns.size > 1:
+            self._validate_metadata_multi_column(metadata)
         lib = self.get_library(libname)
-        lib.write(name, series, metadata=metadata, overwrite=overwrite)
+        lib.write(name, s, metadata=metadata, overwrite=overwrite)
         self._clear_cache(libname)
 
     def add_oseries(self, series: FrameorSeriesUnion, name: str,
@@ -664,15 +690,6 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             by default True
 
         """
-        if isinstance(series, pd.DataFrame) and len(series.columns) > 1:
-            if metadata is None:
-                print("Data contains multiple columns, "
-                      "assuming values in column 0!")
-                metadata = {"value_col": 0}
-            elif not "value_col" in metadata.keys():
-                print("Data contains multiple columns, "
-                      "assuming values in column 0!")
-                metadata["value_col"] = 0
         self._add_series("oseries", series, name,
                          metadata=metadata, overwrite=overwrite)
 
@@ -702,24 +719,30 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         self._add_series("stresses", series, name,
                          metadata=metadata, overwrite=overwrite)
 
-    def add_model(self, ml: ps.Model, add_version: bool = True):
+    def add_model(self, ml: Union[ps.Model, dict], add_version: bool = True):
         """
         Add model to the pystore.
 
         Parameters
         ----------
-        ml : pastas.Model
+        ml : pastas.Model or dict
             model to write to the store
         add_version : bool, optional
             overwrite existing store model if it already exists,
             by default True
 
         """
-        mldict = ml.to_dict(series=False)
+        if isinstance(ml, ps.Model):
+            mldict = ml.to_dict(series=False)
+            name = ml.name
+        elif isinstance(ml, dict):
+            mldict = ml
+            name = ml["name"]
+        else:
+            raise TypeError("Expected ps.Model or dict!")
         jsondict = json.loads(json.dumps(mldict, cls=PastasEncoder, indent=4))
-
         collection = self.get_library("models")
-        collection.write(ml.name, pd.DataFrame(), metadata=jsondict,
+        collection.write(name, pd.DataFrame(), metadata=jsondict,
                          overwrite=add_version)
         self._clear_cache("models")
 
@@ -806,8 +829,14 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         ts = {}
         names = self._parse_names(names, libname=libname)
         for n in (tqdm(names) if progressbar else names):
-            ts[n] = lib.item(n).to_pandas()
-        # return frame if len == 1
+            item = lib.item(n)
+            s = item.to_pandas()
+            # return pd.Series if user passed in Series
+            is_series = item.metadata.pop("_is_series")
+            if is_series:
+                s = s.squeeze()
+            ts[n] = s
+        # return frame if only 1 name
         if len(ts) == 1:
             return ts[n]
         else:
@@ -848,6 +877,8 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             imeta = pystore.utils.read_metadata(lib._item_path(n))
             if "name" not in imeta.keys():
                 imeta["name"] = n
+            if "_is_series" in imeta.keys():
+                imeta.pop("_is_series")
             metalist.append(imeta)
         if as_frame:
             meta = self._meta_list_to_frame(metalist, names=names)
@@ -900,7 +931,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         """
         return self._get_series("stresses", names, progressbar=progressbar)
 
-    def get_models(self, names: Union[list, str], return_dict : bool = False,
+    def get_models(self, names: Union[list, str], return_dict: bool = False,
                    progressbar: bool = False) -> Union[ps.Model, dict]:
         """
         Load models from pystore.
@@ -1041,9 +1072,8 @@ class DictConnector(BaseConnector, ConnectorUtil):
         noseries = len(self.get_library("oseries").keys())
         nstresses = len(self.get_library("stresses").keys())
         nmodels = len(self.get_library("models").keys())
-        return "<DictConnector object> '{0}': {1} oseries, {2} stresses, {3} models".format(
-            self.name, noseries, nstresses, nmodels
-        )
+        return ("<DictConnector object> '{0}': {1} oseries, {2} stresses, "
+                "{3} models".format(self.name, noseries, nstresses, nmodels))
 
     def get_library(self, libname: str):
         """
@@ -1121,19 +1151,26 @@ class DictConnector(BaseConnector, ConnectorUtil):
             metadata["kind"] = kind
         self._add_series("stresses", series, name, metadata=metadata)
 
-    def add_model(self, ml: Model, **kwargs) -> None:
+    def add_model(self, ml: Union[ps.Model, dict], **kwargs) -> None:
         """
         Add model to object.
 
         Parameters
         ----------
-        ml : Model
-            pastas.Model to add
+        ml : pastas.Model or dict
+            pastas.Model or dictionary to add
 
         """
         lib = self.get_library("models")
-        mldict = ml.to_dict(series=False)
-        lib[ml.name] = mldict
+        if isinstance(ml, ps.Model):
+            mldict = ml.to_dict(series=False)
+            name = ml.name
+        elif isinstance(ml, dict):
+            mldict = ml
+            name = ml["name"]
+        else:
+            raise TypeError("Expected pastas.Model or dict!")
+        lib[name] = mldict
         self._clear_cache("models")
 
     def del_models(self, names: Union[list, str]) -> None:
@@ -1299,7 +1336,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         """
         return self._get_series("stresses", names, progressbar=progressbar)
 
-    def get_models(self, names: Union[list, str], return_dict : bool = False,
+    def get_models(self, names: Union[list, str], return_dict: bool = False,
                    progressbar: bool = False) -> Union[Model, dict]:
         """
         Load models from object.
