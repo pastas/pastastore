@@ -1,11 +1,15 @@
+import json
 from abc import ABC, abstractmethod, abstractproperty
 from collections.abc import Iterable
 from typing import Optional, Union
+from warnings import warn
 
 import pandas as pd
+from tqdm import tqdm
 
 import pastas as ps
 from pastas import Model
+from pastas.io.pas import PastasEncoder
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 
@@ -395,6 +399,32 @@ class ConnectorUtil:
             return series
 
     @staticmethod
+    def _validate_metadata_multi_column(metadata):
+        """Internal method for validating metadata dict.
+        Checks whether user has identified which column is holding the
+        relevant data, otherwise assumes relevant data is in column 0.
+
+        Parameters
+        ----------
+        metadata : dict
+            add "value_col" entry to metadata if not provided
+
+        """
+        if metadata is None:
+            warn("'series' contains multiple columns, "
+                 "assuming values in column 0! Pass metadata "
+                 "and set 'value_col' to name or index number of "
+                 "of data column to silence this warning.")
+            metadata = {"value_col": 0}
+        elif not "value_col" in metadata.keys():
+            warn("'series' contains multiple columns, "
+                 "assuming values in column 0! Pass metadata "
+                 "and set 'value_col' to name or index number of "
+                 "of data column to silence this warning.")
+            metadata["value_col"] = 0
+        return metadata
+
+    @staticmethod
     def _validate_input_series(series):
         """check if series is pandas.DataFrame or pandas.Series
 
@@ -412,3 +442,47 @@ class ConnectorUtil:
                 isinstance(series, pd.Series)):
             raise TypeError("Please provide pandas.DataFrame"
                             " or pandas.Series!")
+
+    def _series_to_archive(self, archive, libname: str,
+                           names: Optional[Union[list, str]] = None,
+                           progressbar: bool = True):
+        """Internal method for writing DataFrame or Series to zipfile.
+
+        Parameters
+        ----------
+        archive : zipfile.ZipFile
+            reference to an archive to write data to
+        libname : str
+            name of the library to write to zipfile
+        names : str or list of str, optional
+            names of the timeseries to write to archive, by default None,
+            which writes all timeseries to archive
+        progressbar : bool, optional
+            show progressbar, by default True
+
+        """
+        names = self._parse_names(names, libname=libname)
+        for n in (tqdm(names) if progressbar else names):
+            s = self._get_series(libname, n, progressbar=False)
+            sjson = s.to_json(orient="columns")
+            archive.writestr(f"{libname}/{n}.json", sjson)
+
+    def _models_to_archive(self, archive, names=None, progressbar=True):
+        """Internal method for writing pastas.Model to zipfile.
+
+        Parameters
+        ----------
+        archive : zipfile.ZipFile
+            reference to an archive to write data to
+        names : str or list of str, optional
+            names of the models to write to archive, by default None,
+            which writes all models to archive
+        progressbar : bool, optional
+            show progressbar, by default True
+
+        """
+        names = self._parse_names(names, libname="models")
+        for n in (tqdm(names) if progressbar else names):
+            m = self.get_models(n, return_dict=True)
+            jsondict = json.dumps(m, cls=PastasEncoder, indent=4)
+            archive.writestr(f"models/{n}.pas", jsondict)
