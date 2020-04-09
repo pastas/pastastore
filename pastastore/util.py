@@ -70,3 +70,4 @@ def delete_arctic(connstr: str, name: str,
     for l in libs:
         arc.delete_library(l)
         print(f" - deleted: {l}")
+    print("... Done!")
