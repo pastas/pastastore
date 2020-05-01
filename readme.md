@@ -55,7 +55,7 @@ typing `pip install -e .` from the module root directory.*
 ## Usage
 The following snippets show typical usage. The general idea is to first define
 the connector object. Then, the next step is to pass that connector to
-`PastaStore`.
+`PastasProject`.
 
 ### Using Arctic
 
@@ -67,7 +67,7 @@ connstr = "mongodb://localhost:27017/"
 conn = pst.ArcticConnector("my_connector", connstr)
 
 # create project for managing Pastas data and models
-store = pst.PastaStore("my_project", conn)
+store = pst.PastasProject("my_project", conn)
 ```
 ### Using Pystore
 
@@ -79,14 +79,12 @@ path = "./data/pystore"
 conn = pst.PystoreConnector("my_connector", path)
 
 # create project for managing Pastas data and models
-store = pst.PastaStore("my_project", conn)
+store = pst.PastasProject("my_project", conn)
 ```
 
-The database read/write/delete methods can be accessed through the reference
-to the connector object (i.e. `store.conn.get_oseries()`). For easy access, the
-most common methods are registered to the `store` object:
+The database read/write/delete methods are always accessed through `pr.db` i.e.:
 ```python
-series = store.get_oseries("my_oseries")
+series = store.conn.get_oseries("my_oseries")
 ```
 
 ## Types of Connectors
@@ -130,24 +128,17 @@ PyStore supports so-called snapshots (which store the current state of the
 store) but this has not been actively implemented in this module. Pystore does
 not have the same versioning capabilities as Arctic.
 
-### DictConnector
-The `DictConnector` is a very simple object that stores all
-data and models in dictionaries. The data is stored in-memory and not on disk
-and is therefore not persistent, i.e. you cannot pick up where you left off
-last time. Once you exit Python your data is lost. For small projects, this
-connector can be useful as it is extremely simple.
-
 ### Custom Connectors
 It should be relatively straightforward to write your own custom connector
-object. The `pastastore.base` module contains the `BaseConnector` class
+object. The `pastas_project.base` module contains the `BaseConnector` class
 that defines which methods and properties *must* be defined. Each Connector
 object should inherit from this class. The `BaseConnector` class also shows
 the expected call signature for each method. Following the same call signature
-should ensure that your new connector works directly with `PastaStore`.
+should ensure that your new connector works directly with `PastasProject`.
 Though extra keyword arguments can be added in the custom class.
 
 ```python
-class MyCustomConnector(BaseConnector, ConnectorUtil):
+class MyCustomConnector(BaseConnector):
     """Must override each method and property in BaseConnector, e.g."""
 
     def get_oseries(self, name, progressbar=False):
