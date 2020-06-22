@@ -462,8 +462,9 @@ class ConnectorUtil:
 
         """
         names = self._parse_names(names, libname=libname)
-        for n in (tqdm(names) if progressbar else names):
+        for n in (tqdm(names, desc=libname) if progressbar else names):
             s = self._get_series(libname, n, progressbar=False)
+            # meta = self.get_metadata(libname, n, as_frame=False)
             if isinstance(s, pd.Series):
                 s = s.to_frame()
             sjson = s.to_json(orient="columns")
@@ -484,7 +485,7 @@ class ConnectorUtil:
 
         """
         names = self._parse_names(names, libname="models")
-        for n in (tqdm(names) if progressbar else names):
+        for n in (tqdm(names, desc="models") if progressbar else names):
             m = self.get_models(n, return_dict=True)
             jsondict = json.dumps(m, cls=PastasEncoder, indent=4)
             archive.writestr(f"models/{n}.pas", jsondict)
