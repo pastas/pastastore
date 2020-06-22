@@ -391,6 +391,8 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         names = self._parse_names(names, libname=libname)
         for n in (tqdm(names) if progressbar else names):
             imeta = lib.read_metadata(n).metadata
+            if imeta is None:
+                imeta = {}
             if "name" not in imeta.keys():
                 imeta["name"] = n
             metalist.append(imeta)
