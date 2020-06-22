@@ -81,12 +81,14 @@ def test_oseries_distances(prj):
 def test_repr(prj):
     return prj.__repr__()
 
+
 def test_to_from_zip(request, prj):
     zipname = f"test_{prj.type}.zip"
     prj.to_zip(zipname, progressbar=False)
     conn = pst.DictConnector("test")
     try:
-        _ = pst.PastaStore.from_zip(zipname, conn)
+        store = pst.PastaStore.from_zip(zipname, conn)
+        # assert not store.oseries.empty
     finally:
         os.remove(zipname)
     return
@@ -98,3 +100,18 @@ def test_delete_db(prj):
     elif prj.conn.conn_type == "pystore":
         pst.util.delete_pystore(prj.conn.path, prj.conn.name)
     return
+
+
+if __name__ == "__main__":
+    import os
+
+    os.chdir("..")
+    
+    from conftest import initialize_project
+
+    conn = pst.DictConnector("test")
+    store = initialize_project(conn)
+    store.to_zip("test.zip")
+
+    conn2 = pst.DictConnector("test2")
+    store2 = pst.PastaStore.from_zip("test.zip", conn2)
