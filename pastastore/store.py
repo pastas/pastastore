@@ -551,7 +551,8 @@ class PastaStore:
             for f in archive.namelist():
                 libname, fjson = os.path.split(f)
                 if libname in ["stresses", "oseries"]:
-                    s = pd.read_json(archive.open(f))
+                    s = pd.read_json(archive.open(f),
+                                     orient="columns")
                     conn._add_series(libname, s, fjson.split(".")[0])
                 elif libname in ["models"]:
                     ml = json.load(archive.open(f))
