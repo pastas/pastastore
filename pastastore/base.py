@@ -464,6 +464,8 @@ class ConnectorUtil:
         names = self._parse_names(names, libname=libname)
         for n in (tqdm(names) if progressbar else names):
             s = self._get_series(libname, n, progressbar=False)
+            if isinstance(s, pd.Series):
+                s = s.to_frame()
             sjson = s.to_json(orient="columns")
             archive.writestr(f"{libname}/{n}.json", sjson)
 
