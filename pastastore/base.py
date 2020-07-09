@@ -15,35 +15,30 @@ FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 
 
 class BaseConnector(ABC):  # pragma: no cover
-    """
-    Metaclass for connecting to data management sources.
+    """Metaclass for connecting to data management sources.
 
     For example, MongoDB through Arctic, Pystore, or other databases.
-    Create your own connection to a data source by writing a
-    a class that inherits from this BaseConnector. Your class
-    has to override each method and property.
-
+    Create your own connection to a data source by writing a a class
+    that inherits from this BaseConnector. Your class has to override
+    each method and property.
     """
     _default_library_names = ["oseries", "stresses", "models"]
 
     @abstractmethod
     def get_library(self, libname: str):
-        """
-        Get library handle.
+        """Get library handle.
 
         Parameters
         ----------
         libname : str,
             name of the library
-
         """
         pass
 
     @abstractmethod
     def add_oseries(self, series: FrameorSeriesUnion, name: str,
                     metadata: Union[dict, None] = None, **kwargs) -> None:
-        """
-        Add oseries.
+        """Add oseries.
 
         Parameters
         ----------
@@ -53,15 +48,13 @@ class BaseConnector(ABC):  # pragma: no cover
             name of the series
         metadata : Optional[dict], optional
             dictionary containing metadata, by default None
-
         """
         pass
 
     @abstractmethod
     def add_stress(self, series: FrameorSeriesUnion, name: str, kind: str,
                    metadata: Optional[dict] = None, **kwargs) -> None:
-        """
-        Add stress.
+        """Add stress.
 
         Parameters
         ----------
@@ -73,67 +66,57 @@ class BaseConnector(ABC):  # pragma: no cover
             label specifying type of stress (i.e. 'prec' or 'evap')
         metadata : Optional[dict], optional
             dictionary containing metadata, by default None
-
         """
         pass
 
     @abstractmethod
     def add_model(self, ml: Model, **kwargs) -> None:
-        """
-        Add model.
+        """Add model.
 
         Parameters
         ----------
         ml : Model
             pastas.Model
-
         """
         pass
 
     @abstractmethod
     def del_models(self, names: Union[list, str]) -> None:
-        """
-        Delete model.
+        """Delete model.
 
         Parameters
         ----------
         names : Union[list, str]
             str or list of str of model names to delete
-
         """
         pass
 
     @abstractmethod
     def del_oseries(self, names: Union[list, str]) -> None:
-        """
-        Delete oseries.
+        """Delete oseries.
 
         Parameters
         ----------
         names : Union[list, str]
             str or list of str of oseries names to delete
-
         """
         pass
 
     @abstractmethod
     def del_stress(self, names: Union[list, str]) -> None:
-        """
-        Delete stresses.
+        """Delete stresses.
 
         Parameters
         ----------
         names : Union[list, str]
             str or list of str of stresses to delete
-
         """
         pass
 
     @abstractmethod
     def get_metadata(self, libname: str, names: Union[list, str],
                      progressbar: bool = False, as_frame: bool = True) -> Union[pd.DataFrame, dict]:
-        """
-        Get metadata for oseries or stress.
+        """Get metadata for oseries or stress.
 
         Parameters
         ----------
@@ -150,15 +133,13 @@ class BaseConnector(ABC):  # pragma: no cover
         -------
         Union[pd.DataFrame, dict]
             dictionary or pandas.DataFrame depending on value of `as_frame`.
-
         """
         pass
 
     @abstractmethod
     def get_oseries(self, names: Union[list, str],
                     progressbar: bool = False) -> FrameorSeriesUnion:
-        """
-        Get oseries.
+        """Get oseries.
 
         Parameters
         ----------
@@ -172,15 +153,13 @@ class BaseConnector(ABC):  # pragma: no cover
         dict, pandas.DataFrame
             return dictionary containing data if multiple names are passed,
             else return pandas.DataFrame or pandas.Series
-
         """
         pass
 
     @abstractmethod
     def get_stresses(self, names: Union[list, str],
                      progressbar: bool = False) -> FrameorSeriesUnion:
-        """
-        Get stresses.
+        """Get stresses.
 
         Parameters
         ----------
@@ -194,15 +173,13 @@ class BaseConnector(ABC):  # pragma: no cover
         dict, pandas.DataFrame
             return dictionary containing data if multiple names are passed,
             else return pandas.DataFrame or pandas.Series
-
         """
         pass
 
     @abstractmethod
     def get_models(self, names: Union[list, str],
                    progressbar: bool = False) -> Union[Model, dict]:
-        """
-        Get models.
+        """Get models.
 
         Parameters
         ----------
@@ -215,44 +192,31 @@ class BaseConnector(ABC):  # pragma: no cover
         -------
         Union[Model, dict]
             return pastas.Model if only one name is passed, else return dict
-
         """
         pass
 
     @abstractproperty
     def oseries(self):
-        """
-        Dataframe containing oseries overview.
-
-        """
+        """Dataframe containing oseries overview."""
         pass
 
     @abstractproperty
     def stresses(self):
-        """
-        Dataframe containing stresses overview.
-
-        """
+        """Dataframe containing stresses overview."""
         pass
 
     @abstractproperty
     def models(self):
-        """
-        List of model names.
-
-        """
+        """List of model names."""
         pass
 
 
 class ConnectorUtil:
-    """
-    Mix-in class for general Connector helper functions.
-    """
+    """Mix-in class for general Connector helper functions."""
 
     def _parse_names(self, names: Optional[Union[list, str]] = None,
                      libname: Optional[str] = "oseries") -> list:
-        """
-        Internal method to parse names kwarg, returns iterable with name(s).
+        """Internal method to parse names kwarg, returns iterable with name(s).
 
         Parameters
         ----------
@@ -265,7 +229,6 @@ class ConnectorUtil:
         -------
         list
             list of names
-
         """
         if names is None:
             if libname == "oseries":
@@ -285,8 +248,7 @@ class ConnectorUtil:
 
     @staticmethod
     def _meta_list_to_frame(metalist: list, names: list):
-        """
-        Convert list of metadata dictionaries to DataFrame.
+        """Convert list of metadata dictionaries to DataFrame.
 
         Parameters
         ----------
@@ -299,7 +261,6 @@ class ConnectorUtil:
         -------
         pandas.DataFrame
             DataFrame containing overview of metadata
-
         """
         # convert to dataframe
         if len(metalist) > 1:
@@ -320,8 +281,7 @@ class ConnectorUtil:
         return meta
 
     def _parse_model_dict(self, mdict: dict):
-        """
-        Internal method to parse dictionary describing pastas models.
+        """Internal method to parse dictionary describing pastas models.
 
         Parameters
         ----------
@@ -332,7 +292,6 @@ class ConnectorUtil:
         -------
         ml : pastas.Model
             timeseries analysis model
-
         """
         if 'series' not in mdict['oseries']:
             name = mdict["oseries"]['name']
@@ -376,7 +335,6 @@ class ConnectorUtil:
             if passed avoids retrieving dict from database,
             default is None, in which case data will be read
             from database.
-
         """
         if isinstance(series, pd.Series):
             return series
@@ -400,15 +358,14 @@ class ConnectorUtil:
 
     @staticmethod
     def _validate_metadata_multi_column(metadata):
-        """Internal method for validating metadata dict.
-        Checks whether user has identified which column is holding the
-        relevant data, otherwise assumes relevant data is in column 0.
+        """Internal method for validating metadata dict. Checks whether user
+        has identified which column is holding the relevant data, otherwise
+        assumes relevant data is in column 0.
 
         Parameters
         ----------
         metadata : dict
             add "value_col" entry to metadata if not provided
-
         """
         if metadata is None:
             warn("'series' contains multiple columns, "
@@ -426,7 +383,7 @@ class ConnectorUtil:
 
     @staticmethod
     def _validate_input_series(series):
-        """check if series is pandas.DataFrame or pandas.Series
+        """check if series is pandas.DataFrame or pandas.Series.
 
         Parameters
         ----------
@@ -442,6 +399,72 @@ class ConnectorUtil:
                 isinstance(series, pd.Series)):
             raise TypeError("Please provide pandas.DataFrame"
                             " or pandas.Series!")
+
+    def _check_oseries_in_store(self, ml: Union[ps.Model, dict]):
+        """Internal method, check if Model oseries are contained in PastaStore.
+        If not add series to the oseries library.
+
+        Parameters
+        ----------
+        ml : Union[ps.Model, dict]
+            pastas Model
+        """
+        if isinstance(ml, ps.Model):
+            name = ml.oseries.name
+            meta = ml.oseries.metadata
+            s = ml.oseries.series.copy()
+        elif isinstance(ml, dict):
+            name = ml["oseries"]["name"]
+            meta = ml["oseries"]["metadata"]
+            try:
+                s = ml["oseries"]["series"]
+            except KeyError:
+                s = None
+        else:
+            raise TypeError("Expected pastas.Model or dict!")
+        if name not in self.oseries.index:
+            warn(f"Timeseries '{name}' is not contained in store.")
+            if s is not None:
+                warn(f"Adding '{name}' to 'oseries' store!")
+                s.index.name = None
+                self.add_oseries(s, name, metadata=meta)
+
+    def _check_stresses_in_store(self, ml: Union[ps.Model, dict]):
+        """Internal method, check if stresses timeseries are contained in
+        PastaStore. If not, add timeseries to the stresses library.
+
+        Parameters
+        ----------
+        ml : Union[ps.Model, dict]
+            pastas Model
+        """
+        if isinstance(ml, ps.Model):
+            for sm in ml.stressmodels.values():
+                for s in sm.stress:
+                    if s.name not in self.stresses.index:
+                        warn(f"Timeseries '{s.name}' "
+                             "is not contained in store.")
+                        warn(f"Adding '{s.name}' to 'stresses' store!")
+                        ss = s.series
+                        ss.index.name = None
+                        self.add_stress(ss, s.name,
+                                        kind=s.metadata["kind"],
+                                        metadata=s.metadata)
+        elif isinstance(ml, dict):
+            for sm in ml["stressmodels"].values():
+                for s in sm["stress"]:
+                    if s["name"] not in self.stresses.index:
+                        warn(f"Timeseries '{s['name']}' "
+                             "is not contained in store.")
+                        if "series" in s:
+                            warn(f"Adding '{s['name']}' to 'stresses' store!")
+                            ss = s["series"]
+                            ss.index.name = None
+                            self.add_stress(ss, s["name"],
+                                            kind=s["metadata"]["kind"],
+                                            metadata=s["metadata"])
+        else:
+            raise TypeError("Expected pastas.Model or dict!")
 
     def _series_to_archive(self, archive, libname: str,
                            names: Optional[Union[list, str]] = None,
@@ -459,7 +482,6 @@ class ConnectorUtil:
             which writes all timeseries to archive
         progressbar : bool, optional
             show progressbar, by default True
-
         """
         names = self._parse_names(names, libname=libname)
         for n in (tqdm(names, desc=libname) if progressbar else names):
@@ -482,10 +504,30 @@ class ConnectorUtil:
             which writes all models to archive
         progressbar : bool, optional
             show progressbar, by default True
-
         """
         names = self._parse_names(names, libname="models")
         for n in (tqdm(names, desc="models") if progressbar else names):
             m = self.get_models(n, return_dict=True)
             jsondict = json.dumps(m, cls=PastasEncoder, indent=4)
             archive.writestr(f"models/{n}.pas", jsondict)
+
+
+if __name__ == "__main__":
+
+    import pastastore as pst
+    import pandas as pd
+
+    conn = pst.DictConnector("test")
+    store = pst.PastaStore("test", conn)
+
+    o = pd.read_csv("./tests/data/obs.csv", index_col=0, parse_dates=True)
+    o.index.name = "oseries1"
+    store.add_oseries(o, "oseries1", metadata={"name": "oseries1",
+                                               "x": 100000,
+                                               "y": 400000})
+
+    ml = store.create_model("oseries1", add_recharge=False)
+
+    store.del_oseries("oseries1")
+
+    store.add_model(ml)
