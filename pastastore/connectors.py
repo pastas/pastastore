@@ -269,6 +269,10 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
                 metadata = None
             else:
                 raise TypeError("Expected pastas.Model or dict!")
+            # check if oseries and stresses exist in store, if not add them
+            self._check_oseries_in_store(ml)
+            self._check_stresses_in_store(ml)
+            # write model to store
             lib.write(name, mldict, metadata=metadata)
         else:
             raise Exception("Model with name '{}' already in store!".format(
@@ -681,10 +685,8 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         ----------
         series : pandas.DataFrame of pandas.Series
             oseries data to write to the store
-        collection : str
-            name of the collection to store the data in
-        item : str
-            name of the item to store the data as
+        name : str
+            name of series
         metadata : dict, optional
             dictionary containing metadata, by default None
         overwrite : bool, optional
@@ -744,6 +746,9 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             raise TypeError("Expected ps.Model or dict!")
         jsondict = json.loads(json.dumps(mldict, cls=PastasEncoder, indent=4))
         collection = self.get_library("models")
+        # check if oseries and stresses exist in store, if not add them
+        self._check_oseries_in_store(ml)
+        self._check_stresses_in_store(ml)
         collection.write(name, pd.DataFrame(), metadata=jsondict,
                          overwrite=add_version)
         self._clear_cache("models")
@@ -1172,6 +1177,9 @@ class DictConnector(BaseConnector, ConnectorUtil):
             name = ml["name"]
         else:
             raise TypeError("Expected pastas.Model or dict!")
+        # check if oseries and stresses exist in store, if not add them
+        self._check_oseries_in_store(ml)
+        self._check_stresses_in_store(ml)
         lib[name] = mldict
         self._clear_cache("models")
 
