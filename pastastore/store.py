@@ -374,18 +374,21 @@ class PastaStore:
         # get nearest prec and evap stns
         names = []
         for var in ("prec", "evap"):
-            name = self.get_nearest_stresses(
-                ml.oseries.name, kind=var).iloc[0, 0]
-            # names.append(str(self.stresses.loc[name, "station"]))
+            try:
+                name = self.get_nearest_stresses(
+                    ml.oseries.name, kind=var).iloc[0, 0]
+            except AttributeError:
+                msg = "No precipitation or evaporation timeseries found!"
+                raise Exception(msg)
             names.append(name)
+        if len(names) == 0:
+            msg = "No precipitation or evaporation timeseries found!"
+            raise Exception(msg)
 
         # get data
         tsdict = self.conn.get_stresses(names)
         stresses = []
         for k, s in tsdict.items():
-            # TODO: two possible calls to retrieve metadata here
-            # 1 for metadata
-            # 2 if data is dataframe and data column needs to be found
             metadata = self.conn.get_metadata("stresses", k, as_frame=False)
             s = self.conn._get_dataframe_values("stresses", k, s,
                                                 metadata=metadata)
