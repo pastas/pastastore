@@ -31,9 +31,23 @@ def test_store_model(request, prj):
 
 
 @pytest.mark.dependency()
-def test_get_model(request, prj):
+def test_store_model_missing_series(request, prj):
     depends(request, [f"test_create_model[{prj.type}]",
                       f"test_store_model[{prj.type}]"])
+    ml = test_create_model(prj)
+    prj.del_models("oseries1")
+    prj.del_oseries("oseries1")
+    prj.del_stress("prec1")
+    prj.del_stress("evap1")
+    prj.add_model(ml)
+    return
+
+
+@pytest.mark.dependency()
+def test_get_model(request, prj):
+    depends(request, [f"test_create_model[{prj.type}]",
+                      f"test_store_model[{prj.type}]",
+                      f"test_store_model_missing_series[{prj.type}]"])
     ml = prj.conn.get_models("oseries1")
     return ml
 
@@ -42,6 +56,7 @@ def test_get_model(request, prj):
 def test_del_model(request, prj):
     depends(request, [f"test_create_model[{prj.type}]",
                       f"test_store_model[{prj.type}]",
+                      f"test_store_model_missing_series[{prj.type}]",
                       f"test_get_model[{prj.type}]"])
     prj.conn.del_models("oseries1")
     return
@@ -103,15 +118,5 @@ def test_delete_db(prj):
 
 
 if __name__ == "__main__":
-    import os
-
-    os.chdir("..")
-    
-    from conftest import initialize_project
-
     conn = pst.DictConnector("test")
-    store = initialize_project(conn)
-    store.to_zip("test.zip")
-
-    conn2 = pst.DictConnector("test2")
-    store2 = pst.PastaStore.from_zip("test.zip", conn2)
+    store = pst.PastaStore.from_zip("./examples/tsa_meteo.zip", conn)
