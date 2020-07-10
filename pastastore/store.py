@@ -12,8 +12,7 @@ FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 
 
 class PastaStore:
-    """
-    Pastas project for managing pastas timeseries and models.
+    """Pastas project for managing pastas timeseries and models.
 
     Requires a Connector object to provide the interface to
     the database. Different Connectors are available, e.g.:
@@ -28,12 +27,10 @@ class PastaStore:
     connector : Connector object
         object that provides the interface to the
         database, e.g. ArcticConnector (see pastastore.connectors)
-
     """
 
     def __init__(self, name: str, connector):
-        """
-        Initialize PastaStore for managing pastas timeseries and models.
+        """Initialize PastaStore for managing pastas timeseries and models.
 
         Parameters
         ----------
@@ -42,15 +39,13 @@ class PastaStore:
         connector : Connector object
             object that provides the interface to the
             database
-
         """
         self.name = name
         self.conn = connector
         self._register_connector_methods()
 
     def _register_connector_methods(self):
-        """Internal method for registering connector methods
-        """
+        """Internal method for registering connector methods."""
         methods = [func for func in dir(self.conn) if
                    callable(getattr(self.conn, func)) and
                    not func.startswith("_")]
@@ -58,16 +53,12 @@ class PastaStore:
             setattr(self, meth, getattr(self.conn, meth))
 
     def __repr__(self):
-        """
-        Representation string of the object.
-
-        """
+        """Representation string of the object."""
         return f"<PastasProject> {self.name}: \n - " + self.conn.__str__()
 
     def get_oseries_distances(self, names: Optional[Union[list, str]] = None) \
             -> FrameorSeriesUnion:
-        """
-        Method to obtain the distances in meters between the oseries.
+        """Method to obtain the distances in meters between the oseries.
 
         Parameters
         ----------
@@ -78,7 +69,6 @@ class PastaStore:
         -------
         distances: pandas.DataFrame
             Pandas DataFrame with the distances between the oseries
-
         """
         oseries_df = self.conn.oseries
         other_df = self.conn.oseries
@@ -100,8 +90,7 @@ class PastaStore:
 
     def get_nearest_oseries(self, names: Optional[Union[list, str]] = None,
                             n: int = 1) -> FrameorSeriesUnion:
-        """
-        Method to obtain the nearest (n) oseries.
+        """Method to obtain the nearest (n) oseries.
 
         Parameters
         ----------
@@ -114,7 +103,6 @@ class PastaStore:
         -------
         oseries:
             list with the names of the oseries.
-
         """
 
         distances = self.get_oseries_distances(names)
@@ -130,8 +118,7 @@ class PastaStore:
     def get_distances(self, oseries: Optional[Union[list, str]] = None,
                       stresses: Optional[Union[list, str]] = None,
                       kind: Optional[str] = None) -> FrameorSeriesUnion:
-        """
-        Method to obtain the distances in meters between the oseries and
+        """Method to obtain the distances in meters between the oseries and
         stresses.
 
         Parameters
@@ -148,7 +135,6 @@ class PastaStore:
         distances: pandas.DataFrame
             Pandas DataFrame with the distances between the oseries (index)
             and the stresses (columns).
-
         """
         oseries_df = self.conn.oseries
         stresses_df = self.conn.stresses
@@ -180,8 +166,7 @@ class PastaStore:
                              stresses: Optional[Union[list, str]] = None,
                              kind: Optional[str] = None, n: int = 1) -> \
             FrameorSeriesUnion:
-        """
-        Method to obtain the nearest (n) stresses of a specific kind.
+        """Method to obtain the nearest (n) stresses of a specific kind.
 
         Parameters
         ----------
@@ -198,7 +183,6 @@ class PastaStore:
         -------
         stresses:
             list with the names of the stresses.
-
         """
 
         distances = self.get_distances(oseries, stresses, kind)
@@ -212,8 +196,7 @@ class PastaStore:
         return data
 
     def get_tmin_tmax(self, libname, names=None, progressbar=False):
-        """
-        Get tmin and tmax for timeseries.
+        """Get tmin and tmax for timeseries.
 
         Parameters
         ----------
@@ -230,7 +213,6 @@ class PastaStore:
         -------
         tmintmax : pd.dataframe
             Dataframe containing tmin and tmax per timeseries
-
         """
 
         names = self.conn._parse_names(names, libname=libname)
@@ -246,8 +228,7 @@ class PastaStore:
         return tmintmax
 
     def create_model(self, name: str, add_recharge: bool = True) -> ps.Model:
-        """
-        Create a new pastas Model.
+        """Create a new pastas Model.
 
         Parameters
         ----------
@@ -269,7 +250,6 @@ class PastaStore:
             if data is stored as dataframe and no column is provided
         ValueError
             if timeseries is empty
-
         """
         # get oseries metadata
         meta = self.conn.get_metadata("oseries", name, as_frame=False)
@@ -295,8 +275,7 @@ class PastaStore:
                       solve: bool = False, progressbar: bool = True,
                       return_models: bool = False, ignore_errors: bool = False,
                       **kwargs) -> Union[Tuple[dict, list], list]:
-        """
-        Bulk creation of pastas models.
+        """Bulk creation of pastas models.
 
         Parameters
         ----------
@@ -323,7 +302,6 @@ class PastaStore:
             dictionary of models
         errors : list, always returned
             list of model names that could not be created
-
         """
         if oseries is None:
             oseries = self.conn.oseries.index
@@ -355,8 +333,7 @@ class PastaStore:
             return errors
 
     def add_recharge(self, ml: ps.Model, rfunc=ps.Gamma) -> None:
-        """
-        Add recharge to a pastas model.
+        """Add recharge to a pastas model.
 
         Uses closest precipitation and evaporation timeseries in database.
         These are assumed to be labeled with kind = 'prec' or 'evap'.
@@ -369,7 +346,6 @@ class PastaStore:
             response function to use for recharge in model,
             by default ps.Gamma (for different response functions, see
             pastas documentation)
-
         """
         # get nearest prec and evap stns
         names = []
@@ -404,8 +380,7 @@ class PastaStore:
                      report: bool = False, ignore_solve_errors: bool = False,
                      store_result: bool = True, progressbar: bool = True,
                      **kwargs) -> None:
-        """
-        Solves the models in the store
+        """Solves the models in the store.
 
         Parameters
         ----------
@@ -425,7 +400,6 @@ class PastaStore:
             show progressbar, default is True
         **kwargs :
             arguments are passed to the solve method.
-
         """
         if mls is None:
             mls = self.conn.models
@@ -459,8 +433,7 @@ class PastaStore:
 
     def model_results(self, mls: Optional[Union[ps.Model, list, str]] = None,
                       progressbar: bool = True):  # pragma: no cover
-        """
-        Get pastas model results.
+        """Get pastas model results.
 
         Parameters
         ----------
@@ -480,7 +453,6 @@ class PastaStore:
         ------
         ModuleNotFoundError
             if the art_tools module is not available
-
         """
         try:
             from art_tools import (
@@ -516,7 +488,6 @@ class PastaStore:
             name of zipfile
         progressbar : bool, optional
             show progressbar, by default True
-
         """
         from zipfile import ZipFile, ZIP_DEFLATED
         with ZipFile(fname, "w", compression=ZIP_DEFLATED) as archive:
@@ -547,7 +518,6 @@ class PastaStore:
         -------
         pastastore.PastaStore
             return PastaStore containing data from zipfile
-
         """
         from zipfile import ZipFile
         with ZipFile(fname, "r") as archive:

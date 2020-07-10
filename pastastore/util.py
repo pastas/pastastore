@@ -3,8 +3,7 @@ from typing import Optional, List
 
 def delete_pystore(path: str, name: str,
                    libraries: Optional[List[str]] = None) -> None:
-    """
-    Delete libraries from pystore.
+    """Delete libraries from pystore.
 
     Parameters
     ----------
@@ -15,7 +14,6 @@ def delete_pystore(path: str, name: str,
     libraries : Optional[List[str]], optional
         list of library names to delete, by default None which deletes
         all libraries
-
     """
     try:
         import pystore
@@ -37,8 +35,7 @@ def delete_pystore(path: str, name: str,
 
 def delete_arctic(connstr: str, name: str,
                   libraries: Optional[List[str]] = None) -> None:
-    """
-    Delete libraries from arctic database.
+    """Delete libraries from arctic database.
 
     Parameters
     ----------
@@ -49,7 +46,6 @@ def delete_arctic(connstr: str, name: str,
     libraries : Optional[List[str]], optional
         list of library names to delete, by default None which deletes
         all libraries
-
     """
     try:
         import arctic
