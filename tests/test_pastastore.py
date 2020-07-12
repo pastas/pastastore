@@ -97,16 +97,16 @@ def test_repr(prj):
     return prj.__repr__()
 
 
-def test_to_from_zip(request, prj):
+def test_to_from_zip(prj):
     zipname = f"test_{prj.type}.zip"
     prj.to_zip(zipname, progressbar=False)
     conn = pst.DictConnector("test")
     try:
         store = pst.PastaStore.from_zip(zipname, conn)
-        # assert not store.oseries.empty
+        assert not store.oseries.empty
     finally:
         os.remove(zipname)
-    return
+    return store
 
 
 def test_delete_db(prj):
@@ -115,8 +115,3 @@ def test_delete_db(prj):
     elif prj.conn.conn_type == "pystore":
         pst.util.delete_pystore(prj.conn.path, prj.conn.name)
     return
-
-
-if __name__ == "__main__":
-    conn = pst.DictConnector("test")
-    store = pst.PastaStore.from_zip("./examples/tsa_meteo.zip", conn)

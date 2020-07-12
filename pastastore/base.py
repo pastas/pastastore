@@ -486,11 +486,14 @@ class ConnectorUtil:
         names = self._parse_names(names, libname=libname)
         for n in (tqdm(names, desc=libname) if progressbar else names):
             s = self._get_series(libname, n, progressbar=False)
-            # meta = self.get_metadata(libname, n, as_frame=False)
             if isinstance(s, pd.Series):
                 s = s.to_frame()
             sjson = s.to_json(orient="columns")
             archive.writestr(f"{libname}/{n}.json", sjson)
+            
+            meta = self.get_metadata(libname, n, as_frame=False)
+            meta_json = json.dumps(meta, cls=PastasEncoder, indent=4)
+            archive.writestr(f"{libname}/{n}_meta.json", meta_json)
 
     def _models_to_archive(self, archive, names=None, progressbar=True):
         """Internal method for writing pastas.Model to zipfile.

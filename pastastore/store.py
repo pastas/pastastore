@@ -521,12 +521,17 @@ class PastaStore:
         """
         from zipfile import ZipFile
         with ZipFile(fname, "r") as archive:
-            for f in archive.namelist():
+            namelist = [fi for fi in archive.namelist()
+                        if not fi.endswith("_meta.json")]
+            for f in namelist:
                 libname, fjson = os.path.split(f)
                 if libname in ["stresses", "oseries"]:
                     s = pd.read_json(archive.open(f),
                                      orient="columns")
-                    conn._add_series(libname, s, fjson.split(".")[0])
+                    meta = json.load(archive.open(
+                        f.replace(".json", "_meta.json")))
+                    conn._add_series(libname, s, fjson.split(".")[0],
+                                     metadata=meta)
                 elif libname in ["models"]:
                     ml = json.load(archive.open(f))
                     conn.add_model(ml)
@@ -534,14 +539,14 @@ class PastaStore:
             storename = conn.name
         return cls(storename, conn)
 
-    @property
+    @ property
     def oseries(self):
         return self.conn.oseries
 
-    @property
+    @ property
     def stresses(self):
         return self.conn.stresses
 
-    @property
+    @ property
     def models(self):
         return self.conn.models
