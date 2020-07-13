@@ -69,16 +69,24 @@ def test_create_models(prj):
     _ = prj.conn.models
     return mls
 
+@pytest.mark.dependency()
+def test_get_parameters(request, prj):
+    depends(request, [f"test_create_models[{prj.type}]"])
+    p = prj.get_parameters(progressbar=False, param_value="initial")
+    assert p.index.size == 2
+    assert p.isna().sum().sum() == 0
+    return p
 
 @pytest.mark.dependency()
-def test_solve_models(request, prj):
+def test_solve_models_and_get_stats(request, prj):
     depends(request, [f"test_create_models[{prj.type}]"])
     mls = prj.solve_models(["oseries1", "oseries2"],
                            ignore_solve_errors=False,
                            progressbar=False,
                            store_result=True)
-    return mls
-
+    stats = prj.get_statistics(["evp", "aic"], progressbar=False)
+    assert stats.index.size == 2
+    return mls, stats
 
 # @pytest.mark.dependency()
 # def test_model_results(request, prj):

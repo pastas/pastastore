@@ -227,6 +227,89 @@ class PastaStore:
             tmintmax.loc[n, "tmax"] = s.last_valid_index()
         return tmintmax
 
+    def get_parameters(self, parameters=None, modelnames=None,
+                       param_value="optimal", progressbar=False):
+        """Get model parameters. NaN-values are returned when the parameters
+        are not present in the model or the model is not optimized.
+
+        Parameters
+        ----------
+        parameters : list of str, optional
+            names of the parameters, by default None which uses all
+            parameters from each model
+        modelnames : str or list of str, optional
+            name(s) of model(s), by default None in which case all models
+            are used
+        param_value : str, optional
+            which column to use from the model parameters dataframe, by
+            default "optimal" which retrieves the optimized parameters.
+        progressbar : bool, optional
+            show progressbar, default is False
+
+        Returns
+        -------
+        p : pandas.DataFrame
+            DataFrame containing the parameters (columns) per model (rows)
+        """
+        modelnames = self.conn._parse_names(modelnames, libname="models")
+
+        # create dataframe for results
+        p = pd.DataFrame(index=modelnames, columns=parameters)
+
+        # loop through model names and store results
+        for mlname in (tqdm(modelnames) if progressbar else modelnames):
+            mldict = self.get_models(mlname, return_dict=True,
+                                     progressbar=False)
+            if parameters is None:
+                pindex = mldict["parameters"].index
+            else:
+                pindex = parameters
+
+            for c in pindex:
+                p.loc[mlname, c] = \
+                    mldict["parameters"].loc[c, param_value]
+
+        p = p.squeeze()
+        return p.astype(float)
+
+    def get_statistics(self, statistics, modelnames=None, progressbar=False,
+                       **kwargs):
+        """Get model statistics.
+
+        Parameters
+        ----------
+        statistics : list of str
+            list of statistics to calculate, e.g. ["evp", "rsq", "rmse"], for
+            a full list see `pastas.modelstats.Statistics.ops`.
+        modelnames : list of str, optional
+            modelnames to calculates statistics for, by default None, which
+            uses all models in the store
+        progressbar : bool, optional
+            show progressbar, by default False
+        **kwargs
+            any arguments that can be passed to the methods for calculating
+            statistics
+
+        Returns
+        -------
+        s : pandas.DataFrame
+        """
+
+        modelnames = self.conn._parse_names(modelnames, libname="models")
+
+        # create dataframe for results
+        s = pd.DataFrame(index=modelnames, columns=statistics)
+
+        # loop through model names
+        for mlname in (tqdm(modelnames) if progressbar else modelnames):
+            ml = self.get_models(mlname, progressbar=False)
+            for stat in statistics:
+                value = ml.stats.__getattribute__(stat)(**kwargs)
+                s.loc[mlname, stat] = value
+
+        s = s.squeeze()
+        return s.astype(float)
+
     def create_model(self, name: str, add_recharge: bool = True) -> ps.Model:
         """Create a new pastas Model.
 

@@ -513,24 +513,3 @@ class ConnectorUtil:
             m = self.get_models(n, return_dict=True)
             jsondict = json.dumps(m, cls=PastasEncoder, indent=4)
             archive.writestr(f"models/{n}.pas", jsondict)
-
-
-if __name__ == "__main__":
-
-    import pastastore as pst
-    import pandas as pd
-
-    conn = pst.DictConnector("test")
-    store = pst.PastaStore("test", conn)
-
-    o = pd.read_csv("./tests/data/obs.csv", index_col=0, parse_dates=True)
-    o.index.name = "oseries1"
-    store.add_oseries(o, "oseries1", metadata={"name": "oseries1",
-                                               "x": 100000,
-                                               "y": 400000})
-
-    ml = store.create_model("oseries1", add_recharge=False)
-
-    store.del_oseries("oseries1")
-
-    store.add_model(ml)
