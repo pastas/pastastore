@@ -34,6 +34,9 @@ compressing the stored data.
 ## Dependencies
 This module has several dependencies (depending on which connector is used):
 
+If using in-memory connector:
+  -  No additional dependencies are required.
+
 If using Arctic:
   - Arctic requires MongoDB, e.g. install the Community edition
     ([Windows](<https://fastdl.mongodb.org/win32/mongodb-win32-x86_64-2012plus-4.2.1-signed.msi>),
@@ -127,7 +130,8 @@ connector can be useful as it is extremely simple.
 
 ### ArcticConnector
 The ArcticConnector is an object that creates a connection with a MongoDB
-database. This can be an existing or a new database. A database is created
+database. This means there must be a running MongoDB instance available. 
+This can be an existing or a new database. A database is created
 to hold the different datasets: observation timeseries, stresses timeseries
 and models. For each of these datasets a collection or library is created.
 These are named using the following convention:
