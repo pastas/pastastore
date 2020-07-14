@@ -69,6 +69,7 @@ def test_create_models(prj):
     _ = prj.conn.models
     return mls
 
+
 @pytest.mark.dependency()
 def test_get_parameters(request, prj):
     depends(request, [f"test_create_models[{prj.type}]"])
@@ -76,6 +77,7 @@ def test_get_parameters(request, prj):
     assert p.index.size == 2
     assert p.isna().sum().sum() == 0
     return p
+
 
 @pytest.mark.dependency()
 def test_solve_models_and_get_stats(request, prj):

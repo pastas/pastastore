@@ -177,8 +177,8 @@ class BaseConnector(ABC):  # pragma: no cover
         pass
 
     @abstractmethod
-    def get_models(self, names: Union[list, str],
-                   progressbar: bool = False) -> Union[Model, dict]:
+    def get_models(self, names: Union[list, str], progressbar: bool = False,
+                   **kwargs) -> Union[Model, dict]:
         """Get models.
 
         Parameters
@@ -490,7 +490,7 @@ class ConnectorUtil:
                 s = s.to_frame()
             sjson = s.to_json(orient="columns")
             archive.writestr(f"{libname}/{n}.json", sjson)
-            
+
             meta = self.get_metadata(libname, n, as_frame=False)
             meta_json = json.dumps(meta, cls=PastasEncoder, indent=4)
             archive.writestr(f"{libname}/{n}_meta.json", meta_json)
