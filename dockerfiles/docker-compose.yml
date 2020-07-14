@@ -1,9 +1,11 @@
-version: '3.7'
+version: '3.8'
 services:
   database:
     image: "mongo:latest"
     container_name: "mongodb"
     volumes:
-      - mongodata:/data/db/
+      - mongodata:/home/david/mongodata
     ports:
       - 27017:27017
+volumes:
+  mongodata:

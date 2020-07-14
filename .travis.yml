@@ -28,13 +28,14 @@ before_install:
 
 # Install dependencies
 install:
+  - pip install --upgrade pip
+  - pip install -r requirements.travis.txt
   - pip install python-snappy
   - pip install fsspec>=0.3.3
   - pip install dask[dataframe] --upgrade
   - pip install pystore
-  - pip install -r requirements.travis.txt
+  - pip install git+https://github.com/manahl/arctic.git
   - pip install -e .
-  - pip install --upgrade pip
   - pip install codecov
   - pip install pytest-cov
   - pip install pytest-dependency

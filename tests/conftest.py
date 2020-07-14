@@ -14,32 +14,32 @@ def initialize_project(conn):
     o = pd.read_csv("./tests/data/obs.csv", index_col=0, parse_dates=True)
     o.index.name = "oseries1"
     prj.conn.add_oseries(o, "oseries1", metadata={"x": 100000,
-                                                "y": 400000})
+                                                  "y": 400000})
     # oseries 2
     o = pd.read_csv("./tests/data/head_nb1.csv", index_col=0, parse_dates=True)
     o.index.name = "oseries2"
     prj.conn.add_oseries(o, "oseries2", metadata={"x": 100300,
-                                                "y": 400400})
+                                                  "y": 400400})
 
     # prec 1
     s = pd.read_csv("./tests/data/rain.csv", index_col=0, parse_dates=True)
     prj.conn.add_stress(s, "prec1", kind="prec", metadata={"x": 100000,
-                                                         "y": 400000})
+                                                           "y": 400000})
 
     # prec 2
     s = pd.read_csv("./tests/data/rain_nb1.csv", index_col=0, parse_dates=True)
     prj.conn.add_stress(s, "prec2", kind="prec", metadata={"x": 100300,
-                                                         "y": 400400})
+                                                           "y": 400400})
 
     # evap 1
     s = pd.read_csv("./tests/data/evap.csv", index_col=0, parse_dates=True)
     prj.conn.add_stress(s, "evap1", kind="evap", metadata={"x": 100000,
-                                                         "y": 400000})
+                                                           "y": 400000})
 
     # evap 2
     s = pd.read_csv("./tests/data/evap_nb1.csv", index_col=0, parse_dates=True)
     prj.conn.add_stress(s, "evap2", kind="evap", metadata={"x": 100300,
-                                                         "y": 400400})
+                                                           "y": 400400})
     return prj
 
 
