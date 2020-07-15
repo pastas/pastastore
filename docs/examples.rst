@@ -69,10 +69,10 @@ be explicitly added to the database::
    ml = store.conn.get_models("my_oseries")
 
 
-Example Notebook
-----------------
+Example Notebooks
+-----------------
 
-The link below shows a Jupyter Notebook with explanation and examples of the
+The links below link to Jupyter Notebooks with explanation and examples of the
 usage of the `pastastore` module:
 
 .. toctree::
