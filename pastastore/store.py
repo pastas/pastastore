@@ -54,7 +54,7 @@ class PastaStore:
 
     def __repr__(self):
         """Representation string of the object."""
-        return f"<PastasProject> {self.name}: \n - " + self.conn.__str__()
+        return f"<PastaStore> {self.name}: \n - " + self.conn.__str__()
 
     def get_oseries_distances(self, names: Optional[Union[list, str]] = None) \
             -> FrameorSeriesUnion:
