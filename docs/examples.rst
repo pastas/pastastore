@@ -9,6 +9,21 @@ the communication between the user and the data store. The the next step is to
 pass that connector to the `PastaStore` to access all of the useful methods
 for creating and solving timeseries models.
 
+In-memory
+---------
+
+The following snippet shows how to use PastaStore with in-memory storage of 
+timeseries and models. This is the simplest implementation because everything
+is stored in-memory (in dictionaries)::
+
+   import pastastore as pst
+
+   # define dict connector
+   conn = pst.DictConnect("my_connector")
+
+   # create project for managing Pastas data and models
+   store = pst.PastaStore("my_project", conn)
+
 Using Arctic
 ------------
 
