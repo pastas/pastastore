@@ -146,7 +146,16 @@ latex_elements = {
 
     # Additional stuff for the LaTeX preamble.
     #
-    # 'preamble': '',
+    'preamble': r"""\makeatletter
+\def\UTFviii@defined#1{%
+  \ifx#1\relax
+      -%
+  \else\expandafter
+    #1%
+  \fi
+}
+
+\makeatother""",
 
     # Latex figure (float) alignment
     #
@@ -179,7 +188,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'pastastore', 'pastastore Documentation',
-     author, 'pastastore', 'One line description of project.',
+     author, 'pastastore', 'Tools for managing timeseries and Pastas models',
      'Miscellaneous'),
 ]
 
