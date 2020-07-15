@@ -14,7 +14,7 @@ In-memory
 
 The following snippet shows how to use PastaStore with in-memory storage of 
 timeseries and models. This is the simplest implementation because everything
-is stored in-memory::
+is stored in-memory (in dictionaries)::
 
    import pastastore as pst
 
