@@ -1,14 +1,19 @@
 import json
 import os
-from typing import Union, Tuple, Optional
+import warnings
+from typing import Optional, Tuple, Union
 
-from tqdm import tqdm
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 import pastas as ps
+from pastas.io.pas import pastas_hook
+
+from .util import _custom_warning
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
+warnings.showwarning = _custom_warning
 
 
 class PastaStore:
@@ -218,7 +223,8 @@ class PastaStore:
         names = self.conn._parse_names(names, libname=libname)
         tmintmax = pd.DataFrame(index=names, columns=["tmin", "tmax"],
                                 dtype='datetime64[ns]')
-        for n in (tqdm(names) if progressbar else names):
+        desc = f"Get tmin/tmax {libname}"
+        for n in (tqdm(names, desc=desc) if progressbar else names):
             if libname == "oseries":
                 s = self.conn.get_oseries(n)
             else:
@@ -257,7 +263,8 @@ class PastaStore:
         p = pd.DataFrame(index=modelnames, columns=parameters)
 
         # loop through model names and store results
-        for mlname in (tqdm(modelnames) if progressbar else modelnames):
+        desc = "Get model parameters"
+        for mlname in (tqdm(modelnames, desc=desc) if progressbar else modelnames):
             mldict = self.get_models(mlname, return_dict=True,
                                      progressbar=False)
             if parameters is None:
@@ -301,7 +308,8 @@ class PastaStore:
         s = pd.DataFrame(index=modelnames, columns=statistics)
 
         # loop through model names
-        for mlname in (tqdm(modelnames) if progressbar else modelnames):
+        desc = "Get model statistics"
+        for mlname in (tqdm(modelnames, desc=desc) if progressbar else modelnames):
             ml = self.get_models(mlname, progressbar=False)
             for stat in statistics:
                 value = ml.stats.__getattribute__(stat)(**kwargs)
@@ -311,7 +319,7 @@ class PastaStore:
         return s.astype(float)
 
     def create_model(self, name: str, add_recharge: bool = True) -> ps.Model:
-        """Create a new pastas Model.
+        """Create a pastas Model.
 
         Parameters
         ----------
@@ -337,7 +345,7 @@ class PastaStore:
         # get oseries metadata
         meta = self.conn.get_metadata("oseries", name, as_frame=False)
         ts = self.conn.get_oseries(name)
-        # get right column of data
+        # get the right column w data
         ts = self.conn._get_dataframe_values(
             "oseries", name, ts, metadata=meta)
 
@@ -353,11 +361,12 @@ class PastaStore:
         else:
             raise ValueError("Empty timeseries!")
 
-    def create_models(self, oseries: Optional[Union[list, str]] = None,
-                      add_recharge: bool = True, store: bool = False,
-                      solve: bool = False, progressbar: bool = True,
-                      return_models: bool = False, ignore_errors: bool = False,
-                      **kwargs) -> Union[Tuple[dict, list], list]:
+    def create_models_bulk(self, oseries: Optional[Union[list, str]] = None,
+                           add_recharge: bool = True, store: bool = True,
+                           solve: bool = False, progressbar: bool = True,
+                           return_models: bool = False,
+                           ignore_errors: bool = False,
+                           **kwargs) -> Union[Tuple[dict, dict], dict]:
         """Bulk creation of pastas models.
 
         Parameters
@@ -369,7 +378,7 @@ class PastaStore:
             add recharge to the models based on closest
             precipitation and evaporation timeseries, by default True
         store : bool, optional
-            store the model, by default False
+            store the model, by default True
         solve : bool, optional
             solve the model, by default False
         progressbar : bool, optional
@@ -392,20 +401,21 @@ class PastaStore:
             oseries = [oseries]
 
         models = {}
-        errors = []
-        for o in (tqdm(oseries) if progressbar else oseries):
+        errors = {}
+        desc = "Bulk creation models"
+        for o in (tqdm(oseries, desc=desc) if progressbar else oseries):
             try:
                 iml = self.create_model(o, add_recharge=add_recharge)
             except Exception as e:
                 if ignore_errors:
-                    errors.append(o)
+                    errors[o] = e
                     continue
                 else:
                     raise e
             if solve:
                 iml.solve(**kwargs)
             if store:
-                self.conn.add_model(iml, add_version=True)
+                self.conn.add_model(iml, overwrite=True)
             if return_models:
                 models[o] = iml
         if len(errors) > 0:
@@ -489,7 +499,8 @@ class PastaStore:
         elif isinstance(mls, ps.Model):
             mls = [mls.name]
 
-        for ml_name in (tqdm(mls) if progressbar else mls):
+        desc = "Solving models"
+        for ml_name in (tqdm(mls, desc=desc) if progressbar else mls):
             ml = self.conn.get_models(ml_name)
 
             m_kwargs = {}
@@ -506,7 +517,7 @@ class PastaStore:
             try:
                 ml.solve(report=report, **m_kwargs)
                 if store_result:
-                    self.conn.add_model(ml, add_version=True)
+                    self.conn.add_model(ml, overwrite=True)
             except Exception as e:
                 if ignore_solve_errors:
                     warning = "solve error ignored for -> {}".format(ml.name)
@@ -550,7 +561,8 @@ class PastaStore:
             mls = [mls.name]
 
         results_list = []
-        for mlname in (tqdm(mls) if progressbar else mls):
+        desc = "Get model results"
+        for mlname in (tqdm(mls, desc=desc) if progressbar else mls):
             try:
                 iml = self.conn.get_models(mlname)
             except Exception as e:
@@ -562,17 +574,26 @@ class PastaStore:
 
         return pd.concat(results_list, axis=1).transpose()
 
-    def to_zip(self, fname: str, progressbar: bool = True):
+    def to_zip(self, fname: str, overwrite=False, progressbar: bool = True):
         """Write data to zipfile.
 
         Parameters
         ----------
         fname : str
             name of zipfile
+        overwrite : bool, optional
+            if True, overwrite existing file
         progressbar : bool, optional
             show progressbar, by default True
         """
         from zipfile import ZipFile, ZIP_DEFLATED
+        if os.path.exists(fname) and not overwrite:
+            raise FileExistsError("File already exists! "
+                                  "Use 'overwrite=True' to "
+                                  "force writing file.")
+        elif os.path.exists(fname):
+            warnings.warn(f"Overwriting file '{os.path.basename(fname)}'")
+
         with ZipFile(fname, "w", compression=ZIP_DEFLATED) as archive:
             # oseries
             self.conn._series_to_archive(archive, "oseries",
@@ -616,7 +637,7 @@ class PastaStore:
                     conn._add_series(libname, s, fjson.split(".")[0],
                                      metadata=meta)
                 elif libname in ["models"]:
-                    ml = json.load(archive.open(f))
+                    ml = json.load(archive.open(f), object_hook=pastas_hook)
                     conn.add_model(ml)
         if storename is None:
             storename = conn.name
