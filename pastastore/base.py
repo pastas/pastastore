@@ -2,7 +2,7 @@ import json
 from abc import ABC, abstractmethod, abstractproperty
 from collections.abc import Iterable
 from typing import Optional, Union
-from warnings import warn
+import warnings
 
 import pandas as pd
 from tqdm import tqdm
@@ -11,7 +11,10 @@ import pastas as ps
 from pastas import Model
 from pastas.io.pas import PastasEncoder
 
+from .util import _custom_warning
+
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
+warnings.showwarning = _custom_warning
 
 
 class BaseConnector(ABC):  # pragma: no cover
@@ -37,7 +40,8 @@ class BaseConnector(ABC):  # pragma: no cover
 
     @abstractmethod
     def add_oseries(self, series: FrameorSeriesUnion, name: str,
-                    metadata: Union[dict, None] = None, **kwargs) -> None:
+                    metadata: Union[dict, None] = None,
+                    overwrite: bool = False, **kwargs) -> None:
         """Add oseries.
 
         Parameters
@@ -48,12 +52,16 @@ class BaseConnector(ABC):  # pragma: no cover
             name of the series
         metadata : Optional[dict], optional
             dictionary containing metadata, by default None
+        overwrite: bool, optional
+            overwrite existing dataset with the same name,
+            by default False
         """
         pass
 
     @abstractmethod
     def add_stress(self, series: FrameorSeriesUnion, name: str, kind: str,
-                   metadata: Optional[dict] = None, **kwargs) -> None:
+                   metadata: Optional[dict] = None,
+                   overwrite: bool = False, **kwargs) -> None:
         """Add stress.
 
         Parameters
@@ -66,11 +74,14 @@ class BaseConnector(ABC):  # pragma: no cover
             label specifying type of stress (i.e. 'prec' or 'evap')
         metadata : Optional[dict], optional
             dictionary containing metadata, by default None
+        overwrite: bool, optional
+            overwrite existing dataset with the same name,
+            by default False
         """
         pass
 
     @abstractmethod
-    def add_model(self, ml: Model, **kwargs) -> None:
+    def add_model(self, ml: Model, overwrite: bool = False, **kwargs) -> None:
         """Add model.
 
         Parameters
@@ -314,7 +325,7 @@ class ConnectorUtil:
                             msg = "stress '{}' not present in project".format(
                                 name)
                             raise KeyError(msg)
-        ml = ps.io.base.load_model(mdict)
+        ml = ps.io.base._load_model(mdict)
         return ml
 
     def _get_dataframe_values(self, libname: str, name: str,
@@ -368,16 +379,16 @@ class ConnectorUtil:
             add "value_col" entry to metadata if not provided
         """
         if metadata is None:
-            warn("'series' contains multiple columns, "
-                 "assuming values in column 0! Pass metadata "
-                 "and set 'value_col' to name or index number of "
-                 "of data column to silence this warning.")
+            warnings.warn("'series' contains multiple columns, "
+                          "assuming values in column 0! Pass metadata "
+                          "and set 'value_col' to name or index number of "
+                          "of data column to silence this warning.")
             metadata = {"value_col": 0}
         elif not "value_col" in metadata.keys():
-            warn("'series' contains multiple columns, "
-                 "assuming values in column 0! Pass metadata "
-                 "and set 'value_col' to name or index number of "
-                 "of data column to silence this warning.")
+            warnings.warn("'series' contains multiple columns, "
+                          "assuming values in column 0! Pass metadata "
+                          "and set 'value_col' to name or index number of "
+                          "of data column to silence this warning.")
             metadata["value_col"] = 0
         return metadata
 
@@ -399,6 +410,21 @@ class ConnectorUtil:
                 isinstance(series, pd.Series)):
             raise TypeError("Please provide pandas.DataFrame"
                             " or pandas.Series!")
+
+    @staticmethod
+    def _set_series_name(series, name):
+        """Set series name to match user defined name in store.
+
+        Parameters
+        ----------
+        series : pandas.Series or pandas.DataFrame
+            timeseries to set name for
+        name : str
+            name of the timeseries (used in the pastastore)
+        """
+        if isinstance(series, pd.Series):
+            series.name = name
+        return series
 
     def _check_oseries_in_store(self, ml: Union[ps.Model, dict]):
         """Internal method, check if Model oseries are contained in PastaStore.
@@ -423,9 +449,9 @@ class ConnectorUtil:
         else:
             raise TypeError("Expected pastas.Model or dict!")
         if name not in self.oseries.index:
-            warn(f"Timeseries '{name}' is not contained in store.")
+            warnings.warn(f"Timeseries '{name}' is not contained in store.")
             if s is not None:
-                warn(f"Adding '{name}' to 'oseries' store!")
+                warnings.warn(f"Adding '{name}' to 'oseries' store!")
                 s.index.name = None
                 self.add_oseries(s, name, metadata=meta)
 
@@ -442,27 +468,29 @@ class ConnectorUtil:
             for sm in ml.stressmodels.values():
                 for s in sm.stress:
                     if s.name not in self.stresses.index:
-                        warn(f"Timeseries '{s.name}' "
-                             "is not contained in store.")
-                        warn(f"Adding '{s.name}' to 'stresses' store!")
+                        warnings.warn(f"Timeseries '{s.name}' "
+                                      "is not contained in store.")
+                        warnings.warn(
+                            f"Adding '{s.name}' to 'stresses' store!")
                         ss = s.series
                         ss.index.name = None
                         self.add_stress(ss, s.name,
-                                        kind=s.metadata["kind"],
-                                        metadata=s.metadata)
+                                        metadata=s.metadata,
+                                        kind=s.metadata["kind"])
         elif isinstance(ml, dict):
             for sm in ml["stressmodels"].values():
                 for s in sm["stress"]:
                     if s["name"] not in self.stresses.index:
-                        warn(f"Timeseries '{s['name']}' "
-                             "is not contained in store.")
+                        warnings.warn(f"Timeseries '{s['name']}' "
+                                      "is not contained in store.")
                         if "series" in s:
-                            warn(f"Adding '{s['name']}' to 'stresses' store!")
+                            warnings.warn(
+                                f"Adding '{s['name']}' to 'stresses' store!")
                             ss = s["series"]
                             ss.index.name = None
                             self.add_stress(ss, s["name"],
-                                            kind=s["metadata"]["kind"],
-                                            metadata=s["metadata"])
+                                            metadata=s["metadata"],
+                                            kind=s["metadata"]["kind"])
         else:
             raise TypeError("Expected pastas.Model or dict!")
 
