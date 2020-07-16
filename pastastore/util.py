@@ -3,7 +3,7 @@ from typing import Optional, List
 
 def _custom_warning(message, category=UserWarning, filename='', lineno=-1,
                     *args):
-    print(f"{filename}:{lineno}: {category}: {message}")
+    print(f"{filename}:{lineno}: {category.__name__}: {message}")
 
 
 def delete_pystore(path: str, name: str,
