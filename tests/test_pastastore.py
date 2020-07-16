@@ -64,8 +64,8 @@ def test_del_model(request, prj):
 
 @pytest.mark.dependency()
 def test_create_models(prj):
-    mls = prj.create_models(["oseries1", "oseries2"], store=True,
-                            progressbar=False)
+    mls = prj.create_models_bulk(["oseries1", "oseries2"], store=True,
+                                 progressbar=False)
     _ = prj.conn.models
     return mls
 
