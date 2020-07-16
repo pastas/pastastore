@@ -251,6 +251,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
             else:
                 raise TypeError("Expected pastas.Model or dict!")
             # check if oseries and stresses exist in store, if not add them
+            self._check_model_series_for_store(ml)
             self._check_oseries_in_store(ml)
             self._check_stresses_in_store(ml)
             # write model to store
@@ -687,9 +688,10 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         jsondict = json.loads(json.dumps(mldict, cls=PastasEncoder, indent=4))
         lib = self.get_library("models")
         # check if oseries and stresses exist in store, if not add them
-        self._check_oseries_in_store(ml)
-        self._check_stresses_in_store(ml)
         if not name in lib.items or overwrite:
+            self._check_model_series_for_store(ml)
+            self._check_oseries_in_store(ml)
+            self._check_stresses_in_store(ml)
             lib.write(name, pd.DataFrame(), metadata=jsondict,
                       overwrite=overwrite)
         else:
@@ -1098,9 +1100,10 @@ class DictConnector(BaseConnector, ConnectorUtil):
         else:
             raise TypeError("Expected pastas.Model or dict!")
         # check if oseries and stresses exist in store, if not add them
-        self._check_oseries_in_store(ml)
-        self._check_stresses_in_store(ml)
         if name not in lib or overwrite:
+            self._check_model_series_for_store(ml)
+            self._check_oseries_in_store(ml)
+            self._check_stresses_in_store(ml)
             lib[name] = mldict
         else:
             raise Exception("Model with name '{}' already in store!".format(
@@ -1170,7 +1173,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         names = self._parse_names(names, libname=libname)
         desc = f"Get {libname}"
         for n in (tqdm(names, desc=desc) if progressbar else names):
-            ts[n] = lib[n][1]
+            ts[n] = deepcopy(lib[n][1])
         # return frame if len == 1
         if len(ts) == 1:
             return ts[n]
@@ -1204,7 +1207,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         names = self._parse_names(names, libname=libname)
         desc = f"Get metadata {libname}"
         for n in (tqdm(names, desc=desc) if progressbar else names):
-            imeta = lib[n][0]
+            imeta = deepcopy(lib[n][0])
             if imeta is None:
                 imeta = {}
             if "name" not in imeta.keys():
