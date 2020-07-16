@@ -1,7 +1,7 @@
 import json
 from abc import ABC, abstractmethod, abstractproperty
 from collections.abc import Iterable
-from typing import Optional, Union
+from typing import Optional, Type, Union
 import warnings
 
 import pandas as pd
@@ -426,6 +426,22 @@ class ConnectorUtil:
             series.name = name
         return series
 
+    @staticmethod
+    def _check_model_series_for_store(ml):
+        if isinstance(ml, ps.Model):
+            series_names = [istress.series.name for sm in
+                            ml.stressmodels.values() for istress in sm.stress]
+        elif isinstance(ml, dict):
+            series_names = [istress["name"] for sm in
+                            ml["stressmodels"].values()
+                            for istress in sm["stress"]]
+        else:
+            raise TypeError("Expected pastas.Model or dict!")
+        if len(series_names) - len(set(series_names)) > 0:
+            msg = ("There are multiple stresses series with the same name! "
+                   "Each series name must be unique for the PastaStore!")
+            raise ValueError(msg)
+
     def _check_oseries_in_store(self, ml: Union[ps.Model, dict]):
         """Internal method, check if Model oseries are contained in PastaStore.
         If not add series to the oseries library.
@@ -474,6 +490,10 @@ class ConnectorUtil:
                             f"Adding '{s.name}' to 'stresses' store!")
                         ss = s.series
                         ss.index.name = None
+                        if "kind" not in s.metadata:
+                            msg = ("Stress metadata dictionary must define"
+                                   " 'kind'!")
+                            raise AttributeError(msg)
                         self.add_stress(ss, s.name,
                                         metadata=s.metadata,
                                         kind=s.metadata["kind"])
@@ -488,6 +508,10 @@ class ConnectorUtil:
                                 f"Adding '{s['name']}' to 'stresses' store!")
                             ss = s["series"]
                             ss.index.name = None
+                            if "kind" not in s["metadata"]:
+                                msg = ("Stress metadata dictionary must define"
+                                       " 'kind'!")
+                                raise AttributeError(msg)
                             self.add_stress(ss, s["name"],
                                             metadata=s["metadata"],
                                             kind=s["metadata"]["kind"])
