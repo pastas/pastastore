@@ -1,6 +1,11 @@
 from typing import Optional, List
 
 
+def _custom_warning(message, category=UserWarning, filename='', lineno=-1,
+                    *args):
+    print(f"{filename}:{lineno}: {category}: {message}")
+
+
 def delete_pystore(path: str, name: str,
                    libraries: Optional[List[str]] = None) -> None:
     """Delete libraries from pystore.
