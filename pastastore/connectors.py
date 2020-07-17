@@ -611,9 +611,6 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             metadata = {"_is_series": is_series}
         else:
             metadata["_is_series"] = is_series
-        # check if value column is passed when dataframe has multiple cols
-        if s.columns.size > 1:
-            self._validate_metadata_multi_column(metadata)
         lib = self.get_library(libname)
         if name not in lib.items or overwrite:
             lib.write(name, s, metadata=metadata, overwrite=overwrite)
