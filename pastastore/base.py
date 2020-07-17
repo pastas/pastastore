@@ -321,7 +321,12 @@ class ConnectorUtil:
                             msg = "stress '{}' not present in project".format(
                                 name)
                             raise KeyError(msg)
-        ml = ps.io.base._load_model(mdict)
+        try:
+            # pastas>=0.15.0
+            ml = ps.io.base._load_model(mdict)
+        except AttributeError:
+            # pastas<0.15.0
+            ml = ps.io.base.load_model(mdict)
         return ml
 
     @staticmethod
