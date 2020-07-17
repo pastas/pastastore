@@ -345,9 +345,6 @@ class PastaStore:
         # get oseries metadata
         meta = self.conn.get_metadata("oseries", name, as_frame=False)
         ts = self.conn.get_oseries(name)
-        # get the right column w data
-        ts = self.conn._get_dataframe_values(
-            "oseries", name, ts, metadata=meta)
 
         # convert to Timeseries and create model
         if not ts.dropna().empty:
@@ -459,8 +456,6 @@ class PastaStore:
         stresses = []
         for k, s in tsdict.items():
             metadata = self.conn.get_metadata("stresses", k, as_frame=False)
-            s = self.conn._get_dataframe_values("stresses", k, s,
-                                                metadata=metadata)
             stresses.append(ps.TimeSeries(s, name=k, metadata=metadata))
 
         # add recharge to model
