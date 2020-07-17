@@ -47,10 +47,10 @@ def test_add_get_dataframe(request, pr):
 @pytest.mark.dependency()
 def test_add_oseries(pr):
     o = pd.read_csv("./tests/data/obs.csv", index_col=0, parse_dates=True)
-    o.index.name = "oseries1"
     pr.add_oseries(o, "oseries1", metadata={"name": "oseries1",
                                             "x": 100000,
-                                            "y": 400000})
+                                            "y": 400000},
+                   overwrite=True)
     return
 
 
@@ -67,7 +67,6 @@ def test_add_stress(pr):
 def test_get_oseries(request, pr):
     depends(request, [f"test_add_oseries[{pr.type}]"])
     o = pr.get_oseries("oseries1")
-    o.index.name = "oseries1"
     return o
 
 
