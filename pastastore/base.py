@@ -1,7 +1,7 @@
 import json
 from abc import ABC, abstractmethod, abstractproperty
 from collections.abc import Iterable
-from typing import Optional, Type, Union
+from typing import Optional, Union
 import warnings
 
 import pandas as pd
@@ -395,15 +395,8 @@ class ConnectorUtil:
         """
         if isinstance(ml, ps.Model):
             name = ml.oseries.name
-            meta = ml.oseries.metadata
-            s = ml.oseries.series.copy()
         elif isinstance(ml, dict):
             name = ml["oseries"]["name"]
-            meta = ml["oseries"]["metadata"]
-            try:
-                s = ml["oseries"]["series"]
-            except KeyError:
-                s = None
         else:
             raise TypeError("Expected pastas.Model or dict!")
         if name not in self.oseries.index:
