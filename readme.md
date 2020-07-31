@@ -57,7 +57,8 @@ If using Pystore:
 
 ## Installation
 
-Install the module by typing `pip install .` from the module root directory.
+Install the module by typing `pip install pastastore`.
+
 Please note that pystore is _not_ automatically installed as a dependency
 because it requires Snappy to be (manually) installed first (see previous
 section)!
