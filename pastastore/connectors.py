@@ -1,5 +1,6 @@
 import functools
 import json
+import warnings
 from copy import deepcopy
 from importlib import import_module
 from typing import Optional, Union
@@ -12,8 +13,10 @@ from pastas import Model
 from pastas.io.pas import PastasEncoder
 
 from .base import BaseConnector, ConnectorUtil
+from .util import _custom_warning
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
+warnings.showwarning = _custom_warning
 
 
 class ArcticConnector(BaseConnector, ConnectorUtil):
@@ -121,7 +124,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
 
     def _add_series(self, libname: str, series: FrameorSeriesUnion, name: str,
                     metadata: Optional[dict] = None,
-                    add_version: bool = False) -> None:
+                    overwrite: bool = False) -> None:
         """Internal method to add series to database.
 
         Parameters
@@ -134,19 +137,20 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
             name of the timeseries
         metadata : dict, optional
             dictionary containing metadata, by default None
-        add_version : bool, optional
-            if True, add a new version of the dataset to the database,
+        overwrite : bool, optional
+            overwrite existing dataset with the same name,
             by default False
 
         Raises
         ------
         Exception
-            if add_version is False and name is already in the database
+            if overwrite is False and name is already in the database
             raises an Exception.
         """
         self._validate_input_series(series)
+        series = self._set_series_name(series, name)
         lib = self.get_library(libname)
-        if name not in lib.list_symbols() or add_version:
+        if name not in lib.list_symbols() or overwrite:
             lib.write(name, series, metadata=metadata)
             self._clear_cache(libname)
         else:
@@ -155,7 +159,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
 
     def add_oseries(self, series: FrameorSeriesUnion, name: str,
                     metadata: Optional[dict] = None,
-                    add_version: bool = False) -> None:
+                    overwrite: bool = False) -> None:
         """Add oseries to the database.
 
         Parameters
@@ -166,8 +170,8 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
             name of the timeseries
         metadata : dict, optional
             dictionary containing metadata, by default None
-        add_version : bool, optional
-            if True, add a new version of the dataset to the database,
+        overwrite : bool, optional
+            overwrite existing dataset with the same name,
             by default False
         """
         if isinstance(series, pd.DataFrame) and len(series.columns) > 1:
@@ -181,11 +185,11 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
                 metadata["value_col"] = 0
 
         self._add_series("oseries", series, name=name,
-                         metadata=metadata, add_version=add_version)
+                         metadata=metadata, overwrite=overwrite)
 
     def add_stress(self, series: FrameorSeriesUnion, name: str, kind: str,
                    metadata: Optional[dict] = None,
-                   add_version: bool = False) -> None:
+                   overwrite: bool = False) -> None:
         """Add stress to the database.
 
         Parameters
@@ -201,8 +205,8 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
             dictionary containing metadata, by default None. Also used to
             point to column containing timeseries if DataFrame is passed
             using the "value_col" key.
-        add_version : bool, optional
-            if True, add a new version of the dataset to the database,
+        overwrite : bool, optional
+            overwrite existing dataset with the same name,
             by default False
         """
         if metadata is None:
@@ -215,27 +219,27 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
 
         metadata["kind"] = kind
         self._add_series("stresses", series, name=name,
-                         metadata=metadata, add_version=add_version)
+                         metadata=metadata, overwrite=overwrite)
 
     def add_model(self, ml: Union[ps.Model, dict],
-                  add_version: bool = False) -> None:
+                  overwrite: bool = False) -> None:
         """Add model to the database.
 
         Parameters
         ----------
         ml : pastas.Model or dict
             pastas Model or dictionary to add to the database
-        add_version : bool, optional
-            if True, add new version of existing model, by default False
+        overwrite : bool, optional
+            if True, overwrite existing model, by default False
 
         Raises
         ------
         Exception
-            if add_version is False and model is already in the database
+            if overwrite is False and model is already in the database
             raises an Exception.
         """
         lib = self.get_library("models")
-        if ml.name not in lib.list_symbols() or add_version:
+        if ml.name not in lib.list_symbols() or overwrite:
             if isinstance(ml, ps.Model):
                 mldict = ml.to_dict(series=False)
                 name = ml.name
@@ -247,6 +251,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
             else:
                 raise TypeError("Expected pastas.Model or dict!")
             # check if oseries and stresses exist in store, if not add them
+            self._check_model_series_for_store(ml)
             self._check_oseries_in_store(ml)
             self._check_stresses_in_store(ml)
             # write model to store
@@ -328,7 +333,8 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
 
         ts = {}
         names = self._parse_names(names, libname=libname)
-        for n in (tqdm(names) if progressbar else names):
+        desc = f"Get {libname}"
+        for n in (tqdm(names, desc=desc) if progressbar else names):
             ts[n] = lib.read(n).data
         # return frame if len == 1
         if len(ts) == 1:
@@ -358,7 +364,8 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
 
         metalist = []
         names = self._parse_names(names, libname=libname)
-        for n in (tqdm(names) if progressbar else names):
+        desc = f"Get metadata {libname}"
+        for n in (tqdm(names, desc=desc) if progressbar else names):
             imeta = lib.read_metadata(n).metadata
             if imeta is None:
                 imeta = {}
@@ -436,7 +443,8 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         models = []
         names = self._parse_names(names, libname="models")
 
-        for n in (tqdm(names) if progressbar else names):
+        desc = "Get models"
+        for n in (tqdm(names, desc=desc) if progressbar else names):
             item = lib.read(n)
             data = item.data
             if return_dict:
@@ -571,7 +579,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
 
     def _add_series(self, libname: str, series: FrameorSeriesUnion, name: str,
                     metadata: Optional[dict] = None,
-                    overwrite=True):
+                    overwrite: bool = False):
         """Internal method to add series to a library/store.
 
         Parameters
@@ -586,11 +594,12 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             dictionary containing metadata, by default None
         overwrite : bool, optional
             overwrite existing dataset with the same name,
-            by default True
+            by default False
         """
         self._validate_input_series(series)
+        series = self._set_series_name(series, name)
         # convert to DataFrame because pystore doesn't accept pandas.Series
-        # (maybe has an easy fix, but converting to_frame for now)
+        # (maybe has an easy fix, but converting w to_frame for now)
         if isinstance(series, pd.Series):
             s = series.to_frame(name=name)
             is_series = True
@@ -602,11 +611,12 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             metadata = {"_is_series": is_series}
         else:
             metadata["_is_series"] = is_series
-        # check if value column is passed when dataframe has multiple cols
-        if s.columns.size > 1:
-            self._validate_metadata_multi_column(metadata)
         lib = self.get_library(libname)
-        lib.write(name, s, metadata=metadata, overwrite=overwrite)
+        if name not in lib.items or overwrite:
+            lib.write(name, s, metadata=metadata, overwrite=overwrite)
+        else:
+            Exception("Item with name '{0}' already"
+                      " in '{1}' library!".format(name, libname))
         self._clear_cache(libname)
 
     def add_oseries(self, series: FrameorSeriesUnion, name: str,
@@ -653,14 +663,14 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         self._add_series("stresses", series, name,
                          metadata=metadata, overwrite=overwrite)
 
-    def add_model(self, ml: Union[ps.Model, dict], add_version: bool = True):
+    def add_model(self, ml: Union[ps.Model, dict], overwrite: bool = True):
         """Add model to the pystore.
 
         Parameters
         ----------
         ml : pastas.Model or dict
             model to write to the store
-        add_version : bool, optional
+        overwrite : bool, optional
             overwrite existing store model if it already exists,
             by default True
         """
@@ -673,12 +683,17 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         else:
             raise TypeError("Expected ps.Model or dict!")
         jsondict = json.loads(json.dumps(mldict, cls=PastasEncoder, indent=4))
-        collection = self.get_library("models")
+        lib = self.get_library("models")
         # check if oseries and stresses exist in store, if not add them
-        self._check_oseries_in_store(ml)
-        self._check_stresses_in_store(ml)
-        collection.write(name, pd.DataFrame(), metadata=jsondict,
-                         overwrite=add_version)
+        if not name in lib.items or overwrite:
+            self._check_model_series_for_store(ml)
+            self._check_oseries_in_store(ml)
+            self._check_stresses_in_store(ml)
+            lib.write(name, pd.DataFrame(), metadata=jsondict,
+                      overwrite=overwrite)
+        else:
+            raise Exception("Model with name '{}' already in store!".format(
+                name))
         self._clear_cache("models")
 
     def _del_series(self, libname: str, name):
@@ -753,7 +768,8 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
 
         ts = {}
         names = self._parse_names(names, libname=libname)
-        for n in (tqdm(names) if progressbar else names):
+        desc = f"Get {libname}"
+        for n in (tqdm(names, desc=desc) if progressbar else names):
             item = lib.item(n)
             s = item.to_pandas()
             # return pd.Series if user passed in Series
@@ -796,7 +812,8 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
 
         metalist = []
         names = self._parse_names(names, libname=libname)
-        for n in (tqdm(names) if progressbar else names):
+        desc = f"Get metadata {libname}"
+        for n in (tqdm(names, desc=desc) if progressbar else names):
             imeta = pystore.utils.read_metadata(lib._item_path(n))
             if "name" not in imeta.keys():
                 imeta["name"] = n
@@ -874,8 +891,9 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         models = []
         load_mod = import_module("pastas.io.pas")  # type: ignore
         names = self._parse_names(names, libname="models")
-        for n in (tqdm(names) if progressbar else names):
 
+        desc = "Get models"
+        for n in (tqdm(names, desc=desc) if progressbar else names):
             jsonpath = lib._item_path(n).joinpath("metadata.json")
             data = load_mod.load(jsonpath)  # type: ignore
             if return_dict:
@@ -986,7 +1004,8 @@ class DictConnector(BaseConnector, ConnectorUtil):
         return getattr(self, real_libname)
 
     def _add_series(self, libname: str, series: FrameorSeriesUnion,
-                    name: str, metadata: Union[dict, None] = None) -> None:
+                    name: str, metadata: Union[dict, None] = None,
+                    overwrite: bool = False) -> None:
         """Internal method to obtain series.
 
         Parameters
@@ -999,14 +1018,23 @@ class DictConnector(BaseConnector, ConnectorUtil):
             name of the series
         metadata : dict, optional
             dictionary containing metadata, by default None
+        overwrite : bool, optional
+            overwrite existing dataset with the same name,
+            by default False
         """
         self._validate_input_series(series)
+        series = self._set_series_name(series, name)
         lib = self.get_library(libname)
-        lib[name] = (metadata, series)
+        if name not in lib or overwrite:
+            lib[name] = (metadata, series)
+        else:
+            Exception("Item with name '{0}' already"
+                      " in '{1}' library!".format(name, libname))
         self._clear_cache(libname)
 
     def add_oseries(self, series: FrameorSeriesUnion, name: str,
-                    metadata: Union[dict, None] = None, **kwargs) -> None:
+                    metadata: Union[dict, None] = None,
+                    overwrite: bool = False) -> None:
         """Add oseries to object.
 
         Parameters
@@ -1017,11 +1045,15 @@ class DictConnector(BaseConnector, ConnectorUtil):
             name of the oseries
         metadata : dict, optional
             dictionary with metadata, by default None
+        overwrite : bool, optional
+            overwrite existing timeseries, default is False
         """
-        self._add_series("oseries", series, name, metadata=metadata)
+        self._add_series("oseries", series, name, metadata=metadata,
+                         overwrite=overwrite)
 
     def add_stress(self, series: FrameorSeriesUnion, name: str, kind: str,
-                   metadata: Union[dict, None] = None, **kwargs) -> None:
+                   metadata: Union[dict, None] = None,
+                   overwrite: bool = False) -> None:
         """Add stress to object.
 
         Parameters
@@ -1034,20 +1066,26 @@ class DictConnector(BaseConnector, ConnectorUtil):
             type of stress (i.e. 'prec', 'evap', 'well', etc.)
         metadata : dict, optional
             dictionary containing metadata, by default None
+        overwrite : bool, optional
+            overwrite existing timeseries, default is False
         """
         if metadata is None:
             metadata = {}
         if kind not in metadata.keys():
             metadata["kind"] = kind
-        self._add_series("stresses", series, name, metadata=metadata)
+        self._add_series("stresses", series, name, metadata=metadata,
+                         overwrite=overwrite)
 
-    def add_model(self, ml: Union[ps.Model, dict], **kwargs) -> None:
+    def add_model(self, ml: Union[ps.Model, dict],
+                  overwrite: bool = False) -> None:
         """Add model to object.
 
         Parameters
         ----------
         ml : pastas.Model or dict
             pastas.Model or dictionary to add
+        overwrite : bool, optional
+            overwrite model in store, default is False
         """
         lib = self.get_library("models")
         if isinstance(ml, ps.Model):
@@ -1059,9 +1097,14 @@ class DictConnector(BaseConnector, ConnectorUtil):
         else:
             raise TypeError("Expected pastas.Model or dict!")
         # check if oseries and stresses exist in store, if not add them
-        self._check_oseries_in_store(ml)
-        self._check_stresses_in_store(ml)
-        lib[name] = mldict
+        if name not in lib or overwrite:
+            self._check_model_series_for_store(ml)
+            self._check_oseries_in_store(ml)
+            self._check_stresses_in_store(ml)
+            lib[name] = mldict
+        else:
+            raise Exception("Model with name '{}' already in store!".format(
+                name))
         self._clear_cache("models")
 
     def del_models(self, names: Union[list, str]) -> None:
@@ -1125,8 +1168,9 @@ class DictConnector(BaseConnector, ConnectorUtil):
         lib = self.get_library(libname)
         ts = {}
         names = self._parse_names(names, libname=libname)
-        for n in (tqdm(names) if progressbar else names):
-            ts[n] = lib[n][1]
+        desc = f"Get {libname}"
+        for n in (tqdm(names, desc=desc) if progressbar else names):
+            ts[n] = deepcopy(lib[n][1])
         # return frame if len == 1
         if len(ts) == 1:
             return ts[n]
@@ -1158,8 +1202,9 @@ class DictConnector(BaseConnector, ConnectorUtil):
         lib = self.get_library(libname)
         metalist = []
         names = self._parse_names(names, libname=libname)
-        for n in (tqdm(names) if progressbar else names):
-            imeta = lib[n][0]
+        desc = f"Get metadata {libname}"
+        for n in (tqdm(names, desc=desc) if progressbar else names):
+            imeta = deepcopy(lib[n][0])
             if imeta is None:
                 imeta = {}
             if "name" not in imeta.keys():
@@ -1237,7 +1282,8 @@ class DictConnector(BaseConnector, ConnectorUtil):
         models = []
         names = self._parse_names(names, libname="models")
 
-        for n in (tqdm(names) if progressbar else names):
+        desc = "Get models"
+        for n in (tqdm(names, desc=desc) if progressbar else names):
             data = deepcopy(lib[n])
             if return_dict:
                 ml = data

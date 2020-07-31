@@ -35,12 +35,16 @@ def test_store_model_missing_series(request, prj):
     depends(request, [f"test_create_model[{prj.type}]",
                       f"test_store_model[{prj.type}]"])
     ml = test_create_model(prj)
+    o = prj.get_oseries("oseries1")
+    meta = prj.get_metadata("oseries", "oseries1", as_frame=False)
     prj.del_models("oseries1")
     prj.del_oseries("oseries1")
-    prj.del_stress("prec1")
-    prj.del_stress("evap1")
-    prj.add_model(ml)
-    return
+    try:
+        prj.add_model(ml)
+    except LookupError:
+        prj.add_oseries(o, "oseries1", metadata=meta)
+        prj.add_model(ml)
+        return
 
 
 @pytest.mark.dependency()
@@ -64,8 +68,8 @@ def test_del_model(request, prj):
 
 @pytest.mark.dependency()
 def test_create_models(prj):
-    mls = prj.create_models(["oseries1", "oseries2"], store=True,
-                            progressbar=False)
+    mls = prj.create_models_bulk(["oseries1", "oseries2"], store=True,
+                                 progressbar=False)
     _ = prj.conn.models
     return mls
 
