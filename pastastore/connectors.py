@@ -50,7 +50,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         Parameters
         ----------
         connstr : str
-            connection string
+            connection string (e.g. 'mongodb://localhost:27017/')
         name : str
             name of the project
         library_map: dict, optional
