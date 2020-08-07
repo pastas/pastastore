@@ -318,13 +318,16 @@ class PastaStore:
         s = s.squeeze()
         return s.astype(float)
 
-    def create_model(self, name: str, add_recharge: bool = True) -> ps.Model:
+    def create_model(self, name: str, modelname: str = None,
+                     add_recharge: bool = True) -> ps.Model:
         """Create a pastas Model.
 
         Parameters
         ----------
         name : str
             name of the oseries to create a model for
+        modelname : str, optional
+            name of the model, default is None, which uses oseries name
         add_recharge : bool, optional
             add recharge to the model by looking for the closest
             precipitation and evaporation timeseries in the stresses
@@ -350,7 +353,9 @@ class PastaStore:
         if not ts.dropna().empty:
             ts = ps.TimeSeries(ts, name=name, settings="oseries",
                                metadata=meta)
-            ml = ps.Model(ts, name=name, metadata=meta)
+            if modelname is None:
+                modelname = name
+            ml = ps.Model(ts, name=modelname, metadata=meta)
 
             if add_recharge:
                 self.add_recharge(ml)
