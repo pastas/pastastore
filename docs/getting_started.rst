@@ -12,10 +12,13 @@ of Python.
 
 Dependencies
 ------------
-This module has several optional dependencies that have to be installed
-depending on which connectors are used. Both the `PystoreConnector` and
-`ArcticConnector` are dependent on external software. It is recommended to
-install these dependencies.
+This module has several optional dependencies. These are required for storing 
+timeseries and models in a database. Without these, only the in-memory option
+is available.
+
+It is up to the user to determine which dependencies they want to install. 
+Both the `PystoreConnector` and `ArcticConnector` are dependent on external 
+software. It is recommended but not required to install these dependencies.
 
 * Using Pystore requires Snappy:
    * `Snappy <http://google.github.io/snappy/>`_ is a fast and efficient
@@ -44,21 +47,20 @@ using `docker-compose`:
    The `-d` flag runs the container in the background. This command uses the
    `docker-compose.yml` file by default.
 #. View your running containers with `docker ps -a`.
-
-To stop the container run `docker-compose stop` in a terminal. Once the docker
-container has been created, starting it using the `docker-compose up`
-command might fail. In that case use the command `docker start mongodb` from
-the terminal instead. Check if it is running by typing `docker ps -a`.
+#. If you are done and wish to stop the container, run `docker-compose stop` in a terminal.
 
 Installing `pastastore`
 -----------------------
-Install the module by typing `pip install .` from the root of the module
-directory. Please note that the `pystore` module is not automatically installed
+Install the module by typing::
+  
+    pip install pastastore
+
+Please note that the `pystore` module is not automatically installed
 as a dependency because it requires Snappy to be (manually) installed first
 (see `Dependencies`_ section above)!
 
-For installing in development mode, clone the repository and install by
-typing `pip install -e .` from the module root directory.
+_For installing in development mode, clone the repository and install by
+typing `pip install -e .` from the module root directory._
 
 Using `pastastore`
 ------------------
