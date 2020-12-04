@@ -96,6 +96,9 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         for libname in libmap.values():
             if self._library_name(libname) not in self.arc.list_libraries():
                 self.arc.initialize_library(self._library_name(libname))
+            else:
+                print(f"Library '{self._library_name(libname)}'"
+                      " already exists! Linking to existing library!")
             self.libs[libname] = self.get_library(libname)
 
     def _library_name(self, libname: str) -> str:
