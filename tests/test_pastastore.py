@@ -1,7 +1,9 @@
 import os
 import warnings
-import pytest
+
 import pastas as ps
+import pytest
+from numpy import allclose
 from pytest_dependency import depends
 
 with warnings.catch_warnings():
@@ -13,6 +15,7 @@ with warnings.catch_warnings():
 def test_create_model(prj):
     ml = prj.create_model("oseries1")
     return ml
+
 
 @pytest.mark.dependency()
 def test_properties(prj):
@@ -93,12 +96,12 @@ def test_solve_models_and_get_stats(request, prj):
     stats = prj.get_statistics(["evp", "aic"], progressbar=False)
     assert stats.index.size == 2
     return mls, stats
-    
+
 
 @pytest.mark.dependency()
 def test_save_and_load_model(request, prj):
     ml = prj.create_model("oseries3")
-    sm = ps.StressModel(prj.get_stresses('well1'), ps.Hantush, 
+    sm = ps.StressModel(prj.get_stresses('well1'), ps.Hantush,
                         name='well1', settings="well")
     ml.add_stressmodel(sm)
     ml.solve(tmin='1993-1-1')
@@ -106,8 +109,7 @@ def test_save_and_load_model(request, prj):
     prj.add_model(ml, overwrite=True)
     ml2 = prj.get_models(ml.name)
     evp_ml2 = ml2.stats.evp()
-    
-    assert evp_ml == evp_ml2
+    assert allclose(evp_ml, evp_ml2)
     return ml, ml2
 
 # @pytest.mark.dependency()
@@ -140,8 +142,5 @@ def test_to_from_zip(prj):
 
 
 def test_delete_db(prj):
-    if prj.conn.conn_type == "arctic":
-        pst.util.delete_arctic(prj.conn.connstr, prj.conn.name)
-    elif prj.conn.conn_type == "pystore":
-        pst.util.delete_pystore(prj.conn.path, prj.conn.name)
+    pst.util.delete_pastastore(prj)
     return
