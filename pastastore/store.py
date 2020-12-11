@@ -468,7 +468,12 @@ class PastaStore:
             except AttributeError:
                 msg = "No precipitation or evaporation timeseries found!"
                 raise Exception(msg)
-            names.append(name)
+            if isinstance(name, float):
+                if np.isnan(name):
+                    raise ValueError(f"Unable to find nearest '{var}' stress! "
+                                    "Check X and Y coordinates.")
+            else:
+                names.append(name)
         if len(names) == 0:
             msg = "No precipitation or evaporation timeseries found!"
             raise Exception(msg)
