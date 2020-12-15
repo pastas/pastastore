@@ -50,7 +50,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         Parameters
         ----------
         connstr : str
-            connection string
+            connection string (e.g. 'mongodb://localhost:27017/')
         name : str
             name of the project
         library_map: dict, optional
@@ -96,6 +96,9 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         for libname in libmap.values():
             if self._library_name(libname) not in self.arc.list_libraries():
                 self.arc.initialize_library(self._library_name(libname))
+            else:
+                print(f"Arctic library '{self._library_name(libname)}'"
+                      " already exists! Linking to existing library!")
             self.libs[libname] = self.get_library(libname)
 
     def _library_name(self, libname: str) -> str:
@@ -554,7 +557,11 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             self.library_map = library_map
 
         for libname in self.library_map.values():
+            if libname in self.store.list_collections():
+                print(f"Pystore library '{self.path}/{libname}'' already "
+                      "exists! Linking to existing library!")
             lib = self.store.collection(libname)
+
             self.libs[libname] = lib
 
     def get_library(self, libname: str):

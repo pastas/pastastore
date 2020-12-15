@@ -7,7 +7,7 @@ with open(path.join(this_directory, 'readme.md'), encoding='utf-8') as f:
 
 # Get the version.
 version: dict = {}
-with open("version.py") as fp:
+with open("pastastore/version.py") as fp:
     exec(fp.read(), version)
 setup(
     name='pastastore',

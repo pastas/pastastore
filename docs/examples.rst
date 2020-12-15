@@ -60,17 +60,20 @@ The PastaStore object
 ---------------------
 
 The `PastaStore` object provides useful methods e.g. for creating models and
-determining which timeseries are closest to one another. The database
-read/write/delete methods are always accessed through `pr.conn` i.e.::
+determining which timeseries are closest to one another. The database 
+read/write/delete methods can be accessed directly from the `PastaStore` 
+object::
 
-   # add an observation timeseries
+   # create a timeseries
    series = pd.Series(index=pd.date_range("2019", "2020", freq="D"), data=1.0)
-   store.conn.add_oseries(series, "my_oseries", metadata={"x": 100, "y": 200})
+   
+   # add an observation timeseries
+   store.add_oseries(series, "my_oseries", metadata={"x": 100, "y": 200})
 
    # retrieve the oseries
-   oseries = store.conn.get_oseries("my_oseries")
+   oseries = store.get_oseries("my_oseries")
 
-To create a timeseries model use `store.create_model()`. Note that this does
+To create a Pastas timeseries model use `store.create_model()`. Note that this does
 not automatically add the model to the database. To store the model, it has to
 be explicitly added to the database::
 
@@ -78,10 +81,10 @@ be explicitly added to the database::
    ml = store.create_model("my_oseries", add_recharge=False)
 
    # add to the database
-   store.conn.add_model(ml)
+   store.add_model(ml)
 
    # retrieve model from database
-   ml = store.conn.get_models("my_oseries")
+   ml = store.get_models("my_oseries")
 
 
 Example Notebooks

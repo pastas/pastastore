@@ -94,7 +94,8 @@ class PastaStore:
         return distances
 
     def get_nearest_oseries(self, names: Optional[Union[list, str]] = None,
-                            n: int = 1) -> FrameorSeriesUnion:
+                            n: int = 1, maxdist: Optional[float] = None) \
+            -> FrameorSeriesUnion:
         """Method to obtain the nearest (n) oseries.
 
         Parameters
@@ -103,6 +104,8 @@ class PastaStore:
             string or list of strings with the name(s) of the oseries
         n: int
             number of oseries to obtain
+        maxdist : float, optional
+            maximum distance to consider
 
         Returns
         -------
@@ -111,11 +114,13 @@ class PastaStore:
         """
 
         distances = self.get_oseries_distances(names)
+        if maxdist is not None:
+            distances = distances.where(distances <= maxdist, np.nan)
 
         data = pd.DataFrame(columns=np.arange(n))
 
         for series in distances.index:
-            series = pd.Series(distances.loc[series].sort_values().index[:n],
+            series = pd.Series(distances.loc[series].dropna().sort_values().index[:n],
                                name=series)
             data = data.append(series)
         return data
@@ -132,8 +137,9 @@ class PastaStore:
             name(s) of the oseries
         stresses: str or list of str
             name(s) of the stresses
-        kind: str
-            string representing which kind of stresses to consider
+        kind: str, list of str
+            string or list of strings representing which kind(s) of
+            stresses to consider
 
         Returns
         -------
@@ -149,10 +155,14 @@ class PastaStore:
         if stresses is None and kind is None:
             stresses = stresses_df.index
         elif stresses is not None and kind is not None:
-            mask = stresses_df.kind == kind
+            if isinstance(kind, str):
+                kind = [kind]
+            mask = stresses_df.kind.isin(kind)
             stresses = stresses_df.loc[stresses].loc[mask].index
         elif stresses is None:
-            stresses = stresses_df.loc[stresses_df.kind == kind].index
+            if isinstance(kind, str):
+                kind = [kind]
+            stresses = stresses_df.loc[stresses_df.kind.isin(kind)].index
 
         xo = pd.to_numeric(oseries_df.loc[oseries, "x"])
         xt = pd.to_numeric(stresses_df.loc[stresses, "x"])
@@ -169,7 +179,9 @@ class PastaStore:
 
     def get_nearest_stresses(self, oseries: Optional[Union[list, str]] = None,
                              stresses: Optional[Union[list, str]] = None,
-                             kind: Optional[str] = None, n: int = 1) -> \
+                             kind: Optional[Union[list, str]] = None,
+                             n: int = 1,
+                             maxdist: Optional[float] = None) -> \
             FrameorSeriesUnion:
         """Method to obtain the nearest (n) stresses of a specific kind.
 
@@ -179,10 +191,13 @@ class PastaStore:
             string with the name of the oseries
         stresses: str or list of str
             string with the name of the stresses
-        kind:
-            string with the name of the stresses
+        kind: str, list of str, optional
+            string or list of str with the name of the kind(s)
+            of stresses to consider
         n: int
             number of stresses to obtain
+        maxdist : float, optional
+            maximum distance to consider
 
         Returns
         -------
@@ -191,11 +206,13 @@ class PastaStore:
         """
 
         distances = self.get_distances(oseries, stresses, kind)
+        if maxdist is not None:
+            distances = distances.where(distances <= maxdist, np.nan)
 
         data = pd.DataFrame(columns=np.arange(n))
 
         for series in distances.index:
-            series = pd.Series(distances.loc[series].sort_values().index[:n],
+            series = pd.Series(distances.loc[series].dropna().sort_values().index[:n],
                                name=series)
             data = data.append(series)
         return data
@@ -318,13 +335,16 @@ class PastaStore:
         s = s.squeeze()
         return s.astype(float)
 
-    def create_model(self, name: str, add_recharge: bool = True) -> ps.Model:
+    def create_model(self, name: str, modelname: str = None,
+                     add_recharge: bool = True) -> ps.Model:
         """Create a pastas Model.
 
         Parameters
         ----------
         name : str
             name of the oseries to create a model for
+        modelname : str, optional
+            name of the model, default is None, which uses oseries name
         add_recharge : bool, optional
             add recharge to the model by looking for the closest
             precipitation and evaporation timeseries in the stresses
@@ -350,7 +370,9 @@ class PastaStore:
         if not ts.dropna().empty:
             ts = ps.TimeSeries(ts, name=name, settings="oseries",
                                metadata=meta)
-            ml = ps.Model(ts, name=name, metadata=meta)
+            if modelname is None:
+                modelname = name
+            ml = ps.Model(ts, name=modelname, metadata=meta)
 
             if add_recharge:
                 self.add_recharge(ml)
@@ -446,7 +468,12 @@ class PastaStore:
             except AttributeError:
                 msg = "No precipitation or evaporation timeseries found!"
                 raise Exception(msg)
-            names.append(name)
+            if isinstance(name, float):
+                if np.isnan(name):
+                    raise ValueError(f"Unable to find nearest '{var}' stress! "
+                                    "Check X and Y coordinates.")
+            else:
+                names.append(name)
         if len(names) == 0:
             msg = "No precipitation or evaporation timeseries found!"
             raise Exception(msg)

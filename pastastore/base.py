@@ -232,7 +232,8 @@ class ConnectorUtil:
         Parameters
         ----------
         names : Union[list, str], optional
-            str or list of str or None (retrieves all names)
+            str or list of str or None or 'all' (last two options
+            retrieves all names)
         libname : str, optional
             name of library, default is 'oseries'
 
@@ -241,7 +242,11 @@ class ConnectorUtil:
         list
             list of names
         """
-        if names is None:
+        if not isinstance(names, str) and isinstance(names, Iterable):
+            return names
+        elif isinstance(names, str) and names != "all":
+            return [names]
+        elif names is None or names == "all":
             if libname == "oseries":
                 return getattr(self, "oseries").index.to_list()
             elif libname == "stresses":
@@ -250,10 +255,6 @@ class ConnectorUtil:
                 return getattr(self, "models")
             else:
                 raise ValueError(f"No library '{libname}'!")
-        elif isinstance(names, str):
-            return [names]
-        elif isinstance(names, Iterable):
-            return names
         else:
             raise NotImplementedError(f"Cannot parse 'names': {names}")
 

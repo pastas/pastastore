@@ -1,6 +1,9 @@
 import os
 import warnings
+
+import pastas as ps
 import pytest
+from numpy import allclose
 from pytest_dependency import depends
 
 with warnings.catch_warnings():
@@ -94,6 +97,21 @@ def test_solve_models_and_get_stats(request, prj):
     assert stats.index.size == 2
     return mls, stats
 
+
+@pytest.mark.dependency()
+def test_save_and_load_model(request, prj):
+    ml = prj.create_model("oseries3")
+    sm = ps.StressModel(prj.get_stresses('well1'), ps.Hantush,
+                        name='well1', settings="well")
+    ml.add_stressmodel(sm)
+    ml.solve(tmin='1993-1-1')
+    evp_ml = ml.stats.evp()
+    prj.add_model(ml, overwrite=True)
+    ml2 = prj.get_models(ml.name)
+    evp_ml2 = ml2.stats.evp()
+    assert allclose(evp_ml, evp_ml2)
+    return ml, ml2
+
 # @pytest.mark.dependency()
 # def test_model_results(request, prj):
 #     depends(request, [f"test_create_models[{prj.type}]",
@@ -124,8 +142,5 @@ def test_to_from_zip(prj):
 
 
 def test_delete_db(prj):
-    if prj.conn.conn_type == "arctic":
-        pst.util.delete_arctic(prj.conn.connstr, prj.conn.name)
-    elif prj.conn.conn_type == "pystore":
-        pst.util.delete_pystore(prj.conn.path, prj.conn.name)
+    pst.util.delete_pastastore(prj)
     return
