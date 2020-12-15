@@ -17,7 +17,11 @@ jobs:
     strategy:
       matrix:
         python-version: [3.8, 3.7]
-
+    services:
+      mongodb:
+        image: mongo:latest
+        ports:
+          - 27017:27017
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -51,3 +55,6 @@ jobs:
       - name: Test with pytest
         run: |
           pytest
+      - name: Coverage
+        run: |
+          python-codacy-coverage -r coverage.xml
