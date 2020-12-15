@@ -116,8 +116,8 @@ def delete_pastastore(pstore, libraries: Optional[List[str]] = None) -> None:
 
     Note
     ----
-    This deletes the original PastaStore object. To access 
-    data that has not been deleted, it is recommended to create a new 
+    This deletes the original PastaStore object. To access
+    data that has not been deleted, it is recommended to create a new
     PastaStore object with the same Connector settings. This also creates
     new empty libraries if they were deleted.
 

@@ -138,7 +138,7 @@ class PastaStore:
         stresses: str or list of str
             name(s) of the stresses
         kind: str, list of str
-            string or list of strings representing which kind(s) of 
+            string or list of strings representing which kind(s) of
             stresses to consider
 
         Returns
@@ -192,7 +192,7 @@ class PastaStore:
         stresses: str or list of str
             string with the name of the stresses
         kind: str, list of str, optional
-            string or list of str with the name of the kind(s) 
+            string or list of str with the name of the kind(s)
             of stresses to consider
         n: int
             number of stresses to obtain

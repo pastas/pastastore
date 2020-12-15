@@ -18,7 +18,7 @@ def initialize_project(conn):
     o = pd.read_csv("./tests/data/head_nb1.csv", index_col=0, parse_dates=True)
     prj.add_oseries(o, "oseries2", metadata={"x": 100300,
                                              "y": 400400})
-    
+
     # oseries 3
     o = pd.read_csv("./tests/data/gw_obs.csv", index_col=0, parse_dates=True)
     prj.add_oseries(o, "oseries3", metadata={"x": 165554,
@@ -43,12 +43,12 @@ def initialize_project(conn):
     s = pd.read_csv("./tests/data/evap_nb1.csv", index_col=0, parse_dates=True)
     prj.add_stress(s, "evap2", kind="evap", metadata={"x": 100300,
                                                       "y": 400400})
-    
+
     # well 1
     s = pd.read_csv("./tests/data/well.csv", index_col=0, parse_dates=True)
     prj.add_stress(s, "well1", kind="well", metadata={"x": 164691,
                                                       "y": 423579})
-    
+
     return prj
 
 
