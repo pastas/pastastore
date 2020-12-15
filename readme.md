@@ -8,10 +8,6 @@ This module contains a tool to manage
 [Pastas](https://pastas.readthedocs.io/en/latest/) timeseries and models in a
 database.
 
-The implementation is similar to pastas.Project, but in addition to managing 
-timeseries and models in-memory, it allows storage of data in a 
-database or on disk. 
-
 Storing timeseries and models in a database gives the user 
 a simple way to manage Pastas projects with the added bonus of allowing the user 
 to pick upwhere they left off, without having to (re)load everything into memory.
@@ -33,40 +29,16 @@ compressing the stored data.
       by Arctic) created for storing pandas dataframes (especially timeseries) on
       disk. Data is stored using fastparquet and compressed with Snappy.
 
-## Dependencies
-
-This module has several dependencies (depending on which connector is used):
-
-If using in-memory connector:
-
--   No additional dependencies are required.
-
-If using Arctic:
-
--   Arctic requires MongoDB, e.g. install the Community edition
-    ([Windows](https://fastdl.mongodb.org/win32/mongodb-win32-x86_64-2012plus-4.2.1-signed.msi),
-    [MacOS](https://fastdl.mongodb.org/osx/mongodb-macos-x86_64-4.2.1.tgz)).
-
--   OR, if you wish to use Docker for running MongoDB see the installation instructions [here](https://github.com/pastas/pastastore/tree/master/dockerfiles#running-mongodb-from-docker).
-
-If using Pystore:
-
--   PyStore uses [Snappy](http://google.github.io/snappy/), a fast and
-    efficient compression/decompression library from Google. You'll need to
-    install Snappy on your system before installing PyStore. See links for
-    installation instructions here:
-    <https://github.com/ranaroussi/pystore#dependencies>
-
 ## Installation
 
 Install the module by typing `pip install pastastore`.
 
-Please note that pystore is _not_ automatically installed as a dependency
-because it requires Snappy to be (manually) installed first (see previous
-section)!
+For installing in development mode, clone the repository and install by
+typing `pip install -e .` from the module root directory.
 
-_For installing in development mode, clone the repository and install by
-typing `pip install -e .` from the module root directory._
+Please note that there are external dependencies when using connectors based on 
+`pystore` or `arctic`. These dependencies are _not_ automatically installed 
+(see [Dependencies section](#dependencies))!
 
 ## Usage
 
@@ -132,3 +104,27 @@ is equivalent to:
 ```python
 series = store.get_oseries("my_oseries")
 ```
+
+## Dependencies
+
+This module has several dependencies (depending on which connector is used):
+
+If using in-memory connector:
+
+-   No additional dependencies are required.
+
+If using Arctic:
+
+-   Arctic requires MongoDB, e.g. install the Community edition
+    ([Windows](https://fastdl.mongodb.org/win32/mongodb-win32-x86_64-2012plus-4.2.1-signed.msi),
+    [MacOS](https://fastdl.mongodb.org/osx/mongodb-macos-x86_64-4.2.1.tgz)).
+
+-   OR, if you wish to use Docker for running MongoDB see the installation instructions [here](https://github.com/pastas/pastastore/tree/master/dockerfiles#running-mongodb-from-docker).
+
+If using Pystore:
+
+-   PyStore uses [Snappy](http://google.github.io/snappy/), a fast and
+    efficient compression/decompression library from Google. You'll need to
+    install Snappy on your system before installing PyStore. See links for
+    installation instructions here:
+    <https://github.com/ranaroussi/pystore#dependencies>
