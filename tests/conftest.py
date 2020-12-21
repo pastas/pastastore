@@ -66,6 +66,8 @@ def pr(request):
         pr = pst.PystoreConnector(name, path)
     elif request.param == "dict":
         pr = pst.DictConnector(name)
+    else:
+        raise ValueError("Unrecognized parameter!")
     pr.type = request.param  # added here for defining test dependencies
     yield pr
 
@@ -96,5 +98,7 @@ def prj(request):
         name = "test_project"
         connector = pst.DictConnector(name)
         prj = initialize_project(connector)
+    else:
+        raise ValueError("Unrecognized parameter!")
     prj.type = request.param  # added here for defining test dependencies
     yield prj
