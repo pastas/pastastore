@@ -366,6 +366,11 @@ class ConnectorUtil:
         """
         if isinstance(series, pd.Series):
             series.name = name
+            # empty string on index name causes trouble when reading
+            # data from Arctic VersionStores
+            if series.index.name == "":
+                series.index.name = None
+
         if isinstance(series, pd.DataFrame):
             series.columns = [name]
         return series
@@ -404,10 +409,6 @@ class ConnectorUtil:
             msg = (f"Cannot add model because oseries '{name}' "
                    "is not contained in store.")
             raise LookupError(msg)
-            # if s is not None:
-            #     warnings.warn(f"Adding '{name}' to 'oseries' store!")
-            #     s.index.name = None
-            #     self.add_oseries(s, name, metadata=meta)
 
     def _check_stresses_in_store(self, ml: Union[ps.Model, dict]):
         """Internal method, check if stresses timeseries are contained in
@@ -425,19 +426,6 @@ class ConnectorUtil:
                         msg = (f"Cannot add model because stress '{s.name}' "
                                "is not contained in store.")
                         raise LookupError(msg)
-                        # warnings.warn(f"Timeseries '{s.name}' "
-                        #               "is not contained in store.")
-                        # warnings.warn(
-                        #     f"Adding '{s.name}' to 'stresses' store!")
-                        # ss = s.series
-                        # ss.index.name = None
-                        # if "kind" not in s.metadata:
-                        #     msg = ("Stress metadata dictionary must define"
-                        #            " 'kind'!")
-                        #     raise AttributeError(msg)
-                        # self.add_stress(ss, s.name,
-                        #                 metadata=s.metadata,
-                        #                 kind=s.metadata["kind"])
         elif isinstance(ml, dict):
             for sm in ml["stressmodels"].values():
                 for s in sm["stress"]:
@@ -445,18 +433,6 @@ class ConnectorUtil:
                         msg = (f"Cannot add model because stress '{s.name}' "
                                "is not contained in store.")
                         raise LookupError(msg)
-                        # if "series" in s:
-                        #     warnings.warn(
-                        #         f"Adding '{s['name']}' to 'stresses' store!")
-                        #     ss = s["series"]
-                        #     ss.index.name = None
-                        #     if "kind" not in s["metadata"]:
-                        #         msg = ("Stress metadata dictionary must define"
-                        #                " 'kind'!")
-                        #         raise AttributeError(msg)
-                        #     self.add_stress(ss, s["name"],
-                        #                     metadata=s["metadata"],
-                        #                     kind=s["metadata"]["kind"])
         else:
             raise TypeError("Expected pastas.Model or dict!")
 
