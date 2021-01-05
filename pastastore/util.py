@@ -1,4 +1,6 @@
-from typing import Optional, List
+from typing import List, Optional
+
+from numpy.lib._iotools import NameValidator
 from tqdm import tqdm
 
 
@@ -178,3 +180,42 @@ def empty_library(pstore, libname: str,
                      if progressbar else names):
             _ = lib.pop(name)
     print(f"Emptied library {libname} in {conn.name}: {conn.__class__}")
+
+
+def validate_names(s: Optional[str] = None, d: Optional[dict] = None,
+                   replace_space: Optional[str] = "_",
+                   deletechars: Optional[str] = None, **kwargs) -> str:
+    """Remove invalid characters from string or dictionary keys.
+
+    Parameters
+    ----------
+    s : str, optional
+        remove invalid characters from string
+    d : dict, optional
+        remove invalid characters from keys from dictionary
+    replace_space : str, optional
+        replace spaces by this character, by default "_"
+    deletechars : str, optional
+        a string combining invalid characters, by default None
+
+    Returns
+    -------
+    str, dict
+        string or dict with invalid characters removed
+    """
+    validator = NameValidator(replace_space=replace_space,
+                              deletechars=deletechars,
+                              **kwargs)
+    if s is not None:
+        new_str = validator(s)  # tuple
+        if len(new_str) == 1:
+            return new_str[0]
+        else:
+            return new_str
+    elif d is not None:
+        new_dict = {}
+        for k, v in d.items():
+            new_dict[validator(k)[0]] = v
+        return new_dict
+    else:
+        raise ValueError("Provide one of 's' or 'd'!")
