@@ -13,7 +13,7 @@ from pastas import Model
 from pastas.io.pas import PastasEncoder
 
 from .base import BaseConnector, ConnectorUtil
-from .util import _custom_warning
+from .util import _custom_warning, validate_names
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning
@@ -225,7 +225,8 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
                          metadata=metadata, overwrite=overwrite)
 
     def add_model(self, ml: Union[ps.Model, dict],
-                  overwrite: bool = False) -> None:
+                  overwrite: bool = False,
+                  validate_metadata: bool = False) -> None:
         """Add model to the database.
 
         Parameters
@@ -234,6 +235,8 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
             pastas Model or dictionary to add to the database
         overwrite : bool, optional
             if True, overwrite existing model, by default False
+        validate_metadata, bool optional
+            remove unsupported characters from metadata dictionary keys
 
         Raises
         ------
@@ -246,14 +249,17 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
             if isinstance(ml, ps.Model):
                 mldict = ml.to_dict(series=False)
                 name = ml.name
-                metadata = ml.oseries.metadata
+                if validate_metadata:
+                    metadata = validate_names(d=ml.oseries.metadata)
+                else:
+                    metadata = ml.oseries.metadata
             elif isinstance(ml, dict):
                 mldict = ml
                 name = ml["name"]
                 metadata = None
             else:
                 raise TypeError("Expected pastas.Model or dict!")
-            # check if oseries and stresses exist in store, if not add them
+            # check if oseries and stresses exist in store
             self._check_model_series_for_store(ml)
             self._check_oseries_in_store(ml)
             self._check_stresses_in_store(ml)
