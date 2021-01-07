@@ -654,6 +654,9 @@ class PastaStore:
                 if libname in ["stresses", "oseries"]:
                     s = pd.read_json(archive.open(f),
                                      orient="columns")
+                    if not isinstance(s.index, pd.DatetimeIndex):
+                        s.index = pd.to_datetime(s.index, unit='ms')
+                        s = s.sort_index()
                     meta = json.load(archive.open(
                         f.replace(".json", "_meta.json")))
                     conn._add_series(libname, s, fjson.split(".")[0],
