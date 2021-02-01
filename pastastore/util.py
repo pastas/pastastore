@@ -1,6 +1,8 @@
 from typing import List, Optional
 
 from numpy.lib._iotools import NameValidator
+import pandas as pd
+import numpy as np
 from tqdm import tqdm
 
 
@@ -219,3 +221,110 @@ def validate_names(s: Optional[str] = None, d: Optional[dict] = None,
         return new_dict
     else:
         raise ValueError("Provide one of 's' or 'd'!")
+
+
+def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
+    """Compare two Pastas models.
+
+    Parameters
+    ----------
+    ml1 : pastas.Model
+        first model to compare
+    ml2 : pastas.Model
+        second model to compare
+    stats : list of str, optional
+        if provided compare these model statistics
+    detailed_comparison : bool, optional
+        if True return DataFrame containing comparison details,
+        by default False which returns True if models are equivalent
+        or False if they are not
+
+    Returns
+    -------
+    bool or pd.DataFrame
+        returns True if models are equivalent when detailed_comparison=True
+        else returns DataFrame containing comparison details.
+    """
+
+    df = pd.DataFrame(columns=["model 0", "model 1"])
+    so1 = []  # for storing series_original
+    sv1 = []  # for storing series_validated
+    ss1 = []  # for storing series
+
+    for i, ml in enumerate([ml1, ml2]):
+
+        counter = 0  # for counting stress timeseries
+        df.loc["name:", f"model {i}"] = ml.name
+
+        for k in ml.settings.keys():
+            df.loc[f"- settings: {k}"] = ml.settings.get(k)
+
+        if i == 0:
+            oso = ml.oseries.series_original
+            osv = ml.oseries.series_validated
+            oss = ml.oseries.series
+            df.loc["oseries: series_original", f"model {i}"] = True
+            df.loc["oseries: series_validated", f"model {i}"] = True
+            df.loc["oseries: series_series", f"model {i}"] = True
+        elif i == 1:
+            compare_oso = (oso == ml.oseries.series_original).all()
+            compare_osv = (osv == ml.oseries.series_original).all()
+            compare_oss = (oss == ml.oseries.series_original).all()
+            df.loc["oseries: series_original", f"model {i}"] = compare_oso
+            df.loc["oseries: series_validated", f"model {i}"] = compare_osv
+            df.loc["oseries: series_series", f"model {i}"] = compare_oss
+
+        for sm_name, sm in ml.stressmodels.items():
+
+            df.loc[f"stressmodel: '{sm_name}'"] = sm_name
+            df.loc[f"- rfunc"] = (sm.rfunc._name if sm.rfunc is not None
+                                  else "NA")
+
+            for ts in sm.stress:
+                df.loc[f"- timeseries: '{ts.name}'"] = ts.name
+                for tsk in ts.settings.keys():
+                    df.loc[f"  - {ts.name} settings: {tsk}"] = ts.settings[tsk]
+
+                if i == 0:
+                    so1.append(ts.series_original.copy())
+                    sv1.append(ts.series_validated.copy())
+                    ss1.append(ts.series.copy())
+                    df.loc[f"  - {ts.name}: series_original"] = True
+                    df.loc[f"  - {ts.name}: series_validated"] = True
+                    df.loc[f"  - {ts.name}: series"] = True
+
+                elif i == 1:
+                    compare_so1 = (so1[counter] == ts.series_original).all()
+                    compare_sv1 = (sv1[counter] == ts.series_validated).all()
+                    compare_ss1 = (ss1[counter] == ts.series).all()
+                    df.loc[f"  - {ts.name}: series_original"] = compare_so1
+                    df.loc[f"  - {ts.name}: series_validated"] = compare_sv1
+                    df.loc[f"  - {ts.name}: series"] = compare_ss1
+
+                counter += 1
+
+        for p in ml.parameters.index:
+            df.loc[f"param: {p}", f"model {i}"] = \
+                ml.parameters.loc[p, "optimal"]
+
+        if stats:
+            stats_df = ml.stats.summary(stats=stats)
+            for s in stats:
+                df.loc[f"stats: {s}", f"model {i}"] = stats_df.loc[s, "Value"]
+
+    df["comparison"] = df.iloc[:, 0] == df.iloc[:, 1]
+    # ensure NaN == NaN is not counted as a difference
+    nanmask = df.iloc[:, 0].isna() & df.iloc[:, 1].isna()
+    df.loc[nanmask, "comparison"] = True
+
+    # for stats comparison must be almost_equal
+    if stats:
+        stats_idx = [f"stats: {s}" for s in stats]
+        b = np.allclose(df.loc[stats_idx, "model 0"].astype(float).values,
+                        df.loc[stats_idx, "model 1"].astype(float).values)
+        df.loc[stats_idx, "comparison"] = b
+
+    if detailed_comparison:
+        return df
+    else:
+        return df["comparison"].all()
