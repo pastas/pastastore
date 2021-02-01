@@ -98,7 +98,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
                 self.arc.initialize_library(self._library_name(libname))
             else:
                 print(f"Arctic library '{self._library_name(libname)}'"
-                      " already exists! Linking to existing library!")
+                      " already exists. Linking to existing library.")
             self.libs[libname] = self.get_library(libname)
 
     def _library_name(self, libname: str) -> str:
@@ -585,7 +585,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         for libname in self.library_map.values():
             if libname in self.store.list_collections():
                 print(f"Pystore library '{self.path}/{libname}'' already "
-                      "exists! Linking to existing library!")
+                      "exists. Linking to existing library.")
             lib = self.store.collection(libname)
 
             self.libs[libname] = lib
