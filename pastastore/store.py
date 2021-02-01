@@ -471,7 +471,7 @@ class PastaStore:
             if isinstance(name, float):
                 if np.isnan(name):
                     raise ValueError(f"Unable to find nearest '{var}' stress! "
-                                    "Check X and Y coordinates.")
+                                     "Check X and Y coordinates.")
             else:
                 names.append(name)
         if len(names) == 0:
@@ -626,7 +626,48 @@ class PastaStore:
             # models
             self.conn._models_to_archive(archive, progressbar=progressbar)
 
-    @classmethod
+    def export_model_series_to_csv(self,
+                                   names: Optional[Union[list, str]] = None,
+                                   exportdir: str = ".",
+                                   exportmeta: bool = True):
+        """Export model timeseries to csv files.
+
+        Parameters
+        ----------
+        names : Optional[Union[list, str]], optional
+            names of models to export, by default None, which uses retrieves
+            all models from database
+        exportdir : str, optional
+            directory to export csv files to, default is current directory
+        exportmeta : bool, optional
+            export metadata for all timeseries as csv file, default is True
+        """
+        names = self.conn._parse_names(names, libname="models")
+        for name in names:
+            mldict = self.get_models(name, return_dict=True)
+            
+            oname = mldict["oseries"]["name"]
+            o = self.get_oseries(oname)
+            o.to_csv(os.path.join(exportdir, f"{oname}.csv"))
+            
+            if exportmeta:
+                metalist = [self.get_metadata("oseries", oname)]
+
+            for sm in mldict["stressmodels"]:
+                for istress in mldict["stressmodels"][sm]["stress"]:
+                    stress_name = istress["name"]
+                    ts = self.get_stresses(stress_name)
+                    ts.to_csv(os.path.join(exportdir, f"{stress_name}.csv"))
+            
+                    if exportmeta:
+                        tsmeta = self.get_metadata("stresses", stress_name)
+                        metalist.append(tsmeta)
+            
+            if exportmeta:
+                pd.concat(metalist, axis=0).to_csv(
+                    os.path.join(exportdir, f"metadata_{name}.csv"))
+
+    @ classmethod
     def from_zip(cls, fname: str, conn, storename: Optional[str] = None):
         """Load PastaStore from zipfile.
 
