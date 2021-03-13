@@ -444,7 +444,8 @@ class PastaStore:
         else:
             return errors
 
-    def add_recharge(self, ml: ps.Model, rfunc=ps.Gamma) -> None:
+    def add_recharge(self, ml: ps.Model, rfunc=ps.Gamma,
+                     recharge=ps.rch.Linear()) -> None:
         """Add recharge to a pastas model.
 
         Uses closest precipitation and evaporation timeseries in database.
@@ -458,6 +459,8 @@ class PastaStore:
             response function to use for recharge in model,
             by default ps.Gamma (for different response functions, see
             pastas documentation)
+        recharge : ps.RechargeModel
+            recharge model to use, default is ps.rch.Linear()
         """
         # get nearest prec and evap stns
         names = []
@@ -481,14 +484,16 @@ class PastaStore:
         # get data
         tsdict = self.conn.get_stresses(names)
         stresses = []
-        for k, s in tsdict.items():
+        for (k, s), setting in zip(tsdict.items(), ("prec", "evap")):
             metadata = self.conn.get_metadata("stresses", k, as_frame=False)
-            stresses.append(ps.TimeSeries(s, name=k, metadata=metadata))
+            stresses.append(ps.TimeSeries(s, name=k, settings=setting,
+                                          metadata=metadata))
 
         # add recharge to model
-        rch = ps.StressModel2(stresses, rfunc, name="recharge",
-                              metadata=[i.metadata for i in stresses],
-                              settings=("prec", "evap"))
+        rch = ps.RechargeModel(stresses[0], stresses[1], rfunc,
+                               name="recharge", recharge=recharge,
+                               settings=("prec", "evap"),
+                               metadata=[i.metadata for i in stresses])
         ml.add_stressmodel(rch)
 
     def solve_models(self, mls: Optional[Union[ps.Model, list, str]] = None,
@@ -645,11 +650,11 @@ class PastaStore:
         names = self.conn._parse_names(names, libname="models")
         for name in names:
             mldict = self.get_models(name, return_dict=True)
-            
+
             oname = mldict["oseries"]["name"]
             o = self.get_oseries(oname)
             o.to_csv(os.path.join(exportdir, f"{oname}.csv"))
-            
+
             if exportmeta:
                 metalist = [self.get_metadata("oseries", oname)]
 
@@ -658,11 +663,11 @@ class PastaStore:
                     stress_name = istress["name"]
                     ts = self.get_stresses(stress_name)
                     ts.to_csv(os.path.join(exportdir, f"{stress_name}.csv"))
-            
+
                     if exportmeta:
                         tsmeta = self.get_metadata("stresses", stress_name)
                         metalist.append(tsmeta)
-            
+
             if exportmeta:
                 pd.concat(metalist, axis=0).to_csv(
                     os.path.join(exportdir, f"metadata_{name}.csv"))
