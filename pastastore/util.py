@@ -1,8 +1,9 @@
+import os
 from typing import List, Optional
 
-from numpy.lib._iotools import NameValidator
-import pandas as pd
 import numpy as np
+import pandas as pd
+from numpy.lib._iotools import NameValidator
 from tqdm import tqdm
 
 
@@ -115,6 +116,20 @@ def delete_dict_connector(conn, libraries: Optional[List[str]] = None) -> None:
     print("... Done!")
 
 
+def delete_pas_connector(conn, libraries: Optional[List[str]] = None) -> None:
+    import shutil
+    print(f"Deleting DictConnector: '{conn.name}' ...", end="")
+    if libraries is None:
+        shutil.rmtree(conn.path)
+        print(" Done!")
+    else:
+        for l in libraries:
+            print()
+            shutil.rmtree(os.path.join(conn.path, l))
+            print(f" - deleted: {l}")
+    print("... Done!")
+
+
 def delete_pastastore(pstore, libraries: Optional[List[str]] = None) -> None:
     """Delete libraries from PastaStore.
 
@@ -145,6 +160,8 @@ def delete_pastastore(pstore, libraries: Optional[List[str]] = None) -> None:
         delete_dict_connector(pstore)
     elif pstore.conn.conn_type == "arctic":
         delete_arctic_connector(conn=pstore.conn, libraries=libraries)
+    elif pstore.conn.conn_type == "pas":
+        delete_pas_connector(conn=pstore.conn, libraries=libraries)
     else:
         raise TypeError("Unrecognized pastastore Connector type: "
                         f"{pstore.conn.conn_type}")
