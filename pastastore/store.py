@@ -5,10 +5,9 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
-
 import pastas as ps
 from pastas.io.pas import pastas_hook
+from tqdm import tqdm
 
 from .util import _custom_warning
 
@@ -576,8 +575,7 @@ class PastaStore:
             if the art_tools module is not available
         """
         try:
-            from art_tools import (
-                pastas_get_model_results)
+            from art_tools import pastas_get_model_results
         except:
             raise ModuleNotFoundError(
                 "You need 'art_tools' to use this method!")
@@ -613,7 +611,7 @@ class PastaStore:
         progressbar : bool, optional
             show progressbar, by default True
         """
-        from zipfile import ZipFile, ZIP_DEFLATED
+        from zipfile import ZIP_DEFLATED, ZipFile
         if os.path.exists(fname) and not overwrite:
             raise FileExistsError("File already exists! "
                                   "Use 'overwrite=True' to "
@@ -659,14 +657,25 @@ class PastaStore:
                 metalist = [self.get_metadata("oseries", oname)]
 
             for sm in mldict["stressmodels"]:
-                for istress in mldict["stressmodels"][sm]["stress"]:
-                    stress_name = istress["name"]
-                    ts = self.get_stresses(stress_name)
-                    ts.to_csv(os.path.join(exportdir, f"{stress_name}.csv"))
-
-                    if exportmeta:
-                        tsmeta = self.get_metadata("stresses", stress_name)
-                        metalist.append(tsmeta)
+                if mldict["stressmodels"][sm]["stressmodel"] == "RechargeModel":
+                    for istress in ["prec", "evap"]:
+                        istress = mldict["stressmodels"][sm][istress]
+                        stress_name = istress["name"]
+                        ts = self.get_stresses(stress_name)
+                        ts.to_csv(os.path.join(
+                            exportdir, f"{stress_name}.csv"))
+                        if exportmeta:
+                            tsmeta = self.get_metadata("stresses", stress_name)
+                            metalist.append(tsmeta)
+                else:
+                    for istress in mldict["stressmodels"][sm]["stress"]:
+                        stress_name = istress["name"]
+                        ts = self.get_stresses(stress_name)
+                        ts.to_csv(os.path.join(
+                            exportdir, f"{stress_name}.csv"))
+                        if exportmeta:
+                            tsmeta = self.get_metadata("stresses", stress_name)
+                            metalist.append(tsmeta)
 
             if exportmeta:
                 pd.concat(metalist, axis=0).to_csv(
