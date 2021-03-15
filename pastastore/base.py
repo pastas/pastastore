@@ -125,7 +125,8 @@ class BaseConnector(ABC):  # pragma: no cover
 
     @abstractmethod
     def get_metadata(self, libname: str, names: Union[list, str],
-                     progressbar: bool = False, as_frame: bool = True) -> Union[pd.DataFrame, dict]:
+                     progressbar: bool = False, as_frame: bool = True) \
+            -> Union[pd.DataFrame, dict]:
         """Get metadata for oseries or stress.
 
         Parameters
@@ -473,7 +474,7 @@ class ConnectorUtil:
         names : Optional[Union[list, str]], optional
             names of series, by default None
         squeeze : bool, optional
-            return single entry as json string instead 
+            return single entry as json string instead
             of list, by default True
         progressbar : bool, optional
             show progressbar, by default False

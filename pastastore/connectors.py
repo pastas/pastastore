@@ -183,7 +183,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
                 print("Data contains multiple columns, "
                       "assuming values in column 0!")
                 metadata = {"value_col": 0}
-            elif not "value_col" in metadata.keys():
+            elif "value_col" not in metadata.keys():
                 print("Data contains multiple columns, "
                       "assuming values in column 0!")
                 metadata["value_col"] = 0
@@ -719,7 +719,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         jsondict = json.loads(json.dumps(mldict, cls=PastasEncoder, indent=4))
         lib = self.get_library("models")
         # check if oseries and stresses exist in store, if not add them
-        if not name in lib.items or overwrite:
+        if name not in lib.items or overwrite:
             self._check_model_series_for_store(ml)
             self._check_oseries_in_store(ml)
             self._check_stresses_in_store(ml)
@@ -1416,7 +1416,8 @@ class PasConnector(BaseConnector, ConnectorUtil):
     """
     conn_type = "pas"
 
-    def __init__(self, name: str, path: str, library_map: Optional[dict] = None):
+    def __init__(self, name: str, path: str,
+                 library_map: Optional[dict] = None):
         """Create PasConnector object that stores data as JSON files on disk.
 
         Parameters
@@ -1619,7 +1620,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
             os.remove(os.path.join(lib, f"{n}.pas"))
             try:
                 os.remove(os.path.join(lib, f"{n}_meta.pas"))
-            except Exception as e:
+            except Exception:
                 pass
         self._clear_cache("oseries")
 
@@ -1636,7 +1637,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
             os.remove(os.path.join(lib, f"{n}.pas"))
             try:
                 os.remove(os.path.join(lib, f"{n}_meta.pas"))
-            except Exception as e:
+            except Exception:
                 pass
         self._clear_cache("stresses")
 

@@ -20,14 +20,14 @@ def series_write(conn):
 # @pytest.mark.benchmark(group="write_series")
 # def test_benchmark_write_series_dict(benchmark):
 #     conn = pst.DictConnector("test")
-#     result = benchmark(series_write, conn=conn)
+#     _ = benchmark(series_write, conn=conn)
 #     return
 
 
 @pytest.mark.benchmark(group="write_series")
 def test_benchmark_write_series_pas(benchmark):
     conn = pst.PasConnector("test", "./tests/data/pas")
-    result = benchmark(series_write, conn=conn)
+    _ = benchmark(series_write, conn=conn)
     return
 
 
@@ -35,7 +35,7 @@ def test_benchmark_write_series_pas(benchmark):
 def test_benchmark_write_series_pystore(benchmark):
     path = "./tests/data/pystore"
     conn = pst.PystoreConnector("test", path)
-    result = benchmark(series_write, conn=conn)
+    _ = benchmark(series_write, conn=conn)
     return
 
 
@@ -43,7 +43,7 @@ def test_benchmark_write_series_pystore(benchmark):
 def test_benchmark_write_series_arctic(benchmark):
     connstr = "mongodb://localhost:27017/"
     conn = pst.ArcticConnector("test", connstr)
-    result = benchmark(series_write, conn=conn)
+    _ = benchmark(series_write, conn=conn)
     return
 
 # %% read
@@ -55,14 +55,14 @@ def series_read(conn):
 # @pytest.mark.benchmark(group="read_series")
 # def test_benchmark_write_series_dict(benchmark):
 #     conn = pst.DictConnector("test")
-#     result = benchmark(series_read, conn=conn)
+#     _ = benchmark(series_read, conn=conn)
 #     return
 
 
 @pytest.mark.benchmark(group="read_series")
 def test_benchmark_read_series_pas(benchmark):
     conn = pst.PasConnector("test", "./tests/data/pas")
-    result = benchmark(series_read, conn=conn)
+    _ = benchmark(series_read, conn=conn)
     return
 
 
@@ -70,7 +70,7 @@ def test_benchmark_read_series_pas(benchmark):
 def test_benchmark_read_series_pystore(benchmark):
     path = "./tests/data/pystore"
     conn = pst.PystoreConnector("test", path)
-    result = benchmark(series_read, conn=conn)
+    _ = benchmark(series_read, conn=conn)
     return
 
 
@@ -78,7 +78,7 @@ def test_benchmark_read_series_pystore(benchmark):
 def test_benchmark_read_series_arctic(benchmark):
     connstr = "mongodb://localhost:27017/"
     conn = pst.ArcticConnector("test", connstr)
-    result = benchmark(series_read, conn=conn)
+    _ = benchmark(series_read, conn=conn)
     return
 
 
@@ -122,7 +122,7 @@ def write_model(conn, ml):
 # def test_benchmark_write_model_dict(benchmark):
 #     conn = pst.DictConnector("test")
 #     ml = build_model(conn)
-#     result = benchmark(write_model, conn=conn, ml=ml)
+#     _ = benchmark(write_model, conn=conn, ml=ml)
 #     return
 
 
@@ -130,7 +130,7 @@ def write_model(conn, ml):
 def test_benchmark_write_model_pas(benchmark):
     conn = pst.PasConnector("test", "./tests/data/pas")
     ml = build_model(conn)
-    result = benchmark(write_model, conn=conn, ml=ml)
+    _ = benchmark(write_model, conn=conn, ml=ml)
     return
 
 
@@ -139,7 +139,7 @@ def test_benchmark_write_model_pystore(benchmark):
     path = "./tests/data/pystore"
     conn = pst.PystoreConnector("test", path)
     ml = build_model(conn)
-    result = benchmark(write_model, conn=conn, ml=ml)
+    _ = benchmark(write_model, conn=conn, ml=ml)
     return
 
 
@@ -148,7 +148,7 @@ def test_benchmark_write_model_arctic(benchmark):
     connstr = "mongodb://localhost:27017/"
     conn = pst.ArcticConnector("test", connstr)
     ml = build_model(conn)
-    result = benchmark(write_model, conn=conn, ml=ml)
+    _ = benchmark(write_model, conn=conn, ml=ml)
     return
 
 # %% read model
@@ -161,14 +161,14 @@ def read_model(conn):
 # @pytest.mark.benchmark(group="read_model")
 # def test_benchmark_read_model_dict(benchmark):
 #     conn = pst.DictConnector("test")
-#     result = benchmark(read_model, conn=conn, ml=ml)
+#     _ = benchmark(read_model, conn=conn, ml=ml)
 #     return
 
 
 @pytest.mark.benchmark(group="read_model")
 def test_benchmark_read_model_pas(benchmark):
     conn = pst.PasConnector("test", "./tests/data/pas")
-    ml = benchmark(read_model, conn=conn)
+    _ = benchmark(read_model, conn=conn)
     pst.util.delete_pas_connector(conn)
     return
 
@@ -177,7 +177,7 @@ def test_benchmark_read_model_pas(benchmark):
 def test_benchmark_read_model_pystore(benchmark):
     path = "./tests/data/pystore"
     conn = pst.PystoreConnector("test", path)
-    ml = benchmark(read_model, conn=conn)
+    _ = benchmark(read_model, conn=conn)
     pst.util.delete_pystore_connector(conn=conn)
     return
 
@@ -186,6 +186,6 @@ def test_benchmark_read_model_pystore(benchmark):
 def test_benchmark_read_model_arctic(benchmark):
     connstr = "mongodb://localhost:27017/"
     conn = pst.ArcticConnector("test", connstr)
-    ml = benchmark(read_model, conn=conn)
+    _ = benchmark(read_model, conn=conn)
     pst.util.delete_arctic_connector(conn=conn)
     return

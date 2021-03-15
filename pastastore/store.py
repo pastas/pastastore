@@ -119,8 +119,9 @@ class PastaStore:
         data = pd.DataFrame(columns=np.arange(n))
 
         for series in distances.index:
-            series = pd.Series(distances.loc[series].dropna().sort_values().index[:n],
-                               name=series)
+            series = pd.Series(
+                distances.loc[series].dropna().sort_values().index[:n],
+                name=series)
             data = data.append(series)
         return data
 
@@ -211,8 +212,9 @@ class PastaStore:
         data = pd.DataFrame(columns=np.arange(n))
 
         for series in distances.index:
-            series = pd.Series(distances.loc[series].dropna().sort_values().index[:n],
-                               name=series)
+            series = pd.Series(
+                distances.loc[series].dropna().sort_values().index[:n],
+                name=series)
             data = data.append(series)
         return data
 
@@ -280,7 +282,8 @@ class PastaStore:
 
         # loop through model names and store results
         desc = "Get model parameters"
-        for mlname in (tqdm(modelnames, desc=desc) if progressbar else modelnames):
+        for mlname in (tqdm(modelnames, desc=desc)
+                       if progressbar else modelnames):
             mldict = self.get_models(mlname, return_dict=True,
                                      progressbar=False)
             if parameters is None:
@@ -325,7 +328,8 @@ class PastaStore:
 
         # loop through model names
         desc = "Get model statistics"
-        for mlname in (tqdm(modelnames, desc=desc) if progressbar else modelnames):
+        for mlname in (tqdm(modelnames, desc=desc)
+                       if progressbar else modelnames):
             ml = self.get_models(mlname, progressbar=False)
             for stat in statistics:
                 value = ml.stats.__getattribute__(stat)(**kwargs)
@@ -576,7 +580,7 @@ class PastaStore:
         """
         try:
             from art_tools import pastas_get_model_results
-        except:
+        except Exception:
             raise ModuleNotFoundError(
                 "You need 'art_tools' to use this method!")
 

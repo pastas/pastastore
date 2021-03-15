@@ -97,9 +97,9 @@ def delete_arctic_connector(connstr: Optional[str] = None,
     else:
         libs = [name + "." + ilib for ilib in libraries]
 
-    for l in libs:
-        arc.delete_library(l)
-        print(f" - deleted: {l}")
+    for lib in libs:
+        arc.delete_library(lib)
+        print(f" - deleted: {lib}")
     print("... Done!")
 
 
@@ -109,10 +109,10 @@ def delete_dict_connector(conn, libraries: Optional[List[str]] = None) -> None:
         del conn
         print(" Done!")
     else:
-        for l in libraries:
+        for lib in libraries:
             print()
-            delattr(conn, f"lib_{conn.libname[l]}")
-            print(f" - deleted: {l}")
+            delattr(conn, f"lib_{conn.libname[lib]}")
+            print(f" - deleted: {lib}")
     print("... Done!")
 
 
@@ -123,10 +123,10 @@ def delete_pas_connector(conn, libraries: Optional[List[str]] = None) -> None:
         shutil.rmtree(conn.path)
         print(" Done!")
     else:
-        for l in libraries:
+        for lib in libraries:
             print()
-            shutil.rmtree(os.path.join(conn.path, l))
-            print(f" - deleted: {l}")
+            shutil.rmtree(os.path.join(conn.path, lib))
+            print(f" - deleted: {lib}")
     print("... Done!")
 
 
@@ -294,8 +294,8 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
         for sm_name, sm in ml.stressmodels.items():
 
             df.loc[f"stressmodel: '{sm_name}'"] = sm_name
-            df.loc[f"- rfunc"] = (sm.rfunc._name if sm.rfunc is not None
-                                  else "NA")
+            df.loc["- rfunc"] = (sm.rfunc._name if sm.rfunc is not None
+                                 else "NA")
 
             for ts in sm.stress:
                 df.loc[f"- timeseries: '{ts.name}'"] = ts.name
