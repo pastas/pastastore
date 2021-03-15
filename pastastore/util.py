@@ -42,7 +42,7 @@ def delete_pystore_connector(path: Optional[str] = None,
     elif name is None or path is None:
         raise ValueError("Please provide 'name' and 'path' OR 'conn'!")
 
-    print(f"Deleting pystore: '{name}' ...", end="")
+    print(f"Deleting PystoreConnector database: '{name}' ...", end="")
     pystore.set_path(path)
     if libraries is None:
         pystore.delete_store(name)
@@ -87,7 +87,7 @@ def delete_arctic_connector(connstr: Optional[str] = None,
 
     arc = arctic.Arctic(connstr)
 
-    print(f"Deleting database: '{name}' ...")
+    print(f"Deleting ArcticConnector database: '{name}' ...")
     # get library names
     if libraries is None:
         libs = []
@@ -118,7 +118,7 @@ def delete_dict_connector(conn, libraries: Optional[List[str]] = None) -> None:
 
 def delete_pas_connector(conn, libraries: Optional[List[str]] = None) -> None:
     import shutil
-    print(f"Deleting DictConnector: '{conn.name}' ...", end="")
+    print(f"Deleting PasConnector database: '{conn.name}' ...", end="")
     if libraries is None:
         shutil.rmtree(conn.path)
         print(" Done!")
@@ -127,7 +127,7 @@ def delete_pas_connector(conn, libraries: Optional[List[str]] = None) -> None:
             print()
             shutil.rmtree(os.path.join(conn.path, lib))
             print(f" - deleted: {lib}")
-    print("... Done!")
+        print("... Done!")
 
 
 def delete_pastastore(pstore, libraries: Optional[List[str]] = None) -> None:
