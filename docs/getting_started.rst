@@ -10,11 +10,34 @@ installed on your computer. We recommend using the
 `Anaconda Distribution <https://www.continuum.io/downloads>`_
 of Python.
 
+Installing `pastastore`
+-----------------------
+Install the module by typing::
+  
+    pip install pastastore
+
+Please note that the `pystore` and `arctic` modules are not automatically 
+installed (see `Dependencies`_ section below)!
+
+_For installing in development mode, clone the repository and install by
+typing `pip install -e .` from the module root directory._
+
+Using `pastastore`
+------------------
+Start Python and import the module::
+
+    import pastastore as pst
+    conn = pst.DictConnector("my_connector")
+    store = pst.PastaStore("my_store", conn)
+
+See the :ref:`examples` section for some quick examples on how to get started.
+
 Dependencies
 ------------
 This module has several optional dependencies. These are required for storing 
-timeseries and models in a database. Without these, only the in-memory option
-is available.
+timeseries and models in a database using compression. Without these, only 
+the in-memory option (DictConnector) and storing data on disk without 
+compression (PasConnector) are available.
 
 It is up to the user to determine which dependencies they want to install. 
 Both the `PystoreConnector` and `ArcticConnector` are dependent on external 
@@ -49,25 +72,4 @@ using `docker-compose`:
 #. View your running containers with `docker ps -a`.
 #. If you are done and wish to stop the container, run `docker-compose stop` in a terminal.
 
-Installing `pastastore`
------------------------
-Install the module by typing::
-  
-    pip install pastastore
 
-Please note that the `pystore` module is not automatically installed
-as a dependency because it requires Snappy to be (manually) installed first
-(see `Dependencies`_ section above)!
-
-_For installing in development mode, clone the repository and install by
-typing `pip install -e .` from the module root directory._
-
-Using `pastastore`
-------------------
-Start Python and import the module::
-
-    import pastastore as pst
-    conn = pst.DictConnector("my_connector")
-    store = pst.PastaStore("my_store", conn)
-
-See the :ref:`examples` section for some quick examples on how to get started.

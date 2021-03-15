@@ -2,9 +2,20 @@
 Utilities
 =========
 
-The `pastastore.util` submodule contains functions for deleting libraries or
-entire databases. Functions are available for deleting content from both arctic
-and pystore implementations.
+The `pastastore.util` submodule contains useful functions, i.e. for deleting
+databases, connector objects, and PastaStore objects or emptying a library of
+all its contents:
 
-* :meth:`pastastore.util.delete_arctic`
-* :meth:`pastastore.util.delete_pystore`
+
+* :meth:`pastastore.util.delete_pastastore`
+* :meth:`pastastore.util.delete_dict_connector`
+* :meth:`pastastore.util.delete_pas_connector`
+* :meth:`pastastore.util.delete_pystore_connector`
+* :meth:`pastastore.util.delete_arctic_connector`
+* :meth:`pastastore.util.empty_library`
+
+
+It also contains a method for making a detailed comparison between two 
+pastas.Models:
+
+* :meth:`pastastore.util.compare_models`
