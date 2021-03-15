@@ -50,7 +50,7 @@ def test_benchmark_write_series_arctic(benchmark):
 
 
 def series_read(conn):
-    s = conn.get_oseries("oseries1")
+    _ = conn.get_oseries("oseries1")
 
 # @pytest.mark.benchmark(group="read_series")
 # def test_benchmark_write_series_dict(benchmark):

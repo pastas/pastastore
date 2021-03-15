@@ -1620,7 +1620,8 @@ class PasConnector(BaseConnector, ConnectorUtil):
             os.remove(os.path.join(lib, f"{n}.pas"))
             try:
                 os.remove(os.path.join(lib, f"{n}_meta.pas"))
-            except Exception:
+            except FileNotFoundError:
+                # Nothing to delete
                 pass
         self._clear_cache("oseries")
 
