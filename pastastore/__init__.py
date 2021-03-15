@@ -1,5 +1,5 @@
+from . import connectors, util
+from .connectors import (ArcticConnector, DictConnector, PasConnector,
+                         PystoreConnector)
 from .store import PastaStore
-from .connectors import ArcticConnector, PystoreConnector, DictConnector
-from . import connectors
-from . import util
 from .version import __version__

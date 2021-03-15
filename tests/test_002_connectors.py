@@ -19,10 +19,13 @@ def test_get_library(pr):
 
 
 def test_add_get_series(request, pr):
-    o1 = pd.Series(index=range(10), data=1.0)
+    o1 = pd.Series(index=pd.date_range("2000", periods=10, freq="D"), data=1.0)
     o1.name = "test_series"
     pr.add_oseries(o1, "test_series", metadata=None)
     o2 = pr.get_oseries("test_series")
+    # PasConnector has no logic for preserving Series
+    if pr.conn_type == "pas":
+        o2 = o2.squeeze()
     try:
         assert isinstance(o2, pd.Series)
         assert (o1 == o2).all()
@@ -32,7 +35,8 @@ def test_add_get_series(request, pr):
 
 
 def test_add_get_dataframe(request, pr):
-    o1 = pd.DataFrame(data=1.0, columns=["test_df"], index=range(10))
+    o1 = pd.DataFrame(data=1.0, columns=["test_df"],
+                      index=pd.date_range("2000", periods=10, freq="D"))
     o1.index.name = "test_idx"
     pr.add_oseries(o1, "test_df", metadata=None)
     o2 = pr.get_oseries("test_df")
@@ -111,9 +115,11 @@ def test_del_stress(request, pr):
 @pytest.mark.dependency()
 def test_delete(request, pr):
     if pr.conn_type == "arctic":
-        pst.util.delete_arctic_connector(pr.connstr, pr.name, libraries=["oseries"])
+        pst.util.delete_arctic_connector(
+            pr.connstr, pr.name, libraries=["oseries"])
         pst.util.delete_arctic_connector(pr.connstr, pr.name)
     elif pr.conn_type == "pystore":
-        pst.util.delete_pystore_connector(pr.path, pr.name, libraries=["oseries"])
+        pst.util.delete_pystore_connector(
+            pr.path, pr.name, libraries=["oseries"])
         pst.util.delete_pystore_connector(pr.path, pr.name)
     return
