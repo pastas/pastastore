@@ -451,7 +451,7 @@ class ConnectorUtil:
                 if sm["stressmodel"] == "RechargeModel":
                     stresses = [sm["prec"], sm["evap"]]
                 else:
-                    sm["stress"]
+                    stresses = sm["stress"]
                 for s in stresses:
                     if s["name"] not in self.stresses.index:
                         msg = (f"Cannot add model because stress '{s.name}' "
