@@ -24,6 +24,7 @@ is stored in-memory (in dictionaries)::
    # create project for managing Pastas data and models
    store = pst.PastaStore("my_project", conn)
 
+
 Using Pastas
 ------------
 
@@ -33,12 +34,13 @@ that writes data to disk as no external dependencies are required::
 
    import pastastore as pst
 
-   # define dict connector
+   # define pas connector
    path = "./data/pas"
-   conn = pst.PasConnect("my_connector", path)
+   conn = pst.PasConnector("my_connector", path)
 
    # create project for managing Pastas data and models
    store = pst.PastaStore("my_project", conn)
+
 
 Using Arctic
 ------------
