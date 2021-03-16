@@ -594,7 +594,7 @@ class ConnectorUtil:
         s = pd.read_json(fjson, orient="columns")
         if not isinstance(s.index, pd.DatetimeIndex):
             s.index = pd.to_datetime(s.index, unit='ms')
-            s = s.sort_index()
+        s = s.sort_index()  # needed for some reason ...
         return s
 
     @staticmethod
