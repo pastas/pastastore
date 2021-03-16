@@ -329,7 +329,15 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
             for s in stats:
                 df.loc[f"stats: {s}", f"model {i}"] = stats_df.loc[s, "Value"]
 
+    # compare
     df["comparison"] = df.iloc[:, 0] == df.iloc[:, 1]
+
+    # allclose for params
+    param_mask = df.index.str.startswith("param: ")
+    df.loc[param_mask, "comparison"] = np.allclose(
+        df.loc[param_mask, "model 0"].astype(float).values,
+        df.loc[param_mask, "model 1"].astype(float).values)
+
     # ensure NaN == NaN is not counted as a difference
     nanmask = df.iloc[:, 0].isna() & df.iloc[:, 1].isna()
     df.loc[nanmask, "comparison"] = True
