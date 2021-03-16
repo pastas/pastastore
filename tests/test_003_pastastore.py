@@ -110,6 +110,7 @@ def test_save_and_load_model(request, prj):
     ml2 = prj.get_models(ml.name)
     evp_ml2 = ml2.stats.evp()
     assert allclose(evp_ml, evp_ml2)
+    assert pst.util.compare_models(ml, ml2)
     return ml, ml2
 
 # @pytest.mark.dependency()
