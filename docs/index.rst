@@ -11,12 +11,14 @@ For users who have used `pastas` before, this module is similar to
 `pastas.Project`, but much more extensive in terms of functionality.
 
 The connection to the data/database/disk is managed by a connector object.
-Currently, three connectors are included. The first connector `DictConnector`
-stores all data in-memory using dictionaries. The other two implementations
-`ArcticConnector` and `PystoreConnector` store data in a database or on disk. Both
-implementations are designed to have fast read/write operations, while also
-compressing the stored data. These connectors are implemented using the following
-two modules:
+Currently, four connectors are included. The first connector `DictConnector`
+stores all data in-memory using dictionaries. The other three implementations
+`PasConnector`, `ArcticConnector` and `PystoreConnector` store data in a 
+database or on disk. The former is the simplest option for storing data on disk,
+and does not require external dependencies. The latter two implementations are 
+designed to have faster read/write operations, while also compressing the 
+stored data. These two connectors are implemented using the following two 
+modules:
 
 * `Arctic <https://arctic.readthedocs.io/en/latest/>`_ is a timeseries/dataframe
   database that sits atop `MongoDB <https://www.mongodb.com>`_. Arctic supports

@@ -6,6 +6,10 @@ import pandas as pd
 import pastastore as pst
 
 
+params = ["arctic", "pystore", "dict", "pas"]
+# params = ["pas"]
+
+
 def initialize_project(conn):
 
     prj = pst.PastaStore("test_project", conn)
@@ -52,7 +56,7 @@ def initialize_project(conn):
     return prj
 
 
-@pytest.fixture(scope="module", params=["arctic", "pystore", "dict"])
+@pytest.fixture(scope="module", params=params)
 def pr(request):
     """Fixture that yields connection object.
     """
@@ -66,13 +70,15 @@ def pr(request):
         pr = pst.PystoreConnector(name, path)
     elif request.param == "dict":
         pr = pst.DictConnector(name)
+    elif request.param == "pas":
+        pr = pst.PasConnector(name, "./tests/data/pas")
     else:
         raise ValueError("Unrecognized parameter!")
     pr.type = request.param  # added here for defining test dependencies
     yield pr
 
 
-@pytest.fixture(scope="module", params=["arctic", "pystore", "dict"])
+@pytest.fixture(scope="module", params=params)
 def prj(request):
     if request.param == "arctic":
         connstr = "mongodb://localhost:27017/"
@@ -97,6 +103,10 @@ def prj(request):
     elif request.param == "dict":
         name = "test_project"
         connector = pst.DictConnector(name)
+        prj = initialize_project(connector)
+    elif request.param == "pas":
+        name = "test_project"
+        connector = pst.PasConnector(name, "./tests/data/pas")
         prj = initialize_project(connector)
     else:
         raise ValueError("Unrecognized parameter!")

@@ -23,6 +23,13 @@ DictConnector
    :members:
    :show-inheritance:
 
+PasConnector
+^^^^^^^^^^^^
+
+.. autoclass:: pastastore.PasConnector
+   :members:
+   :show-inheritance:
+
 ArcticConnector
 ^^^^^^^^^^^^^^^
 

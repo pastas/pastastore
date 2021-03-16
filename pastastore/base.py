@@ -1,15 +1,14 @@
 import json
+import warnings
 from abc import ABC, abstractmethod, abstractproperty
 from collections.abc import Iterable
 from typing import Optional, Union
-import warnings
 
 import pandas as pd
-from tqdm import tqdm
-
 import pastas as ps
 from pastas import Model
 from pastas.io.pas import PastasEncoder
+from tqdm import tqdm
 
 from .util import _custom_warning
 
@@ -126,7 +125,8 @@ class BaseConnector(ABC):  # pragma: no cover
 
     @abstractmethod
     def get_metadata(self, libname: str, names: Union[list, str],
-                     progressbar: bool = False, as_frame: bool = True) -> Union[pd.DataFrame, dict]:
+                     progressbar: bool = False, as_frame: bool = True) \
+            -> Union[pd.DataFrame, dict]:
         """Get metadata for oseries or stress.
 
         Parameters
@@ -366,6 +366,11 @@ class ConnectorUtil:
         """
         if isinstance(series, pd.Series):
             series.name = name
+            # empty string on index name causes trouble when reading
+            # data from Arctic VersionStores
+            if series.index.name == "":
+                series.index.name = None
+
         if isinstance(series, pd.DataFrame):
             series.columns = [name]
         return series
@@ -373,12 +378,28 @@ class ConnectorUtil:
     @staticmethod
     def _check_model_series_for_store(ml):
         if isinstance(ml, ps.Model):
-            series_names = [istress.series.name for sm in
-                            ml.stressmodels.values() for istress in sm.stress]
+            series_names = [istress.series.name
+                            for sm in ml.stressmodels.values()
+                            if sm._name != "RechargeModel"
+                            for istress in sm.stress]
+            if "RechargeModel" in [i._name for i in ml.stressmodels.values()]:
+                series_names += [istress.series.name
+                                 for sm in ml.stressmodels.values()
+                                 if sm._name == "RechargeModel"
+                                 for istress in sm.stress]
         elif isinstance(ml, dict):
+            # non RechargeModel stressmodels
             series_names = [istress["name"] for sm in
                             ml["stressmodels"].values()
+                            if sm["stressmodel"] != "RechargeModel"
                             for istress in sm["stress"]]
+            # RechargeModel
+            if "RechargeModel" in [i["stressmodel"] for i in
+                                   ml["stressmodels"].values()]:
+                series_names += [istress["name"] for sm in
+                                 ml["stressmodels"].values()
+                                 if sm["stressmodel"] == "RechargeModel"
+                                 for istress in [sm["prec"], sm["evap"]]]
         else:
             raise TypeError("Expected pastas.Model or dict!")
         if len(series_names) - len(set(series_names)) > 0:
@@ -404,10 +425,6 @@ class ConnectorUtil:
             msg = (f"Cannot add model because oseries '{name}' "
                    "is not contained in store.")
             raise LookupError(msg)
-            # if s is not None:
-            #     warnings.warn(f"Adding '{name}' to 'oseries' store!")
-            #     s.index.name = None
-            #     self.add_oseries(s, name, metadata=meta)
 
     def _check_stresses_in_store(self, ml: Union[ps.Model, dict]):
         """Internal method, check if stresses timeseries are contained in
@@ -420,45 +437,100 @@ class ConnectorUtil:
         """
         if isinstance(ml, ps.Model):
             for sm in ml.stressmodels.values():
-                for s in sm.stress:
+                if sm._name == "RechargeModel":
+                    stresses = [sm.prec, sm.evap]
+                else:
+                    stresses = sm.stress
+                for s in stresses:
                     if s.name not in self.stresses.index:
                         msg = (f"Cannot add model because stress '{s.name}' "
                                "is not contained in store.")
                         raise LookupError(msg)
-                        # warnings.warn(f"Timeseries '{s.name}' "
-                        #               "is not contained in store.")
-                        # warnings.warn(
-                        #     f"Adding '{s.name}' to 'stresses' store!")
-                        # ss = s.series
-                        # ss.index.name = None
-                        # if "kind" not in s.metadata:
-                        #     msg = ("Stress metadata dictionary must define"
-                        #            " 'kind'!")
-                        #     raise AttributeError(msg)
-                        # self.add_stress(ss, s.name,
-                        #                 metadata=s.metadata,
-                        #                 kind=s.metadata["kind"])
         elif isinstance(ml, dict):
             for sm in ml["stressmodels"].values():
-                for s in sm["stress"]:
+                if sm["stressmodel"] == "RechargeModel":
+                    stresses = [sm["prec"], sm["evap"]]
+                else:
+                    stresses = sm["stress"]
+                for s in stresses:
                     if s["name"] not in self.stresses.index:
                         msg = (f"Cannot add model because stress '{s.name}' "
                                "is not contained in store.")
                         raise LookupError(msg)
-                        # if "series" in s:
-                        #     warnings.warn(
-                        #         f"Adding '{s['name']}' to 'stresses' store!")
-                        #     ss = s["series"]
-                        #     ss.index.name = None
-                        #     if "kind" not in s["metadata"]:
-                        #         msg = ("Stress metadata dictionary must define"
-                        #                " 'kind'!")
-                        #         raise AttributeError(msg)
-                        #     self.add_stress(ss, s["name"],
-                        #                     metadata=s["metadata"],
-                        #                     kind=s["metadata"]["kind"])
         else:
             raise TypeError("Expected pastas.Model or dict!")
+
+    def _stored_series_to_json(self,
+                               libname: str,
+                               names: Optional[Union[list, str]] = None,
+                               squeeze: bool = True,
+                               progressbar: bool = False):
+        """Write stored series to JSON.
+
+        Parameters
+        ----------
+        libname : str
+            library name
+        names : Optional[Union[list, str]], optional
+            names of series, by default None
+        squeeze : bool, optional
+            return single entry as json string instead
+            of list, by default True
+        progressbar : bool, optional
+            show progressbar, by default False
+
+        Returns
+        -------
+        files : list or str
+            list of series converted to JSON string or single string
+            if single entry is returned and squeeze is True
+        """
+        names = self._parse_names(names, libname=libname)
+        files = []
+        for n in (tqdm(names, desc=libname) if progressbar else names):
+            s = self._get_series(libname, n, progressbar=False)
+            if isinstance(s, pd.Series):
+                s = s.to_frame()
+            sjson = s.to_json(orient="columns")
+            files.append(sjson)
+        if len(files) == 1 and squeeze:
+            return files[0]
+        else:
+            return files
+
+    def _stored_metadata_to_json(self,
+                                 libname: str,
+                                 names: Optional[Union[list, str]] = None,
+                                 squeeze: bool = True,
+                                 progressbar: bool = False):
+        """Write metadata from stored series to JSON.
+
+        Parameters
+        ----------
+        libname : str
+            library containing series
+        names : Optional[Union[list, str]], optional
+            names to parse, by default None
+        squeeze : bool, optional
+            return single entry as json string instead of list, by default True
+        progressbar : bool, optional
+            show progressbar, by default False
+
+        Returns
+        -------
+        files : list or str
+            list of json string
+        """
+        names = self._parse_names(names, libname=libname)
+        files = []
+        for n in (tqdm(names, desc=libname) if progressbar else names):
+            meta = self.get_metadata(libname, n, as_frame=False)
+            meta_json = json.dumps(meta, cls=PastasEncoder, indent=4)
+            files.append(meta_json)
+        if len(files) == 1 and squeeze:
+            return files[0]
+        else:
+            return files
 
     def _series_to_archive(self, archive, libname: str,
                            names: Optional[Union[list, str]] = None,
@@ -479,14 +551,11 @@ class ConnectorUtil:
         """
         names = self._parse_names(names, libname=libname)
         for n in (tqdm(names, desc=libname) if progressbar else names):
-            s = self._get_series(libname, n, progressbar=False)
-            if isinstance(s, pd.Series):
-                s = s.to_frame()
-            sjson = s.to_json(orient="columns")
+            sjson = self._stored_series_to_json(
+                libname, names=n, progressbar=False, squeeze=True)
+            meta_json = self._stored_metadata_to_json(
+                libname, names=n, progressbar=False, squeeze=True)
             archive.writestr(f"{libname}/{n}.json", sjson)
-
-            meta = self.get_metadata(libname, n, as_frame=False)
-            meta_json = json.dumps(meta, cls=PastasEncoder, indent=4)
             archive.writestr(f"{libname}/{n}_meta.json", meta_json)
 
     def _models_to_archive(self, archive, names=None, progressbar=True):
@@ -507,3 +576,41 @@ class ConnectorUtil:
             m = self.get_models(n, return_dict=True)
             jsondict = json.dumps(m, cls=PastasEncoder, indent=4)
             archive.writestr(f"models/{n}.pas", jsondict)
+
+    @staticmethod
+    def _series_from_json(fjson: str):
+        """Load timeseries from JSON.
+
+        Parameters
+        ----------
+        fjson : str
+            path to file
+
+        Returns
+        -------
+        s : pd.DataFrame
+            DataFrame containing timeseries
+        """
+        s = pd.read_json(fjson, orient="columns")
+        if not isinstance(s.index, pd.DatetimeIndex):
+            s.index = pd.to_datetime(s.index, unit='ms')
+        s = s.sort_index()  # needed for some reason ...
+        return s
+
+    @staticmethod
+    def _metadata_from_json(fjson: str):
+        """Load metadata dictionary from JSON.
+
+        Parameters
+        ----------
+        fjson : str
+            path to file
+
+        Returns
+        -------
+        meta : dict
+            dictionary containing metadata
+        """
+        with open(fjson, "r") as f:
+            meta = json.load(f)
+        return meta

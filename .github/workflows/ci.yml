@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - master
+      - dev
   pull_request:
     branches:
       - master
@@ -44,6 +45,7 @@ jobs:
           pip install codecov
           pip install pytest-cov
           pip install pytest-dependency
+          pip install pytest-benchmark
           pip install codacy-coverage
           pip install -e .
       - name: Lint with flake8

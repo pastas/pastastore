@@ -14,13 +14,17 @@ a simple way to manage Pastas projects with the added bonus of allowing the user
 to pick upwhere they left off, without having to (re)load everything into memory.
 
 The connection to database/disk/memory is managed by a connector object.
-Currently, three connectors are included. The first implementation is an 
-in-memory connector. The other two store data in a database. Both of these 
-implementations are designed to have fast read/write operations, while also 
-compressing the stored data.
+Currently, four connectors are included. The first implementation is an 
+in-memory connector. The other three store data on disk or in a database. 
+The PasConnector implementation writes human-readable JSON files to disk. 
+The ArcticConnector and PystoreConnector implementations are designed to have 
+fast read/write operations, while also compressing the stored data.
 
 -   In-memory: uses dictionaries to hold timeseries and pastas Models in-memory.
       Does not require any additional packages to use. 
+
+-   Pastas: uses Pastas write and read methods to store data as JSON files on
+      disk. Does not require any additional packages to use.
 
 -   [Arctic](https://arctic.readthedocs.io/en/latest/) is a timeseries/dataframe
       database that sits atop [MongoDB](https://www.mongodb.com). Arctic supports
@@ -62,9 +66,27 @@ conn = pst.DictConnector("my_connector")
 store = pst.PastaStore("my_project", conn)
 ```
 
+### Using Pastas read/load methods
+
+Store data on disk as JSON files (with .pas extension) using Pastas read and 
+load methods. This works out of the box after installing with `pip` without 
+installing any additional Python dependencies or external software.
+
+```python
+import pastastore as pst
+
+# define connector
+path = "./data/pas"
+conn = pst.PasConnector("my_connector")
+
+# create project for managing Pastas data and models
+store = pst.PastaStore("my_project", conn)
+```
+
 ### Using Arctic
 
-Only works if there is an instance of MongoDB running somewhere.
+Store data in MongoDB using Arctic. Only works if there is an instance of 
+MongoDB running somewhere.
 
 ```python
 import pastastore as pst
@@ -79,7 +101,8 @@ store = pst.PastaStore("my_project", conn)
 
 ### Using Pystore
 
-Only works if `python-snappy` and `pystore` are installed.
+Store data on disk as parquet files using compression. Only works if 
+`python-snappy` and `pystore` are installed.
 
 ```python
 import pastastore as pst
@@ -110,11 +133,11 @@ series = store.get_oseries("my_oseries")
 
 This module has several dependencies (depending on which connector is used):
 
-If using in-memory connector:
+If using `Dictconnector` or `PasConnector`:
 
 -   No additional dependencies are required.
 
-If using Arctic:
+If using `ArcticConnector`:
 
 -   Arctic requires MongoDB, e.g. install the Community edition
     ([Windows](https://fastdl.mongodb.org/win32/mongodb-win32-x86_64-2012plus-4.2.1-signed.msi),
@@ -122,7 +145,7 @@ If using Arctic:
 
 -   OR, if you wish to use Docker for running MongoDB see the installation instructions [here](https://github.com/pastas/pastastore/tree/master/dockerfiles#running-mongodb-from-docker).
 
-If using Pystore:
+If using `PystoreConnector`:
 
 -   PyStore uses [Snappy](http://google.github.io/snappy/), a fast and
     efficient compression/decompression library from Google. You'll need to

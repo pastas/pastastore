@@ -5,10 +5,9 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
-
 import pastas as ps
 from pastas.io.pas import pastas_hook
+from tqdm import tqdm
 
 from .util import _custom_warning
 
@@ -120,8 +119,9 @@ class PastaStore:
         data = pd.DataFrame(columns=np.arange(n))
 
         for series in distances.index:
-            series = pd.Series(distances.loc[series].dropna().sort_values().index[:n],
-                               name=series)
+            series = pd.Series(
+                distances.loc[series].dropna().sort_values().index[:n],
+                name=series)
             data = data.append(series)
         return data
 
@@ -212,8 +212,9 @@ class PastaStore:
         data = pd.DataFrame(columns=np.arange(n))
 
         for series in distances.index:
-            series = pd.Series(distances.loc[series].dropna().sort_values().index[:n],
-                               name=series)
+            series = pd.Series(
+                distances.loc[series].dropna().sort_values().index[:n],
+                name=series)
             data = data.append(series)
         return data
 
@@ -281,7 +282,8 @@ class PastaStore:
 
         # loop through model names and store results
         desc = "Get model parameters"
-        for mlname in (tqdm(modelnames, desc=desc) if progressbar else modelnames):
+        for mlname in (tqdm(modelnames, desc=desc)
+                       if progressbar else modelnames):
             mldict = self.get_models(mlname, return_dict=True,
                                      progressbar=False)
             if parameters is None:
@@ -326,7 +328,8 @@ class PastaStore:
 
         # loop through model names
         desc = "Get model statistics"
-        for mlname in (tqdm(modelnames, desc=desc) if progressbar else modelnames):
+        for mlname in (tqdm(modelnames, desc=desc)
+                       if progressbar else modelnames):
             ml = self.get_models(mlname, progressbar=False)
             for stat in statistics:
                 value = ml.stats.__getattribute__(stat)(**kwargs)
@@ -444,7 +447,8 @@ class PastaStore:
         else:
             return errors
 
-    def add_recharge(self, ml: ps.Model, rfunc=ps.Gamma) -> None:
+    def add_recharge(self, ml: ps.Model, rfunc=ps.Gamma,
+                     recharge=ps.rch.Linear()) -> None:
         """Add recharge to a pastas model.
 
         Uses closest precipitation and evaporation timeseries in database.
@@ -458,6 +462,8 @@ class PastaStore:
             response function to use for recharge in model,
             by default ps.Gamma (for different response functions, see
             pastas documentation)
+        recharge : ps.RechargeModel
+            recharge model to use, default is ps.rch.Linear()
         """
         # get nearest prec and evap stns
         names = []
@@ -471,7 +477,7 @@ class PastaStore:
             if isinstance(name, float):
                 if np.isnan(name):
                     raise ValueError(f"Unable to find nearest '{var}' stress! "
-                                    "Check X and Y coordinates.")
+                                     "Check X and Y coordinates.")
             else:
                 names.append(name)
         if len(names) == 0:
@@ -481,14 +487,16 @@ class PastaStore:
         # get data
         tsdict = self.conn.get_stresses(names)
         stresses = []
-        for k, s in tsdict.items():
+        for (k, s), setting in zip(tsdict.items(), ("prec", "evap")):
             metadata = self.conn.get_metadata("stresses", k, as_frame=False)
-            stresses.append(ps.TimeSeries(s, name=k, metadata=metadata))
+            stresses.append(ps.TimeSeries(s, name=k, settings=setting,
+                                          metadata=metadata))
 
         # add recharge to model
-        rch = ps.StressModel2(stresses, rfunc, name="recharge",
-                              metadata=[i.metadata for i in stresses],
-                              settings=("prec", "evap"))
+        rch = ps.RechargeModel(stresses[0], stresses[1], rfunc,
+                               name="recharge", recharge=recharge,
+                               settings=("prec", "evap"),
+                               metadata=[i.metadata for i in stresses])
         ml.add_stressmodel(rch)
 
     def solve_models(self, mls: Optional[Union[ps.Model, list, str]] = None,
@@ -571,9 +579,8 @@ class PastaStore:
             if the art_tools module is not available
         """
         try:
-            from art_tools import (
-                pastas_get_model_results)
-        except:
+            from art_tools import pastas_get_model_results
+        except Exception:
             raise ModuleNotFoundError(
                 "You need 'art_tools' to use this method!")
 
@@ -608,7 +615,7 @@ class PastaStore:
         progressbar : bool, optional
             show progressbar, by default True
         """
-        from zipfile import ZipFile, ZIP_DEFLATED
+        from zipfile import ZIP_DEFLATED, ZipFile
         if os.path.exists(fname) and not overwrite:
             raise FileExistsError("File already exists! "
                                   "Use 'overwrite=True' to "
@@ -626,7 +633,59 @@ class PastaStore:
             # models
             self.conn._models_to_archive(archive, progressbar=progressbar)
 
-    @classmethod
+    def export_model_series_to_csv(self,
+                                   names: Optional[Union[list, str]] = None,
+                                   exportdir: str = ".",
+                                   exportmeta: bool = True):
+        """Export model timeseries to csv files.
+
+        Parameters
+        ----------
+        names : Optional[Union[list, str]], optional
+            names of models to export, by default None, which uses retrieves
+            all models from database
+        exportdir : str, optional
+            directory to export csv files to, default is current directory
+        exportmeta : bool, optional
+            export metadata for all timeseries as csv file, default is True
+        """
+        names = self.conn._parse_names(names, libname="models")
+        for name in names:
+            mldict = self.get_models(name, return_dict=True)
+
+            oname = mldict["oseries"]["name"]
+            o = self.get_oseries(oname)
+            o.to_csv(os.path.join(exportdir, f"{oname}.csv"))
+
+            if exportmeta:
+                metalist = [self.get_metadata("oseries", oname)]
+
+            for sm in mldict["stressmodels"]:
+                if mldict["stressmodels"][sm]["stressmodel"] == "RechargeModel":
+                    for istress in ["prec", "evap"]:
+                        istress = mldict["stressmodels"][sm][istress]
+                        stress_name = istress["name"]
+                        ts = self.get_stresses(stress_name)
+                        ts.to_csv(os.path.join(
+                            exportdir, f"{stress_name}.csv"))
+                        if exportmeta:
+                            tsmeta = self.get_metadata("stresses", stress_name)
+                            metalist.append(tsmeta)
+                else:
+                    for istress in mldict["stressmodels"][sm]["stress"]:
+                        stress_name = istress["name"]
+                        ts = self.get_stresses(stress_name)
+                        ts.to_csv(os.path.join(
+                            exportdir, f"{stress_name}.csv"))
+                        if exportmeta:
+                            tsmeta = self.get_metadata("stresses", stress_name)
+                            metalist.append(tsmeta)
+
+            if exportmeta:
+                pd.concat(metalist, axis=0).to_csv(
+                    os.path.join(exportdir, f"metadata_{name}.csv"))
+
+    @ classmethod
     def from_zip(cls, fname: str, conn, storename: Optional[str] = None):
         """Load PastaStore from zipfile.
 
@@ -654,6 +713,9 @@ class PastaStore:
                 if libname in ["stresses", "oseries"]:
                     s = pd.read_json(archive.open(f),
                                      orient="columns")
+                    if not isinstance(s.index, pd.DatetimeIndex):
+                        s.index = pd.to_datetime(s.index, unit='ms')
+                        s = s.sort_index()
                     meta = json.load(archive.open(
                         f.replace(".json", "_meta.json")))
                     conn._add_series(libname, s, fjson.split(".")[0],

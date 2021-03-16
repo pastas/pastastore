@@ -27,8 +27,10 @@ setup(
         'Programming Language :: Python :: 3.8'
     ],
     platforms='Windows, MacOS, *nix',
-    install_requires=['numpy>=1.15', 'pandas>=0.24', "tqdm",
-                      "pastas>=0.13", "arctic"],
+    install_requires=["numpy>=1.15",
+                      "pandas>=1.0,<1.2.0",  # for now, until Arctic is updated
+                      "tqdm>=4.36",
+                      "pastas>=0.13"],
     packages=find_packages(exclude=[]),
     include_package_data=True,
 )

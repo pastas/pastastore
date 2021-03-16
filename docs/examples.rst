@@ -24,6 +24,24 @@ is stored in-memory (in dictionaries)::
    # create project for managing Pastas data and models
    store = pst.PastaStore("my_project", conn)
 
+
+Using Pastas
+------------
+
+The following snippet shows how to use PastaStore with storage of 
+timeseries and models on disk as pas-files. This is the simplest implementation 
+that writes data to disk as no external dependencies are required::
+
+   import pastastore as pst
+
+   # define pas connector
+   path = "./data/pas"
+   conn = pst.PasConnector("my_connector", path)
+
+   # create project for managing Pastas data and models
+   store = pst.PastaStore("my_project", conn)
+
+
 Using Arctic
 ------------
 

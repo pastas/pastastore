@@ -18,6 +18,29 @@ and is therefore not persistent, i.e. you cannot pick up where you left off
 last time. Once you exit Python your data is lost. For small projects, this
 connector can be useful as it is extremely simple.
 
+Pas-files
+---------
+The :ref:`PasConnector` is an object that stores Pastas timeseries and models
+on disk as pas-files. These are JSON files (with a .pas extension) and make 
+use of Pastas methods to store models on disk. There is no compression of files 
+and the files are stored in directories on the harddrive which means all files 
+are human-readable. The advantage of this Connector is that no external 
+dependencies are required. The downside of this storage method is that it takes 
+up more diskspace and is slower than the other Connectors.
+
+The PasConnector uses the following structure:
+
+.. code-block:: bash
+
+   +-- directory
+   |   +-- sub-directories (i.e. oseries, stresses, models)
+   |   |   +-- pas-files... (i.e. individual timeseries or models)
+
+The data is stored within these sub-directories. Observations and stresses 
+timeseries are stored as JSON files. Models are stored as JSON as well but 
+*do not* contain the timeseries themselves. These are picked up from
+the other directories when the model is loaded from the database.
+
 Arctic
 ------
 The :ref:`ArcticConnector` is an object that creates a
