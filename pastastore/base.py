@@ -301,7 +301,7 @@ class ConnectorUtil:
         mdict : dict
             dictionary describing pastas.Model
         update_ts_settings : bool, optional
-            update stored tmin and tmax in timeseries settings 
+            update stored tmin and tmax in timeseries settings
             based on timeseries loaded from store.
 
         Returns
@@ -322,6 +322,7 @@ class ConnectorUtil:
                     mdict['oseries']['series'].index[0]
                 mdict["oseries"]["settings"]["tmax"] = \
                     mdict['oseries']['series'].index[-1]
+
         # StressModel, StressModel2, WellModel
         for ts in mdict["stressmodels"].values():
             if "stress" in ts.keys():
@@ -336,6 +337,7 @@ class ConnectorUtil:
                                     stress['series'].index[0]
                                 stress["settings"]["tmax"] = \
                                     stress['series'].index[-1]
+
             # RechargeModel
             if ("prec" in ts.keys()) and ("evap" in ts.keys()):
                 for stress in [ts["prec"], ts["evap"]]:
