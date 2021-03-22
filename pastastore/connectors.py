@@ -261,7 +261,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
             else:
                 raise TypeError("Expected pastas.Model or dict!")
             # check if oseries and stresses exist in store
-            self._check_model_series_for_store(ml)
+            self._check_model_series_names_for_store(ml)
             self._check_oseries_in_store(ml)
             self._check_stresses_in_store(ml)
             # write model to store
@@ -446,7 +446,8 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
                                 squeeze=squeeze)
 
     def get_models(self, names: Union[list, str], return_dict: bool = False,
-                   progressbar: bool = False, squeeze: bool = True) \
+                   progressbar: bool = False, squeeze: bool = True,
+                   update_ts_settings: bool = False) \
             -> Union[ps.Model, list]:
         """Load models from database.
 
@@ -462,6 +463,9 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         squeeze : bool, optional
             if True return Model instead of list of Models
             for single entry
+        update_ts_settings : bool, optional
+            update timeseries settings based on timeseries in store.
+            overwrites stored tmin/tmax in model.
 
         Returns
         -------
@@ -480,7 +484,8 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
             if return_dict:
                 ml = item.data
             else:
-                ml = self._parse_model_dict(data)
+                ml = self._parse_model_dict(
+                    data, update_ts_settings=update_ts_settings)
             models.append(ml)
         if len(models) == 1 and squeeze:
             return models[0]
@@ -720,7 +725,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         lib = self.get_library("models")
         # check if oseries and stresses exist in store, if not add them
         if name not in lib.items or overwrite:
-            self._check_model_series_for_store(ml)
+            self._check_model_series_names_for_store(ml)
             self._check_oseries_in_store(ml)
             self._check_stresses_in_store(ml)
             lib.write(name, pd.DataFrame(), metadata=jsondict,
@@ -918,7 +923,8 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
                                 squeeze=squeeze)
 
     def get_models(self, names: Union[list, str], return_dict: bool = False,
-                   progressbar: bool = False, squeeze: bool = True) \
+                   progressbar: bool = False, squeeze: bool = True,
+                   update_ts_settings: bool = False) \
             -> Union[ps.Model, list]:
         """Load models from pystore.
 
@@ -934,6 +940,9 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         squeeze : bool, optional
             if True return Model instead of list of Models
             for single entry
+        update_ts_settings : bool, optional
+            update timeseries settings based on timeseries in store.
+            overwrites stored tmin/tmax in model.
 
         Returns
         -------
@@ -953,7 +962,8 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             if return_dict:
                 ml = data
             else:
-                ml = self._parse_model_dict(data)
+                ml = self._parse_model_dict(
+                    data, update_ts_settings=update_ts_settings)
             models.append(ml)
         if len(models) == 1 and squeeze:
             return models[0]
@@ -1152,7 +1162,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
             raise TypeError("Expected pastas.Model or dict!")
         # check if oseries and stresses exist in store, if not add them
         if name not in lib or overwrite:
-            self._check_model_series_for_store(ml)
+            self._check_model_series_names_for_store(ml)
             self._check_oseries_in_store(ml)
             self._check_stresses_in_store(ml)
             lib[name] = mldict
@@ -1330,7 +1340,8 @@ class DictConnector(BaseConnector, ConnectorUtil):
                                 squeeze=squeeze)
 
     def get_models(self, names: Union[list, str], return_dict: bool = False,
-                   progressbar: bool = False, squeeze: bool = True) \
+                   progressbar: bool = False, squeeze: bool = True,
+                   update_ts_settings: bool = False) \
             -> Union[Model, list]:
         """Load models from object.
 
@@ -1346,6 +1357,9 @@ class DictConnector(BaseConnector, ConnectorUtil):
         squeeze : bool, optional
             if True return Model instead of list of Models
             for single entry
+        update_ts_settings : bool, optional
+            update timeseries settings based on timeseries in store.
+            overwrites stored tmin/tmax in model.
 
         Returns
         -------
@@ -1363,7 +1377,8 @@ class DictConnector(BaseConnector, ConnectorUtil):
             if return_dict:
                 ml = data
             else:
-                ml = self._parse_model_dict(data)
+                ml = self._parse_model_dict(
+                    data, update_ts_settings=update_ts_settings)
             models.append(ml)
         if len(models) == 1 and squeeze:
             return models[0]
@@ -1581,7 +1596,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
             raise TypeError("Expected pastas.Model or dict!")
         # check if oseries and stresses exist in store, if not add them
         if name not in self.models or overwrite:
-            self._check_model_series_for_store(ml)
+            self._check_model_series_names_for_store(ml)
             self._check_oseries_in_store(ml)
             self._check_stresses_in_store(ml)
 
@@ -1672,6 +1687,9 @@ class PasConnector(BaseConnector, ConnectorUtil):
         desc = f"Get {libname}"
         for n in (tqdm(names, desc=desc) if progressbar else names):
             fjson = os.path.join(lib, f"{n}.pas")
+            if not os.path.exists(fjson):
+                msg = f"Stress '{n}' not in store."
+                raise FileNotFoundError(msg)
             ts[n] = self._series_from_json(fjson)
         # return frame if len == 1
         if len(ts) == 1 and squeeze:
@@ -1775,7 +1793,8 @@ class PasConnector(BaseConnector, ConnectorUtil):
                                 squeeze=squeeze)
 
     def get_models(self, names: Union[list, str], return_dict: bool = False,
-                   progressbar: bool = False, squeeze: bool = True) \
+                   progressbar: bool = False, squeeze: bool = True,
+                   update_ts_settings: bool = False) \
             -> Union[Model, list]:
         """Load models from object.
 
@@ -1791,6 +1810,9 @@ class PasConnector(BaseConnector, ConnectorUtil):
         squeeze : bool, optional
             if True return Model instead of list of Models
             for single entry
+        update_ts_settings : bool, optional
+            update timeseries settings based on timeseries in store.
+            overwrites stored tmin/tmax in model.
 
         Returns
         -------
@@ -1809,7 +1831,8 @@ class PasConnector(BaseConnector, ConnectorUtil):
             if return_dict:
                 ml = data
             else:
-                ml = self._parse_model_dict(data)
+                ml = self._parse_model_dict(
+                    data, update_ts_settings=update_ts_settings)
             models.append(ml)
         if len(models) == 1 and squeeze:
             return models[0]
