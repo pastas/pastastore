@@ -42,6 +42,7 @@ jobs:
           pip install dask[dataframe] --upgrade
           pip install pystore
           pip install git+https://github.com/manahl/arctic.git
+          pip install pandas==1.1.5
           pip install codecov
           pip install pytest-cov
           pip install pytest-dependency
