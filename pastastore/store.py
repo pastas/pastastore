@@ -119,9 +119,11 @@ class PastaStore:
         data = pd.DataFrame(columns=np.arange(n))
 
         for series in distances.index:
-            series = pd.Series(
-                distances.loc[series].dropna().sort_values().index[:n],
-                name=series)
+            others = distances.loc[series].dropna(
+            ).sort_values().index.tolist()
+            # remove self
+            others.remove(series)
+            series = pd.Series(others[:n], name=series)
             data = data.append(series)
         return data
 
