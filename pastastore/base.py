@@ -524,7 +524,12 @@ class ConnectorUtil:
             s = self._get_series(libname, n, progressbar=False)
             if isinstance(s, pd.Series):
                 s = s.to_frame()
-            sjson = s.to_json(orient="columns")
+            try:
+                sjson = s.to_json(orient="columns")
+            except ValueError as e:
+                msg = (f"DatetimeIndex of '{n}' probably contains NaT "
+                       "or duplicate timestamps!")
+                raise ValueError(msg) from e
             files.append(sjson)
         if len(files) == 1 and squeeze:
             return files[0]
