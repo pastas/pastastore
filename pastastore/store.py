@@ -341,7 +341,8 @@ class PastaStore:
         return s.astype(float)
 
     def create_model(self, name: str, modelname: str = None,
-                     add_recharge: bool = True) -> ps.Model:
+                     add_recharge: bool = True,
+                     recharge_name: str = "recharge") -> ps.Model:
         """Create a pastas Model.
 
         Parameters
@@ -354,6 +355,8 @@ class PastaStore:
             add recharge to the model by looking for the closest
             precipitation and evaporation timeseries in the stresses
             library, by default True
+        recharge_name : str
+            name of the RechargeModel
 
         Returns
         -------
@@ -380,17 +383,20 @@ class PastaStore:
             ml = ps.Model(ts, name=modelname, metadata=meta)
 
             if add_recharge:
-                self.add_recharge(ml)
+                self.add_recharge(ml, recharge_name=recharge_name)
             return ml
         else:
             raise ValueError("Empty timeseries!")
 
     def create_models_bulk(self, oseries: Optional[Union[list, str]] = None,
-                           add_recharge: bool = True, store: bool = True,
-                           solve: bool = False, progressbar: bool = True,
+                           add_recharge: bool = True,
+                           store: bool = True,
+                           solve: bool = False,
+                           progressbar: bool = True,
                            return_models: bool = False,
                            ignore_errors: bool = False,
-                           **kwargs) -> Union[Tuple[dict, dict], dict]:
+                           **kwargs) \
+            -> Union[Tuple[dict, dict], dict]:
         """Bulk creation of pastas models.
 
         Parameters
@@ -451,7 +457,7 @@ class PastaStore:
 
     def add_recharge(self, ml: ps.Model, rfunc=ps.Gamma,
                      recharge=ps.rch.Linear(),
-                     name: str = "recharge") -> None:
+                     recharge_name: str = "recharge") -> None:
         """Add recharge to a pastas model.
 
         Uses closest precipitation and evaporation timeseries in database.
@@ -467,7 +473,7 @@ class PastaStore:
             pastas documentation)
         recharge : ps.RechargeModel
             recharge model to use, default is ps.rch.Linear()
-        name : str
+        recharge_name : str
             name of the RechargeModel
         """
         # get nearest prec and evap stns
@@ -499,7 +505,7 @@ class PastaStore:
 
         # add recharge to model
         rch = ps.RechargeModel(stresses[0], stresses[1], rfunc,
-                               name=name, recharge=recharge,
+                               name=recharge_name, recharge=recharge,
                                settings=("prec", "evap"),
                                metadata=[i.metadata for i in stresses])
         ml.add_stressmodel(rch)
