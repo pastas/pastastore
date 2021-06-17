@@ -292,25 +292,38 @@ class ConnectorUtil:
             meta.index = names
         return meta
 
-    def _parse_model_dict(self, mdict: dict):
+    def _parse_model_dict(self, mdict: dict,
+                          update_ts_settings: bool = False):
         """Internal method to parse dictionary describing pastas models.
 
         Parameters
         ----------
         mdict : dict
             dictionary describing pastas.Model
+        update_ts_settings : bool, optional
+            update stored tmin and tmax in timeseries settings
+            based on timeseries loaded from store.
 
         Returns
         -------
         ml : pastas.Model
             timeseries analysis model
         """
+        # oseries
         if 'series' not in mdict['oseries']:
             name = mdict["oseries"]['name']
             if name not in self.oseries.index:
                 msg = 'oseries {} not present in project'.format(name)
                 raise LookupError(msg)
             mdict['oseries']['series'] = self.get_oseries(name)
+            # update tmin/tmax from timeseries
+            if update_ts_settings:
+                mdict["oseries"]["settings"]["tmin"] = \
+                    mdict['oseries']['series'].index[0]
+                mdict["oseries"]["settings"]["tmax"] = \
+                    mdict['oseries']['series'].index[-1]
+
+        # StressModel, StressModel2, WellModel
         for ts in mdict["stressmodels"].values():
             if "stress" in ts.keys():
                 for stress in ts["stress"]:
@@ -318,6 +331,26 @@ class ConnectorUtil:
                         name = stress['name']
                         if name in self.stresses.index:
                             stress['series'] = self.get_stresses(name)
+                            # update tmin/tmax from timeseries
+                            if update_ts_settings:
+                                stress["settings"]["tmin"] = \
+                                    stress['series'].index[0]
+                                stress["settings"]["tmax"] = \
+                                    stress['series'].index[-1]
+
+            # RechargeModel
+            if ("prec" in ts.keys()) and ("evap" in ts.keys()):
+                for stress in [ts["prec"], ts["evap"]]:
+                    if 'series' not in stress:
+                        name = stress['name']
+                        if name in self.stresses.index:
+                            stress['series'] = self.get_stresses(name)
+                            # update tmin/tmax from timeseries
+                            if update_ts_settings:
+                                stress["settings"]["tmin"] = \
+                                    stress['series'].index[0]
+                                stress["settings"]["tmax"] = \
+                                    stress['series'].index[-1]
                         else:
                             msg = "stress '{}' not present in project".format(
                                 name)
@@ -376,7 +409,7 @@ class ConnectorUtil:
         return series
 
     @staticmethod
-    def _check_model_series_for_store(ml):
+    def _check_model_series_names_for_store(ml):
         if isinstance(ml, ps.Model):
             series_names = [istress.series.name
                             for sm in ml.stressmodels.values()
@@ -454,7 +487,7 @@ class ConnectorUtil:
                     stresses = sm["stress"]
                 for s in stresses:
                     if s["name"] not in self.stresses.index:
-                        msg = (f"Cannot add model because stress '{s.name}' "
+                        msg = (f"Cannot add model because stress '{s['name']}' "
                                "is not contained in store.")
                         raise LookupError(msg)
         else:
@@ -491,7 +524,12 @@ class ConnectorUtil:
             s = self._get_series(libname, n, progressbar=False)
             if isinstance(s, pd.Series):
                 s = s.to_frame()
-            sjson = s.to_json(orient="columns")
+            try:
+                sjson = s.to_json(orient="columns")
+            except ValueError as e:
+                msg = (f"DatetimeIndex of '{n}' probably contains NaT "
+                       "or duplicate timestamps!")
+                raise ValueError(msg) from e
             files.append(sjson)
         if len(files) == 1 and squeeze:
             return files[0]

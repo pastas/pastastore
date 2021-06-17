@@ -119,9 +119,11 @@ class PastaStore:
         data = pd.DataFrame(columns=np.arange(n))
 
         for series in distances.index:
-            series = pd.Series(
-                distances.loc[series].dropna().sort_values().index[:n],
-                name=series)
+            others = distances.loc[series].dropna(
+            ).sort_values().index.tolist()
+            # remove self
+            others.remove(series)
+            series = pd.Series(others[:n], name=series)
             data = data.append(series)
         return data
 
@@ -339,7 +341,8 @@ class PastaStore:
         return s.astype(float)
 
     def create_model(self, name: str, modelname: str = None,
-                     add_recharge: bool = True) -> ps.Model:
+                     add_recharge: bool = True,
+                     recharge_name: str = "recharge") -> ps.Model:
         """Create a pastas Model.
 
         Parameters
@@ -352,6 +355,8 @@ class PastaStore:
             add recharge to the model by looking for the closest
             precipitation and evaporation timeseries in the stresses
             library, by default True
+        recharge_name : str
+            name of the RechargeModel
 
         Returns
         -------
@@ -378,17 +383,20 @@ class PastaStore:
             ml = ps.Model(ts, name=modelname, metadata=meta)
 
             if add_recharge:
-                self.add_recharge(ml)
+                self.add_recharge(ml, recharge_name=recharge_name)
             return ml
         else:
             raise ValueError("Empty timeseries!")
 
     def create_models_bulk(self, oseries: Optional[Union[list, str]] = None,
-                           add_recharge: bool = True, store: bool = True,
-                           solve: bool = False, progressbar: bool = True,
+                           add_recharge: bool = True,
+                           store: bool = True,
+                           solve: bool = False,
+                           progressbar: bool = True,
                            return_models: bool = False,
                            ignore_errors: bool = False,
-                           **kwargs) -> Union[Tuple[dict, dict], dict]:
+                           **kwargs) \
+            -> Union[Tuple[dict, dict], dict]:
         """Bulk creation of pastas models.
 
         Parameters
@@ -448,7 +456,8 @@ class PastaStore:
             return errors
 
     def add_recharge(self, ml: ps.Model, rfunc=ps.Gamma,
-                     recharge=ps.rch.Linear()) -> None:
+                     recharge=ps.rch.Linear(),
+                     recharge_name: str = "recharge") -> None:
         """Add recharge to a pastas model.
 
         Uses closest precipitation and evaporation timeseries in database.
@@ -464,6 +473,8 @@ class PastaStore:
             pastas documentation)
         recharge : ps.RechargeModel
             recharge model to use, default is ps.rch.Linear()
+        recharge_name : str
+            name of the RechargeModel
         """
         # get nearest prec and evap stns
         names = []
@@ -494,7 +505,7 @@ class PastaStore:
 
         # add recharge to model
         rch = ps.RechargeModel(stresses[0], stresses[1], rfunc,
-                               name="recharge", recharge=recharge,
+                               name=recharge_name, recharge=recharge,
                                settings=("prec", "evap"),
                                metadata=[i.metadata for i in stresses])
         ml.add_stressmodel(rch)
@@ -686,7 +697,7 @@ class PastaStore:
                     os.path.join(exportdir, f"metadata_{name}.csv"))
 
     @ classmethod
-    def from_zip(cls, fname: str, conn, storename: Optional[str] = None):
+    def from_zip(cls, fname: str, conn, storename: Optional[str] = None, progressbar: bool = True):
         """Load PastaStore from zipfile.
 
         Parameters
@@ -698,6 +709,8 @@ class PastaStore:
         storename : str, optional
             name of the PastaStore, by default None, which
             defaults to the name of the Connector.
+        progressbar : bool, optional
+            show progressbar, by default True
 
         Returns
         -------
@@ -708,14 +721,14 @@ class PastaStore:
         with ZipFile(fname, "r") as archive:
             namelist = [fi for fi in archive.namelist()
                         if not fi.endswith("_meta.json")]
-            for f in namelist:
+            for f in tqdm(namelist, desc="Reading zip"):
                 libname, fjson = os.path.split(f)
                 if libname in ["stresses", "oseries"]:
                     s = pd.read_json(archive.open(f),
                                      orient="columns")
                     if not isinstance(s.index, pd.DatetimeIndex):
                         s.index = pd.to_datetime(s.index, unit='ms')
-                        s = s.sort_index()
+                    s = s.sort_index()
                     meta = json.load(archive.open(
                         f.replace(".json", "_meta.json")))
                     conn._add_series(libname, s, fjson.split(".")[0],

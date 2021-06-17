@@ -75,11 +75,26 @@ def test_get_oseries(request, pr):
 
 
 @pytest.mark.dependency()
+def test_get_oseries_and_metadata(request, pr):
+    depends(request, [f"test_add_oseries[{pr.type}]"])
+    o, m = pr.get_oseries("oseries1", return_metadata=True)
+    return o, m
+
+
+@pytest.mark.dependency()
 def test_get_stress(request, pr):
     depends(request, [f"test_add_stress[{pr.type}]"])
     s = pr.get_stresses('prec')
     s.name = 'prec'
     return s
+
+
+@pytest.mark.dependency()
+def test_get_stress_and_metadata(request, pr):
+    depends(request, [f"test_add_stress[{pr.type}]"])
+    s, m = pr.get_stresses('prec', return_metadata=True)
+    s.name = 'prec'
+    return s, m
 
 
 @pytest.mark.dependency()

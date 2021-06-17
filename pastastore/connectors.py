@@ -4,7 +4,7 @@ import os
 import warnings
 from copy import deepcopy
 from importlib import import_module
-from typing import Optional, Union
+from typing import Optional, Union, List, Dict
 
 import pandas as pd
 import pastas as ps
@@ -261,7 +261,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
             else:
                 raise TypeError("Expected pastas.Model or dict!")
             # check if oseries and stresses exist in store
-            self._check_model_series_for_store(ml)
+            self._check_model_series_names_for_store(ml)
             self._check_oseries_in_store(ml)
             self._check_stresses_in_store(ml)
             # write model to store
@@ -398,14 +398,20 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
                 return metalist
 
     def get_oseries(self, names: Union[list, str],
-                    progressbar: bool = False, squeeze: bool = True) \
-            -> FrameorSeriesUnion:
+                    return_metadata: bool = False,
+                    progressbar: bool = False,
+                    squeeze: bool = True) \
+            -> Union[Union[FrameorSeriesUnion, Dict],
+                     Optional[Union[Dict, List]]]:
         """Get oseries from database.
 
         Parameters
         ----------
         names : str or list of str
             names of the oseries to load
+        return_metadata : bool, optional
+            return metadata as dictionary or list of dictionaries, 
+            default is False
         progressbar : bool, optional
             show progressbar, by default False
         squeeze : bool, optional
@@ -414,22 +420,39 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
 
         Returns
         -------
-        pandas.DataFrame or dict of DataFrames
+        oseries : pandas.DataFrame or dict of DataFrames
             returns timeseries as DataFrame or dictionary of DataFrames if
             multiple names were passed
+        metadata : dict or list of dict
+            metadata for each oseries, only returned if return_metadata=True
         """
-        return self._get_series("oseries", names, progressbar=progressbar,
-                                squeeze=squeeze)
+        oseries = self._get_series("oseries", names, progressbar=progressbar,
+                                   squeeze=squeeze)
+        if return_metadata:
+            metadata = self.get_metadata("oseries",
+                                         names,
+                                         progressbar=progressbar,
+                                         as_frame=False,
+                                         squeeze=squeeze)
+            return oseries, metadata
+        else:
+            return oseries
 
     def get_stresses(self, names: Union[list, str],
-                     progressbar: bool = False, squeeze: bool = True) \
-            -> FrameorSeriesUnion:
+                     return_metadata: bool = False,
+                     progressbar: bool = False,
+                     squeeze: bool = True) \
+            -> Union[Union[FrameorSeriesUnion, Dict],
+                     Optional[Union[Dict, List]]]:
         """Get stresses from database.
 
         Parameters
         ----------
         names : str or list of str
             names of the stresses to load
+        return_metadata : bool, optional
+            return metadata as dictionary or list of dictionaries,
+            default is False
         progressbar : bool, optional
             show progressbar, by default False
         squeeze : bool, optional
@@ -438,15 +461,27 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
 
         Returns
         -------
-        pandas.DataFrame or dict of DataFrames
+        stresses : pandas.DataFrame or dict of DataFrames
             returns timeseries as DataFrame or dictionary of DataFrames if
             multiple names were passed
+        metadata : dict or list of dict
+            metadata for each stress, only returned if return_metadata=True
         """
-        return self._get_series("stresses", names, progressbar=progressbar,
-                                squeeze=squeeze)
+        stresses = self._get_series("stresses", names, progressbar=progressbar,
+                                    squeeze=squeeze)
+        if return_metadata:
+            metadata = self.get_metadata("stresses",
+                                         names,
+                                         progressbar=progressbar,
+                                         as_frame=False,
+                                         squeeze=squeeze)
+            return stresses, metadata
+        else:
+            return stresses
 
     def get_models(self, names: Union[list, str], return_dict: bool = False,
-                   progressbar: bool = False, squeeze: bool = True) \
+                   progressbar: bool = False, squeeze: bool = True,
+                   update_ts_settings: bool = False) \
             -> Union[ps.Model, list]:
         """Load models from database.
 
@@ -462,6 +497,9 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         squeeze : bool, optional
             if True return Model instead of list of Models
             for single entry
+        update_ts_settings : bool, optional
+            update timeseries settings based on timeseries in store.
+            overwrites stored tmin/tmax in model.
 
         Returns
         -------
@@ -480,7 +518,8 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
             if return_dict:
                 ml = item.data
             else:
-                ml = self._parse_model_dict(data)
+                ml = self._parse_model_dict(
+                    data, update_ts_settings=update_ts_settings)
             models.append(ml)
         if len(models) == 1 and squeeze:
             return models[0]
@@ -720,7 +759,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         lib = self.get_library("models")
         # check if oseries and stresses exist in store, if not add them
         if name not in lib.items or overwrite:
-            self._check_model_series_for_store(ml)
+            self._check_model_series_names_for_store(ml)
             self._check_oseries_in_store(ml)
             self._check_stresses_in_store(ml)
             lib.write(name, pd.DataFrame(), metadata=jsondict,
@@ -847,14 +886,14 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         list or pandas.DataFrame
             list or pandas.DataFrame containing metadata
         """
-        import pystore
+        from pystore.utils import read_metadata
         lib = self.get_library(libname)
 
         metalist = []
         names = self._parse_names(names, libname=libname)
         desc = f"Get metadata {libname}"
         for n in (tqdm(names, desc=desc) if progressbar else names):
-            imeta = pystore.utils.read_metadata(lib._item_path(n))
+            imeta = read_metadata(lib._item_path(n))
             if "name" not in imeta.keys():
                 imeta["name"] = n
             if "_is_series" in imeta.keys():
@@ -870,14 +909,20 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
                 return metalist
 
     def get_oseries(self, names: Union[list, str],
-                    progressbar: bool = False, squeeze: bool = True) \
-            -> FrameorSeriesUnion:
+                    return_metadata: bool = False,
+                    progressbar: bool = False,
+                    squeeze: bool = True) \
+            -> Union[Union[FrameorSeriesUnion, Dict],
+                     Optional[Union[Dict, List]]]:
         """Retrieve oseries from pystore.
 
         Parameters
         ----------
         names : str or list of str
             name(s) of collections to load oseries data from
+        return_metadata : bool, optional
+            return metadata as dictionary or list of dictionaries,
+            default is False
         progressbar : bool, optional
             show progressbar, by default True
         squeeze : bool, optional
@@ -886,22 +931,37 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
 
         Returns
         -------
-        pandas.DataFrame or dict of pandas.DataFrames
+        oseries : pandas.DataFrame or dict of pandas.DataFrames
             returns data as a DataFrame or a dictionary of DataFrames
             if multiple names are passed
+        metadata : dict or list of dict
+            metadata for each oseries, only returned if return_metadata=True
         """
-        return self._get_series("oseries", names, progressbar=progressbar,
-                                squeeze=squeeze)
+        oseries = self._get_series("oseries", names, progressbar=progressbar,
+                                   squeeze=squeeze)
+        if return_metadata:
+            metadata = self.get_metadata("oseries", names,
+                                         progressbar=progressbar,
+                                         as_frame=False, squeeze=squeeze)
+            return oseries, metadata
+        else:
+            return oseries
 
     def get_stresses(self, names: Union[list, str],
-                     progressbar: bool = False, squeeze: bool = True) \
-            -> FrameorSeriesUnion:
+                     return_metadata: bool = False,
+                     progressbar: bool = False,
+                     squeeze: bool = True) \
+            -> Union[Union[FrameorSeriesUnion, Dict],
+                     Optional[Union[Dict, List]]]:
         """Retrieve stresses from pystore.
 
         Parameters
         ----------
         names : str or list of str
             name(s) of collections to load stresses data from
+        return_metadata : bool, optional
+            return metadata as dictionary or list of dictionaries,
+            default is False
         progressbar : bool, optional
             show progressbar, by default True
         squeeze : bool, optional
@@ -910,15 +970,25 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
 
         Returns
         -------
-        pandas.DataFrame or dict of pandas.DataFrames
+        stresses : pandas.DataFrame or dict of pandas.DataFrames
             returns data as a DataFrame or a dictionary of DataFrames
             if multiple names are passed
+        metadata : dict or list of dict
+            metadata for each stress, only returned if return_metadata=True
         """
-        return self._get_series("stresses", names, progressbar=progressbar,
-                                squeeze=squeeze)
+        stresses = self._get_series("stresses", names, progressbar=progressbar,
+                                    squeeze=squeeze)
+        if return_metadata:
+            metadata = self.get_metadata("stresses", names,
+                                         progressbar=progressbar,
+                                         as_frame=False, squeeze=squeeze)
+            return stresses, metadata
+        else:
+            return stresses
 
     def get_models(self, names: Union[list, str], return_dict: bool = False,
-                   progressbar: bool = False, squeeze: bool = True) \
+                   progressbar: bool = False, squeeze: bool = True,
+                   update_ts_settings: bool = False) \
             -> Union[ps.Model, list]:
         """Load models from pystore.
 
@@ -934,6 +1004,9 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         squeeze : bool, optional
             if True return Model instead of list of Models
             for single entry
+        update_ts_settings : bool, optional
+            update timeseries settings based on timeseries in store.
+            overwrites stored tmin/tmax in model.
 
         Returns
         -------
@@ -953,7 +1026,8 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             if return_dict:
                 ml = data
             else:
-                ml = self._parse_model_dict(data)
+                ml = self._parse_model_dict(
+                    data, update_ts_settings=update_ts_settings)
             models.append(ml)
         if len(models) == 1 and squeeze:
             return models[0]
@@ -1152,7 +1226,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
             raise TypeError("Expected pastas.Model or dict!")
         # check if oseries and stresses exist in store, if not add them
         if name not in lib or overwrite:
-            self._check_model_series_for_store(ml)
+            self._check_model_series_names_for_store(ml)
             self._check_oseries_in_store(ml)
             self._check_stresses_in_store(ml)
             lib[name] = mldict
@@ -1282,14 +1356,20 @@ class DictConnector(BaseConnector, ConnectorUtil):
                 return metalist
 
     def get_oseries(self, names: Union[list, str],
-                    progressbar: bool = False, squeeze: bool = True) \
-            -> FrameorSeriesUnion:
+                    return_metadata: bool = False,
+                    progressbar: bool = False,
+                    squeeze: bool = True) \
+            -> Union[Union[FrameorSeriesUnion, Dict],
+                     Optional[Union[Dict, List]]]:
         """Retrieve oseries from object.
 
         Parameters
         ----------
         names : Union[list, str]
             name or list of names to retrieve
+        return_metadata : bool, optional
+            return metadata as dictionary or list of dictionaries,
+            default is False
         progressbar : bool, optional
             show progressbar, by default False
         squeeze : bool, optional
@@ -1298,22 +1378,37 @@ class DictConnector(BaseConnector, ConnectorUtil):
 
         Returns
         -------
-        dict, FrameorSeriesUnion
+        oseries : dict, FrameorSeriesUnion
             returns dictionary or DataFrame/Series depending on number of
             names passed
+        metadata : dict or list of dict
+            metadata for each stress, only returned if return_metadata=True
         """
-        return self._get_series("oseries", names, progressbar=progressbar,
-                                squeeze=squeeze)
+        oseries = self._get_series("oseries", names, progressbar=progressbar,
+                                   squeeze=squeeze)
+        if return_metadata:
+            metadata = self.get_metadata("oseries", names,
+                                         progressbar=progressbar,
+                                         as_frame=False, squeeze=squeeze)
+            return oseries, metadata
+        else:
+            return oseries
 
     def get_stresses(self, names: Union[list, str],
-                     progressbar: bool = False, squeeze: bool = True) \
-            -> FrameorSeriesUnion:
+                     return_metadata: bool = False,
+                     progressbar: bool = False,
+                     squeeze: bool = True) \
+            -> Union[Union[FrameorSeriesUnion, Dict],
+                     Optional[Union[Dict, List]]]:
         """Retrieve stresses from object.
 
         Parameters
         ----------
         names : Union[list, str]
             name or list of names of stresses to retrieve
+        return_metadata : bool, optional
+            return metadata as dictionary or list of dictionaries,
+            default is False
         progressbar : bool, optional
             show progressbar, by default False
         squeeze : bool, optional
@@ -1322,15 +1417,25 @@ class DictConnector(BaseConnector, ConnectorUtil):
 
         Returns
         -------
-        dict, FrameorSeriesUnion
+        stresses : dict, FrameorSeriesUnion
             returns dictionary or DataFrame/Series depending on number of
             names passed
+        metadata : dict or list of dict
+            metadata for each stress, only returned if return_metadata=True
         """
-        return self._get_series("stresses", names, progressbar=progressbar,
-                                squeeze=squeeze)
+        stresses = self._get_series("stresses", names, progressbar=progressbar,
+                                    squeeze=squeeze)
+        if return_metadata:
+            metadata = self.get_metadata("stresses", names,
+                                         progressbar=progressbar,
+                                         as_frame=False, squeeze=squeeze)
+            return stresses, metadata
+        else:
+            return stresses
 
     def get_models(self, names: Union[list, str], return_dict: bool = False,
-                   progressbar: bool = False, squeeze: bool = True) \
+                   progressbar: bool = False, squeeze: bool = True,
+                   update_ts_settings: bool = False) \
             -> Union[Model, list]:
         """Load models from object.
 
@@ -1346,6 +1451,9 @@ class DictConnector(BaseConnector, ConnectorUtil):
         squeeze : bool, optional
             if True return Model instead of list of Models
             for single entry
+        update_ts_settings : bool, optional
+            update timeseries settings based on timeseries in store.
+            overwrites stored tmin/tmax in model.
 
         Returns
         -------
@@ -1363,7 +1471,8 @@ class DictConnector(BaseConnector, ConnectorUtil):
             if return_dict:
                 ml = data
             else:
-                ml = self._parse_model_dict(data)
+                ml = self._parse_model_dict(
+                    data, update_ts_settings=update_ts_settings)
             models.append(ml)
         if len(models) == 1 and squeeze:
             return models[0]
@@ -1581,7 +1690,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
             raise TypeError("Expected pastas.Model or dict!")
         # check if oseries and stresses exist in store, if not add them
         if name not in self.models or overwrite:
-            self._check_model_series_for_store(ml)
+            self._check_model_series_names_for_store(ml)
             self._check_oseries_in_store(ml)
             self._check_stresses_in_store(ml)
 
@@ -1672,6 +1781,9 @@ class PasConnector(BaseConnector, ConnectorUtil):
         desc = f"Get {libname}"
         for n in (tqdm(names, desc=desc) if progressbar else names):
             fjson = os.path.join(lib, f"{n}.pas")
+            if not os.path.exists(fjson):
+                msg = f"Stress '{n}' not in store."
+                raise FileNotFoundError(msg)
             ts[n] = self._series_from_json(fjson)
         # return frame if len == 1
         if len(ts) == 1 and squeeze:
@@ -1727,14 +1839,20 @@ class PasConnector(BaseConnector, ConnectorUtil):
                 return metalist
 
     def get_oseries(self, names: Union[list, str],
-                    progressbar: bool = False, squeeze: bool = True) \
-            -> FrameorSeriesUnion:
+                    return_metadata: bool = False,
+                    progressbar: bool = False,
+                    squeeze: bool = True) \
+        -> Union[Union[FrameorSeriesUnion, Dict],
+                 Optional[Union[Dict, List]]]:
         """Retrieve oseries from object.
 
         Parameters
         ----------
         names : Union[list, str]
             name or list of names to retrieve
+        return_metadata : bool, optional
+            return metadata as dictionary or list of dictionaries,
+            default is False
         progressbar : bool, optional
             show progressbar, by default False
         squeeze : bool, optional
@@ -1743,22 +1861,37 @@ class PasConnector(BaseConnector, ConnectorUtil):
 
         Returns
         -------
-        dict, FrameorSeriesUnion
+        oseries : dict, FrameorSeriesUnion
             returns dictionary or DataFrame/Series depending on number of
             names passed
+        metadata : dict or list of dict
+            metadata for each oseries, only returned if return_metadata=True
         """
-        return self._get_series("oseries", names, progressbar=progressbar,
-                                squeeze=squeeze)
+        oseries = self._get_series("oseries", names, progressbar=progressbar,
+                                   squeeze=squeeze)
+        if return_metadata:
+            metadata = self.get_metadata("oseries", names,
+                                         progressbar=progressbar,
+                                         as_frame=False, squeeze=squeeze)
+            return oseries, metadata
+        else:
+            return oseries
 
     def get_stresses(self, names: Union[list, str],
-                     progressbar: bool = False, squeeze: bool = True) \
-            -> FrameorSeriesUnion:
+                     return_metadata: bool = False,
+                     progressbar: bool = False,
+                     squeeze: bool = True) \
+            -> Union[Union[FrameorSeriesUnion, Dict],
+                     Optional[Union[Dict, List]]]:
         """Retrieve stresses from object.
 
         Parameters
         ----------
         names : Union[list, str]
             name or list of names of stresses to retrieve
+        return_metadata : bool, optional
+            return metadata as dictionary or list of dictionaries,
+            default is False
         progressbar : bool, optional
             show progressbar, by default False
         squeeze : bool, optional
@@ -1767,15 +1900,25 @@ class PasConnector(BaseConnector, ConnectorUtil):
 
         Returns
         -------
-        dict, FrameorSeriesUnion
+        stresses : dict, FrameorSeriesUnion
             returns dictionary or DataFrame/Series depending on number of
             names passed
+        metadata : dict or list of dict
+            metadata for each stress, only returned if return_metadata=True
         """
-        return self._get_series("stresses", names, progressbar=progressbar,
-                                squeeze=squeeze)
+        stresses = self._get_series("stresses", names, progressbar=progressbar,
+                                    squeeze=squeeze)
+        if return_metadata:
+            metadata = self.get_metadata("stresses", names,
+                                         progressbar=progressbar,
+                                         as_frame=False, squeeze=squeeze)
+            return stresses, metadata
+        else:
+            return stresses
 
     def get_models(self, names: Union[list, str], return_dict: bool = False,
-                   progressbar: bool = False, squeeze: bool = True) \
+                   progressbar: bool = False, squeeze: bool = True,
+                   update_ts_settings: bool = False) \
             -> Union[Model, list]:
         """Load models from object.
 
@@ -1791,6 +1934,9 @@ class PasConnector(BaseConnector, ConnectorUtil):
         squeeze : bool, optional
             if True return Model instead of list of Models
             for single entry
+        update_ts_settings : bool, optional
+            update timeseries settings based on timeseries in store.
+            overwrites stored tmin/tmax in model.
 
         Returns
         -------
@@ -1809,7 +1955,8 @@ class PasConnector(BaseConnector, ConnectorUtil):
             if return_dict:
                 ml = data
             else:
-                ml = self._parse_model_dict(data)
+                ml = self._parse_model_dict(
+                    data, update_ts_settings=update_ts_settings)
             models.append(ml)
         if len(models) == 1 and squeeze:
             return models[0]
