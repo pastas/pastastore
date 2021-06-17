@@ -450,7 +450,8 @@ class PastaStore:
             return errors
 
     def add_recharge(self, ml: ps.Model, rfunc=ps.Gamma,
-                     recharge=ps.rch.Linear()) -> None:
+                     recharge=ps.rch.Linear(),
+                     name: str = "recharge") -> None:
         """Add recharge to a pastas model.
 
         Uses closest precipitation and evaporation timeseries in database.
@@ -466,6 +467,8 @@ class PastaStore:
             pastas documentation)
         recharge : ps.RechargeModel
             recharge model to use, default is ps.rch.Linear()
+        name : str
+            name of the RechargeModel
         """
         # get nearest prec and evap stns
         names = []
@@ -496,7 +499,7 @@ class PastaStore:
 
         # add recharge to model
         rch = ps.RechargeModel(stresses[0], stresses[1], rfunc,
-                               name="recharge", recharge=recharge,
+                               name=name, recharge=recharge,
                                settings=("prec", "evap"),
                                metadata=[i.metadata for i in stresses])
         ml.add_stressmodel(rch)
@@ -688,7 +691,7 @@ class PastaStore:
                     os.path.join(exportdir, f"metadata_{name}.csv"))
 
     @ classmethod
-    def from_zip(cls, fname: str, conn, storename: Optional[str] = None):
+    def from_zip(cls, fname: str, conn, storename: Optional[str] = None, progressbar: bool = True):
         """Load PastaStore from zipfile.
 
         Parameters
@@ -700,6 +703,8 @@ class PastaStore:
         storename : str, optional
             name of the PastaStore, by default None, which
             defaults to the name of the Connector.
+        progressbar : bool, optional
+            show progressbar, by default True
 
         Returns
         -------
@@ -710,7 +715,7 @@ class PastaStore:
         with ZipFile(fname, "r") as archive:
             namelist = [fi for fi in archive.namelist()
                         if not fi.endswith("_meta.json")]
-            for f in namelist:
+            for f in tqdm(namelist, desc="Reading zip"):
                 libname, fjson = os.path.split(f)
                 if libname in ["stresses", "oseries"]:
                     s = pd.read_json(archive.open(f),
