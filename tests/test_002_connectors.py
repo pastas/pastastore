@@ -1,10 +1,9 @@
 import warnings
 
 import pandas as pd
+import pastas as ps
 import pytest
 from pytest_dependency import depends
-
-import pastas as ps
 
 with warnings.catch_warnings():
     warnings.simplefilter(action="ignore", category=FutureWarning)
@@ -13,128 +12,176 @@ with warnings.catch_warnings():
 ps.set_log_level("ERROR")
 
 
-def test_get_library(pr):
-    olib = pr.get_library("oseries")
+def test_get_library(conn):
+    olib = conn._get_library("oseries")
     return olib
 
 
-def test_add_get_series(request, pr):
+def test_add_get_series(request, conn):
     o1 = pd.Series(index=pd.date_range("2000", periods=10, freq="D"), data=1.0)
     o1.name = "test_series"
-    pr.add_oseries(o1, "test_series", metadata=None)
-    o2 = pr.get_oseries("test_series")
+    conn.add_oseries(o1, "test_series", metadata=None)
+    o2 = conn.get_oseries("test_series")
     # PasConnector has no logic for preserving Series
-    if pr.conn_type == "pas":
+    if conn.conn_type == "pas":
         o2 = o2.squeeze()
     try:
         assert isinstance(o2, pd.Series)
         assert (o1 == o2).all()
     finally:
-        pr.del_oseries("test_series")
+        conn.del_oseries("test_series")
     return
 
 
-def test_add_get_dataframe(request, pr):
+def test_add_get_dataframe(request, conn):
     o1 = pd.DataFrame(data=1.0, columns=["test_df"],
                       index=pd.date_range("2000", periods=10, freq="D"))
     o1.index.name = "test_idx"
-    pr.add_oseries(o1, "test_df", metadata=None)
-    o2 = pr.get_oseries("test_df")
+    conn.add_oseries(o1, "test_df", metadata=None)
+    o2 = conn.get_oseries("test_df")
     try:
         assert isinstance(o2, pd.DataFrame)
         assert (o1 == o2).all().all()
     finally:
-        pr.del_oseries("test_df")
+        conn.del_oseries("test_df")
+    return
+
+
+def test_add_pastas_timeseries(request, conn):
+    o1 = pd.DataFrame(data=1.0, columns=["test_df"],
+                      index=pd.date_range("2000", periods=10, freq="D"))
+    o1.index.name = "test_idx"
+    ts = ps.TimeSeries(o1, metadata={"x": 100000., "y": 400000.})
+    conn.add_oseries(ts, "test_pastas_ts", metadata=None)
+    conn.add_stress(ts, "test_pastas_ts", kind="test",
+                    metadata={"x": 200000., "y": 500000.})
+    conn.del_oseries("test_pastas_ts")
+    conn.del_stress("test_pastas_ts")
+    return
+
+
+def test_update_series(request, conn):
+    o1 = pd.DataFrame(data=1.0, columns=["test_df"],
+                      index=pd.date_range("2000", periods=10, freq="D"))
+    o1.index.name = "test_idx"
+    conn.add_oseries(o1, "test_df", metadata={"x": 100000.})
+    o2 = pd.DataFrame(data=2.0, columns=["test_df"],
+                      index=pd.date_range("2000-01-10", periods=2, freq="D"))
+    o2.index.name = "test_idx"
+    conn.update_oseries(o2, "test_df", metadata={"x": 200000., "y": 400000})
+    o3 = conn.get_oseries("test_df")
+    try:
+        assert (o3.iloc[-2:] == 2.0).all().all()
+        assert o3.index.size == 11
+    finally:
+        conn.del_oseries("test_df")
+    return
+
+
+def test_update_metadata(request, conn):
+    o1 = pd.DataFrame(data=1.0, columns=["test_df"],
+                      index=pd.date_range("2000", periods=10, freq="D"))
+    o1.index.name = "test_idx"
+    conn.add_oseries(o1, "test_df", metadata={"x": 100000.})
+    conn.update_metadata("oseries", "test_df", {"x": 200000., "y": 400000.})
+    m = conn._get_metadata("oseries", "test_df")
+    try:
+        assert isinstance(m, dict)
+        assert m["x"] == 200000.
+        assert m["y"] == 400000.
+    finally:
+        conn.del_oseries("test_df")
     return
 
 
 @pytest.mark.dependency()
-def test_add_oseries(pr):
+def test_add_oseries(conn):
     o = pd.read_csv("./tests/data/obs.csv", index_col=0, parse_dates=True)
-    pr.add_oseries(o, "oseries1", metadata={"name": "oseries1",
-                                            "x": 100000,
-                                            "y": 400000},
-                   overwrite=True)
+    conn.add_oseries(o, "oseries1",
+                     metadata={"name": "oseries1",
+                               "x": 100000,
+                               "y": 400000},
+                     overwrite=True)
     return
 
 
 @pytest.mark.dependency()
-def test_add_stress(pr):
+def test_add_stress(conn):
     s = pd.read_csv("./tests/data/rain.csv", index_col=0, parse_dates=True)
-    pr.add_stress(s, "prec", kind="prec", metadata={"kind": "prec",
-                                                    "x": 100001,
-                                                    "y": 400001})
+    conn.add_stress(s, "prec", kind="prec", metadata={"kind": "prec",
+                                                      "x": 100001,
+                                                      "y": 400001})
     return
 
 
 @pytest.mark.dependency()
-def test_get_oseries(request, pr):
-    depends(request, [f"test_add_oseries[{pr.type}]"])
-    o = pr.get_oseries("oseries1")
+def test_get_oseries(request, conn):
+    depends(request, [f"test_add_oseries[{conn.type}]"])
+    o = conn.get_oseries("oseries1")
     return o
 
 
 @pytest.mark.dependency()
-def test_get_oseries_and_metadata(request, pr):
-    depends(request, [f"test_add_oseries[{pr.type}]"])
-    o, m = pr.get_oseries("oseries1", return_metadata=True)
+def test_get_oseries_and_metadata(request, conn):
+    depends(request, [f"test_add_oseries[{conn.type}]"])
+    o, m = conn.get_oseries("oseries1", return_metadata=True)
     return o, m
 
 
 @pytest.mark.dependency()
-def test_get_stress(request, pr):
-    depends(request, [f"test_add_stress[{pr.type}]"])
-    s = pr.get_stresses('prec')
+def test_get_stress(request, conn):
+    depends(request, [f"test_add_stress[{conn.type}]"])
+    s = conn.get_stresses('prec')
     s.name = 'prec'
     return s
 
 
 @pytest.mark.dependency()
-def test_get_stress_and_metadata(request, pr):
-    depends(request, [f"test_add_stress[{pr.type}]"])
-    s, m = pr.get_stresses('prec', return_metadata=True)
+def test_get_stress_and_metadata(request, conn):
+    depends(request, [f"test_add_stress[{conn.type}]"])
+    s, m = conn.get_stresses('prec', return_metadata=True)
     s.name = 'prec'
     return s, m
 
 
 @pytest.mark.dependency()
-def test_oseries_prop(request, pr):
-    depends(request, [f"test_add_oseries[{pr.type}]"])
-    return pr.oseries
+def test_oseries_prop(request, conn):
+    depends(request, [f"test_add_oseries[{conn.type}]"])
+    return conn.oseries
 
 
 @pytest.mark.dependency()
-def test_stresses_prop(request, pr):
-    depends(request, [f"test_add_stress[{pr.type}]"])
-    return pr.stresses
+def test_stresses_prop(request, conn):
+    depends(request, [f"test_add_stress[{conn.type}]"])
+    return conn.stresses
 
 
-def test_repr(pr):
-    return pr.__repr__()
+def test_repr(conn):
+    return conn.__repr__()
 
 
 @pytest.mark.dependency()
-def test_del_oseries(request, pr):
-    depends(request, [f"test_add_oseries[{pr.type}]"])
-    pr.del_oseries("oseries1")
+def test_del_oseries(request, conn):
+    depends(request, [f"test_add_oseries[{conn.type}]"])
+    conn.del_oseries("oseries1")
     return
 
 
 @pytest.mark.dependency()
-def test_del_stress(request, pr):
-    depends(request, [f"test_add_stress[{pr.type}]"])
-    pr.del_stress("prec")
+def test_del_stress(request, conn):
+    depends(request, [f"test_add_stress[{conn.type}]"])
+    conn.del_stress("prec")
     return
 
 
 @pytest.mark.dependency()
-def test_delete(request, pr):
-    if pr.conn_type == "arctic":
+def test_delete(request, conn):
+    if conn.conn_type == "arctic":
         pst.util.delete_arctic_connector(
-            pr.connstr, pr.name, libraries=["oseries"])
-        pst.util.delete_arctic_connector(pr.connstr, pr.name)
-    elif pr.conn_type == "pystore":
+            conn.connstr, conn.name, libraries=["oseries"])
+        pst.util.delete_arctic_connector(conn.connstr, conn.name)
+    elif conn.conn_type == "pystore":
         pst.util.delete_pystore_connector(
-            pr.path, pr.name, libraries=["oseries"])
-        pst.util.delete_pystore_connector(pr.path, pr.name)
+            conn.path, conn.name, libraries=["oseries"])
+        pst.util.delete_pystore_connector(conn.path, conn.name)
     return

@@ -1,225 +1,697 @@
+import functools
 import json
 import warnings
 from abc import ABC, abstractmethod, abstractproperty
 from collections.abc import Iterable
-from typing import Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 import pastas as ps
-from pastas import Model
 from pastas.io.pas import PastasEncoder
 from tqdm import tqdm
 
-from .util import _custom_warning
+from .util import ItemInLibraryException, _custom_warning, validate_names
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning
 
 
-class BaseConnector(ABC):  # pragma: no cover
-    """Metaclass for connecting to data management sources.
+class BaseConnector(ABC):
+    """Base Connector class.
 
-    For example, MongoDB through Arctic, Pystore, or other databases.
-    Create your own connection to a data source by writing a a class
-    that inherits from this BaseConnector. Your class has to override
-    each method and property.
+    Class holds base logic for dealing with timeseries and Pastas
+    Models. Create your own Connector to a data source by writing a a
+    class that inherits from this BaseConnector. Your class has to
+    override each abstractmethod and abstractproperty.
     """
+
     _default_library_names = ["oseries", "stresses", "models"]
 
+    def __repr__(self):
+        """Representation string of the object."""
+        return (f"<{type(self).__name__} object> '{self.name}': "
+                f"{self.n_oseries} oseries, "
+                f"{self.n_stresses} stresses, "
+                f"{self.n_models} models")
+
     @abstractmethod
-    def get_library(self, libname: str):
+    def _get_library(self, libname: str):
         """Get library handle.
 
+        Must be overriden by subclass.
+
         Parameters
         ----------
-        libname : str,
+        libname : str
             name of the library
+
+        Returns
+        -------
+        lib : Any
+            handle to the library
         """
         pass
 
     @abstractmethod
-    def add_oseries(self, series: FrameorSeriesUnion, name: str,
-                    metadata: Union[dict, None] = None,
-                    overwrite: bool = False, **kwargs) -> None:
-        """Add oseries.
+    def _add_item(self, libname: str,
+                  item: Union[FrameorSeriesUnion, Dict],
+                  name: str,
+                  metadata: Optional[Dict] = None,
+                  overwrite: bool = False) -> None:
+        """Internal method to add item for both timeseries and pastas.Models.
+
+        Must be overriden by subclass.
 
         Parameters
         ----------
-        series : FrameorSeriesUnion
-            pandas.Series or pandas.DataFrame to add
+        libname : str
+            name of library to add item to
+        item : FrameorSeriesUnion or dict
+            item to add
         name : str
-            name of the series
-        metadata : Optional[dict], optional
+            name of the item
+        metadata : dict, optional
             dictionary containing metadata, by default None
-        overwrite: bool, optional
-            overwrite existing dataset with the same name,
-            by default False
         """
         pass
 
     @abstractmethod
-    def add_stress(self, series: FrameorSeriesUnion, name: str, kind: str,
-                   metadata: Optional[dict] = None,
-                   overwrite: bool = False, **kwargs) -> None:
-        """Add stress.
+    def _get_item(self, libname: str, name: str) \
+            -> Union[FrameorSeriesUnion, Dict]:
+        """Internal method to get item (series or pastas.Models).
 
-        Parameters
-        ----------
-        series : FrameorSeriesUnion
-            pandas.Series or pandas.DataFrame to add
-        name : str
-            name of the series
-        kind : str
-            label specifying type of stress (i.e. 'prec' or 'evap')
-        metadata : Optional[dict], optional
-            dictionary containing metadata, by default None
-        overwrite: bool, optional
-            overwrite existing dataset with the same name,
-            by default False
-        """
-        pass
-
-    @abstractmethod
-    def add_model(self, ml: Model, overwrite: bool = False, **kwargs) -> None:
-        """Add model.
-
-        Parameters
-        ----------
-        ml : Model
-            pastas.Model
-        """
-        pass
-
-    @abstractmethod
-    def del_models(self, names: Union[list, str]) -> None:
-        """Delete model.
-
-        Parameters
-        ----------
-        names : Union[list, str]
-            str or list of str of model names to delete
-        """
-        pass
-
-    @abstractmethod
-    def del_oseries(self, names: Union[list, str]) -> None:
-        """Delete oseries.
-
-        Parameters
-        ----------
-        names : Union[list, str]
-            str or list of str of oseries names to delete
-        """
-        pass
-
-    @abstractmethod
-    def del_stress(self, names: Union[list, str]) -> None:
-        """Delete stresses.
-
-        Parameters
-        ----------
-        names : Union[list, str]
-            str or list of str of stresses to delete
-        """
-        pass
-
-    @abstractmethod
-    def get_metadata(self, libname: str, names: Union[list, str],
-                     progressbar: bool = False, as_frame: bool = True) \
-            -> Union[pd.DataFrame, dict]:
-        """Get metadata for oseries or stress.
+        Must be overriden by subclass.
 
         Parameters
         ----------
         libname : str
             name of library
-        names : Union[list, str]
-            str or list of str of series to get metadata for
-        progressbar : bool, optional
-            show progressbar, by default False
-        as_frame : bool, optional
-            return as dataframe, by default True
+        name : str
+            name of item
 
         Returns
         -------
-        Union[pd.DataFrame, dict]
-            dictionary or pandas.DataFrame depending on value of `as_frame`.
+        item : FrameorSeriesUnion or dict
+            item (timeseries or pastas.Model)
         """
         pass
 
     @abstractmethod
+    def _del_item(self, libname: str, name: str) -> None:
+        """Internal method to delete items (series or models).
+
+        Must be overriden by subclass.
+
+        Parameters
+        ----------
+        libname : str
+            name of library to delete item from
+        name : str
+            name of item to delete
+        """
+        pass
+
+    @abstractmethod
+    def _get_metadata(self, libname: str, name: str) -> Dict:
+        """Internal method to get metadata.
+
+        Must be overriden by subclass.
+
+        Parameters
+        ----------
+        libname : str
+            name of the library
+        name : str
+            name of the item
+
+        Returns
+        -------
+        metadata : dict
+            dictionary containing metadata
+        """
+        pass
+
+    @abstractproperty
+    def oseries_names(self):
+        """List of oseries names.
+
+        Property must be overriden by subclass.
+        """
+        pass
+
+    @abstractproperty
+    def stresses_names(self):
+        """List of stresses names.
+
+        Property must be overriden by subclass.
+        """
+        pass
+
+    @abstractproperty
+    def model_names(self):
+        """List of model names.
+
+        Property must be overriden by subclass.
+        """
+        pass
+
+    def _add_series(self, libname: str,
+                    series: FrameorSeriesUnion,
+                    name: str,
+                    metadata: Optional[dict] = None,
+                    overwrite: bool = False) -> None:
+        """Internal method to add series to database.
+
+        Parameters
+        ----------
+        libname : str
+            name of the library to add the series to
+        series : pandas.Series or pandas.DataFrame
+            data to add
+        name : str
+            name of the timeseries
+        metadata : dict, optional
+            dictionary containing metadata, by default None
+        overwrite : bool, optional
+            overwrite existing dataset with the same name,
+            by default False
+
+        Raises
+        ------
+        ItemInLibraryException
+            if overwrite is False and name is already in the database
+        """
+        self._validate_input_series(series)
+        series = self._set_series_name(series, name)
+        in_store = getattr(self, f"{libname}_names")
+        if name not in in_store or overwrite:
+            self._add_item(libname, series, name, metadata=metadata,
+                           overwrite=overwrite)
+            self._clear_cache(libname)
+        else:
+            raise ItemInLibraryException(f"Item with name '{name}' already"
+                                         f" in '{libname}' library!")
+
+    def _update_series(self, libname: str,
+                       series: FrameorSeriesUnion,
+                       name: str,
+                       metadata: Optional[dict] = None) -> None:
+        """Internal method to update timeseries.
+
+        Parameters
+        ----------
+        libname : str
+            name of library
+        series : FrameorSeriesUnion
+            timeseries containing update values
+        name : str
+            name of the timeseries to update
+        metadata : Optional[dict], optional
+            optionally provide metadata dictionary which will also update
+            the current stored metadata dictionary, by default None
+        """
+        if libname not in ["oseries", "stresses"]:
+            raise ValueError("Library must be 'oseries' or 'stresses'!")
+        self._validate_input_series(series)
+        series = self._set_series_name(series, name)
+        stored = self._get_series(libname, name, progressbar=False)
+        # get union of index
+        idx_union = stored.index.union(series.index)
+        # update series with new values
+        update = stored.reindex(idx_union)
+        update.update(series)
+        # metadata
+        update_meta = self._get_metadata(libname, name)
+        update_meta.update(metadata)
+        self._add_series(libname, update, name, metadata=update_meta,
+                         overwrite=True)
+
+    def update_metadata(self, libname: str, name: str, metadata: dict) -> None:
+        """Update metadata.
+
+        Note: also retrieves and stores timeseries as updating only metadata
+        is not really supported.
+
+        Parameters
+        ----------
+        libname : str
+            name of library
+        name : str
+            name of the item for which to update metadata
+        metadata : dict
+            metadata dictionary that will be used to update the stored
+            metadata
+        """
+
+        if libname not in ["oseries", "stresses"]:
+            raise ValueError("Library must be 'oseries' or 'stresses'!")
+        update_meta = self._get_metadata(libname, name)
+        update_meta.update(metadata)
+        # get series, since just updating metadata is not really defined
+        # in all cases
+        s = self._get_series(libname, name, progressbar=False)
+        self._add_series(libname, s, name, metadata=update_meta,
+                         overwrite=True)
+
+    def add_oseries(self, series: Union[FrameorSeriesUnion, ps.TimeSeries],
+                    name: str,
+                    metadata: Optional[dict] = None,
+                    overwrite: bool = False) -> None:
+        """Add oseries to the database.
+
+        Parameters
+        ----------
+        series : pandas.Series, pandas.DataFrame or pastas.TimeSeries
+            data to add
+        name : str
+            name of the timeseries
+        metadata : dict, optional
+            dictionary containing metadata, by default None. If
+            pastas.TimeSeries is passed, metadata is kwarg is ignored and
+            metadata is taken from pastas.TimeSeries object
+        overwrite : bool, optional
+            overwrite existing dataset with the same name,
+            by default False
+        """
+        series, metadata = self._parse_series_input(series, metadata)
+        self._add_series("oseries", series, name=name, metadata=metadata,
+                         overwrite=overwrite)
+
+    def add_stress(self, series: Union[FrameorSeriesUnion, ps.TimeSeries],
+                   name: str, kind: str,
+                   metadata: Optional[dict] = None,
+                   overwrite: bool = False) -> None:
+        """Add stress to the database.
+
+        Parameters
+        ----------
+        series : pandas.Series, pandas.DataFrame or pastas.TimeSeries
+            data to add, if pastas.Timeseries is passed, series_orignal
+            and metadata is stored in database
+        name : str
+            name of the timeseries
+        kind : str
+            category to identify type of stress, this label is added to the
+            metadata dictionary.
+        metadata : dict, optional
+            dictionary containing metadata, by default None. If
+            pastas.TimeSeries is passed, metadata is kwarg is ignored and
+            metadata is taken from pastas.TimeSeries object
+        overwrite : bool, optional
+            overwrite existing dataset with the same name,
+            by default False
+        """
+        series, metadata = self._parse_series_input(series, metadata)
+        if metadata is None:
+            metadata = {}
+        metadata["kind"] = kind
+        self._add_series("stresses", series, name=name,
+                         metadata=metadata, overwrite=overwrite)
+
+    def add_model(self, ml: Union[ps.Model, dict],
+                  overwrite: bool = False,
+                  validate_metadata: bool = False) -> None:
+        """Add model to the database.
+
+        Parameters
+        ----------
+        ml : pastas.Model or dict
+            pastas Model or dictionary to add to the database
+        overwrite : bool, optional
+            if True, overwrite existing model, by default False
+        validate_metadata, bool optional
+            remove unsupported characters from metadata dictionary keys
+
+        Raises
+        ------
+        TypeError
+            if model is not pastas.Model or dict
+        ItemInLibraryException
+            if overwrite is False and model is already in the database
+        """
+        if isinstance(ml, ps.Model):
+            mldict = ml.to_dict(series=False)
+            name = ml.name
+            if validate_metadata:
+                metadata = validate_names(d=ml.oseries.metadata)
+            else:
+                metadata = ml.oseries.metadata
+        elif isinstance(ml, dict):
+            mldict = ml
+            name = ml["name"]
+            metadata = None
+        else:
+            raise TypeError("Expected pastas.Model or dict!")
+
+        if name not in self.model_names or overwrite:
+            # check if oseries and stresses exist in store
+            self._check_model_series_names_for_store(ml)
+            self._check_oseries_in_store(ml)
+            self._check_stresses_in_store(ml)
+            # write model to store
+            self._add_item("models", mldict, name, metadata=metadata,
+                           overwrite=overwrite)
+        else:
+            raise ItemInLibraryException(f"Model with name '{name}' "
+                                         "already in 'models' library!")
+        self._clear_cache("models")
+
+    @staticmethod
+    def _parse_series_input(series: Union[FrameorSeriesUnion, ps.TimeSeries],
+                            metadata: Optional[Dict] = None) \
+            -> Tuple[FrameorSeriesUnion, Optional[Dict]]:
+        """Internal method to parse series input.
+
+        Parameters
+        ----------
+        series : Union[FrameorSeriesUnion, ps.TimeSeries],
+            series object to parse
+        metadata : dict, optional
+            metadata dictionary or None, by default None
+
+        Returns
+        -------
+        series, metadata : FrameorSeriesUnion, Optional[Dict]
+            timeseries as pandas.Series or DataFrame and optionally
+            metadata dictionary
+        """
+        if isinstance(series, ps.TimeSeries):
+            if metadata is not None:
+                print("Warning! Metadata kwarg ignored. Metadata taken from "
+                      "pastas.TimeSeries object!")
+            s = series.series_original
+            m = series.metadata
+        else:
+            s = series
+            m = metadata
+        return s, m
+
+    def update_oseries(self, series: Union[FrameorSeriesUnion, ps.TimeSeries],
+                       name: str, metadata: Optional[dict] = None) -> None:
+        """Update oseries values.
+
+        Parameters
+        ----------
+        series : Union[FrameorSeriesUnion, ps.TimeSeries]
+            timeseries to update stored oseries with
+        name : str
+            name of the oseries to update
+        metadata : Optional[dict], optional
+            optionally provide metadata, which will update
+            the stored metadata dictionary, by default None
+        """
+        series, metadata = self._parse_series_input(series, metadata)
+        self._update_series("oseries", series, name, metadata=metadata)
+
+    def update_stress(self, series: Union[FrameorSeriesUnion, ps.TimeSeries],
+                      name: str, metadata: Optional[dict] = None) -> None:
+        """Update stresses values.
+
+        Note: the 'kind' attribute of a stress cannot be updated! To update
+        the 'kind' delete and add the stress again.
+
+        Parameters
+        ----------
+        series : Union[FrameorSeriesUnion, ps.TimeSeries]
+            timeseries to update stored stress with
+        name : str
+            name of the stress to update
+        metadata : Optional[dict], optional
+            optionally provide metadata, which will update
+            the stored metadata dictionary, by default None
+        """
+        series, metadata = self._parse_series_input(series, metadata)
+        self._update_series("stresses", series, name, metadata=metadata)
+
+    def del_models(self, names: Union[list, str]) -> None:
+        """Delete model(s) from the database.
+
+        Parameters
+        ----------
+        names : str or list of str
+            name(s) of the model to delete
+        """
+        for n in self._parse_names(names, libname="models"):
+            self._del_item("models", n)
+        self._clear_cache("models")
+
+    def del_oseries(self, names: Union[list, str]):
+        """Delete oseries from the database.
+
+        Parameters
+        ----------
+        names : str or list of str
+            name(s) of the oseries to delete
+        """
+        for n in self._parse_names(names, libname="oseries"):
+            self._del_item("oseries", n)
+        self._clear_cache("oseries")
+
+    def del_stress(self, names: Union[list, str]):
+        """Delete stress from the database.
+
+        Parameters
+        ----------
+        names : str or list of str
+            name(s) of the stress to delete
+        """
+        for n in self._parse_names(names, libname="stresses"):
+            self._del_item("stresses", n)
+        self._clear_cache("stresses")
+
+    def _get_series(self, libname: str, names: Union[list, str],
+                    progressbar: bool = True, squeeze: bool = True) \
+            -> FrameorSeriesUnion:
+        """Internal method to get timeseries.
+
+        Parameters
+        ----------
+        libname : str
+            name of the library
+        names : str or list of str
+            names of the timeseries to load
+        progressbar : bool, optional
+            show progressbar, by default True
+        squeeze : bool, optional
+            if True return DataFrame or Series instead of dictionary
+            for single entry
+
+        Returns
+        -------
+        pandas.DataFrame or dict of pandas.DataFrames
+            either returns timeseries as pandas.DataFrame or
+            dictionary containing the timeseries.
+        """
+        ts = {}
+        names = self._parse_names(names, libname=libname)
+        desc = f"Get {libname}"
+        for n in (tqdm(names, desc=desc) if progressbar else names):
+            ts[n] = self._get_item(libname, n)
+        # return frame if len == 1
+        if len(ts) == 1 and squeeze:
+            return ts[n]
+        else:
+            return ts
+
+    def get_metadata(self, libname: str, names: Union[list, str],
+                     progressbar: bool = False, as_frame: bool = True,
+                     squeeze: bool = True) -> Union[dict, pd.DataFrame]:
+        """Read metadata from database.
+
+        Parameters
+        ----------
+        libname : str
+            name of the library containing the dataset
+        names : str or list of str
+            names of the datasets for which to read the metadata
+        squeeze : bool, optional
+            if True return dict instead of list of dict
+            for single entry
+
+        Returns
+        -------
+        dict or pandas.DataFrame
+            returns metadata dictionary or DataFrame of metadata
+        """
+        metalist = []
+        names = self._parse_names(names, libname=libname)
+        desc = f"Get metadata {libname}"
+        for n in (tqdm(names, desc=desc) if progressbar else names):
+            imeta = self._get_metadata(libname, n)
+            if imeta is None:
+                imeta = {}
+            if "name" not in imeta.keys():
+                imeta["name"] = n
+            metalist.append(imeta)
+        if as_frame:
+            meta = self._meta_list_to_frame(metalist, names=names)
+            return meta
+        else:
+            if len(metalist) == 1 and squeeze:
+                return metalist[0]
+            else:
+                return metalist
+
     def get_oseries(self, names: Union[list, str],
-                    progressbar: bool = False) -> FrameorSeriesUnion:
-        """Get oseries.
+                    return_metadata: bool = False,
+                    progressbar: bool = False,
+                    squeeze: bool = True) \
+            -> Union[Union[FrameorSeriesUnion, Dict],
+                     Optional[Union[Dict, List]]]:
+        """Get oseries from database.
 
         Parameters
         ----------
-        names : Union[list, str]
-            str or list of str of names of oseries to retrieve
+        names : str or list of str
+            names of the oseries to load
+        return_metadata : bool, optional
+            return metadata as dictionary or list of dictionaries,
+            default is False
         progressbar : bool, optional
             show progressbar, by default False
+        squeeze : bool, optional
+            if True return DataFrame or Series instead of dictionary
+            for single entry
 
         Returns
         -------
-        dict, pandas.DataFrame
-            return dictionary containing data if multiple names are passed,
-            else return pandas.DataFrame or pandas.Series
+        oseries : pandas.DataFrame or dict of DataFrames
+            returns timeseries as DataFrame or dictionary of DataFrames if
+            multiple names were passed
+        metadata : dict or list of dict
+            metadata for each oseries, only returned if return_metadata=True
         """
-        pass
+        oseries = self._get_series("oseries", names, progressbar=progressbar,
+                                   squeeze=squeeze)
+        if return_metadata:
+            metadata = self.get_metadata("oseries",
+                                         names,
+                                         progressbar=progressbar,
+                                         as_frame=False,
+                                         squeeze=squeeze)
+            return oseries, metadata
+        else:
+            return oseries
 
-    @abstractmethod
     def get_stresses(self, names: Union[list, str],
-                     progressbar: bool = False) -> FrameorSeriesUnion:
-        """Get stresses.
+                     return_metadata: bool = False,
+                     progressbar: bool = False,
+                     squeeze: bool = True) \
+            -> Union[Union[FrameorSeriesUnion, Dict],
+                     Optional[Union[Dict, List]]]:
+        """Get stresses from database.
 
         Parameters
         ----------
-        names : Union[list, str]
-            str or list of str of names of stresses to retrieve
+        names : str or list of str
+            names of the stresses to load
+        return_metadata : bool, optional
+            return metadata as dictionary or list of dictionaries,
+            default is False
         progressbar : bool, optional
             show progressbar, by default False
+        squeeze : bool, optional
+            if True return DataFrame or Series instead of dictionary
+            for single entry
 
         Returns
         -------
-        dict, pandas.DataFrame
-            return dictionary containing data if multiple names are passed,
-            else return pandas.DataFrame or pandas.Series
+        stresses : pandas.DataFrame or dict of DataFrames
+            returns timeseries as DataFrame or dictionary of DataFrames if
+            multiple names were passed
+        metadata : dict or list of dict
+            metadata for each stress, only returned if return_metadata=True
         """
-        pass
+        stresses = self._get_series("stresses", names, progressbar=progressbar,
+                                    squeeze=squeeze)
+        if return_metadata:
+            metadata = self.get_metadata("stresses",
+                                         names,
+                                         progressbar=progressbar,
+                                         as_frame=False,
+                                         squeeze=squeeze)
+            return stresses, metadata
+        else:
+            return stresses
 
-    @abstractmethod
-    def get_models(self, names: Union[list, str], progressbar: bool = False,
-                   **kwargs) -> Union[Model, dict]:
-        """Get models.
+    def get_models(self, names: Union[list, str], return_dict: bool = False,
+                   progressbar: bool = False, squeeze: bool = True,
+                   update_ts_settings: bool = False) \
+            -> Union[ps.Model, list]:
+        """Load models from database.
 
         Parameters
         ----------
-        names : Union[list, str]
-            str or list of str of models to retrieve
+        names : str or list of str
+            names of the models to load
+        return_dict : bool, optional
+            return model dictionary instead of pastas.Model (much
+            faster for obtaining parameters, for example)
         progressbar : bool, optional
             show progressbar, by default False
+        squeeze : bool, optional
+            if True return Model instead of list of Models
+            for single entry
+        update_ts_settings : bool, optional
+            update timeseries settings based on timeseries in store.
+            overwrites stored tmin/tmax in model.
 
         Returns
         -------
-        Union[Model, dict]
-            return pastas.Model if only one name is passed, else return dict
+        pastas.Model or list of pastas.Model
+            return pastas model, or list of models if multiple names were
+            passed
         """
-        pass
+        models = []
+        names = self._parse_names(names, libname="models")
+        desc = "Get models"
+        for n in (tqdm(names, desc=desc) if progressbar else names):
+            data = self._get_item("models", n)
+            if return_dict:
+                ml = data
+            else:
+                ml = self._parse_model_dict(
+                    data, update_ts_settings=update_ts_settings)
+            models.append(ml)
+        if len(models) == 1 and squeeze:
+            return models[0]
+        else:
+            return models
 
-    @abstractproperty
+    @staticmethod
+    def _clear_cache(libname: str) -> None:
+        """Clear cached property."""
+        getattr(BaseConnector, libname).fget.cache_clear()
+
+    @property  # type: ignore
+    @functools.lru_cache()
     def oseries(self):
-        """Dataframe containing oseries overview."""
-        pass
+        """Dataframe with overview of oseries."""
+        return self.get_metadata("oseries", self.oseries_names)
 
-    @abstractproperty
+    @property  # type: ignore
+    @functools.lru_cache()
     def stresses(self):
-        """Dataframe containing stresses overview."""
-        pass
+        """Dataframe with overview of stresses."""
+        return self.get_metadata("stresses", self.stresses_names)
 
-    @abstractproperty
+    @property  # type: ignore
+    @functools.lru_cache()
     def models(self):
         """List of model names."""
-        pass
+        return self.model_names
+
+    @property
+    def n_oseries(self):
+        return len(self.oseries_names)
+
+    @property
+    def n_stresses(self):
+        return len(self.stresses_names)
+
+    @property
+    def n_models(self):
+        return len(self.model_names)
 
 
 class ConnectorUtil:
@@ -248,11 +720,11 @@ class ConnectorUtil:
             return [names]
         elif names is None or names == "all":
             if libname == "oseries":
-                return getattr(self, "oseries").index.to_list()
+                return getattr(self, "oseries_names")
             elif libname == "stresses":
-                return getattr(self, "stresses").index.to_list()
+                return getattr(self, "stresses_names")
             elif libname == "models":
-                return getattr(self, "models")
+                return getattr(self, "model_names")
             else:
                 raise ValueError(f"No library '{libname}'!")
         else:
