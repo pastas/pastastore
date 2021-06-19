@@ -1,5 +1,5 @@
 import os
-from typing import List, Optional
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -10,6 +10,10 @@ from tqdm import tqdm
 def _custom_warning(message, category=UserWarning, filename='', lineno=-1,
                     *args):
     print(f"{filename}:{lineno}: {category.__name__}: {message}")
+
+
+class ItemInLibraryException(Exception):
+    pass
 
 
 def delete_pystore_connector(path: Optional[str] = None,
@@ -83,7 +87,7 @@ def delete_arctic_connector(connstr: Optional[str] = None,
         name = conn.name
         connstr = conn.connstr
     elif name is None or connstr is None:
-        raise ValueError("Please provide 'name' and 'connstr' OR 'conn'!")
+        raise ValueError("Provide 'name' and 'connstr' OR 'conn'!")
 
     arc = arctic.Arctic(connstr)
 
@@ -94,8 +98,10 @@ def delete_arctic_connector(connstr: Optional[str] = None,
         for ilib in arc.list_libraries():
             if ilib.split(".")[0] == name:
                 libs.append(ilib)
-    else:
+    elif name is not None:
         libs = [name + "." + ilib for ilib in libraries]
+    else:
+        raise ValueError("Provide 'name' and 'connstr' OR 'conn'!")
 
     for lib in libs:
         arc.delete_library(lib)
@@ -203,7 +209,8 @@ def empty_library(pstore, libname: str,
 
 def validate_names(s: Optional[str] = None, d: Optional[dict] = None,
                    replace_space: Optional[str] = "_",
-                   deletechars: Optional[str] = None, **kwargs) -> str:
+                   deletechars: Optional[str] = None, **kwargs) \
+        -> Union[str, Dict]:
     """Remove invalid characters from string or dictionary keys.
 
     Parameters
@@ -237,7 +244,7 @@ def validate_names(s: Optional[str] = None, d: Optional[dict] = None,
             new_dict[validator(k)[0]] = v
         return new_dict
     else:
-        raise ValueError("Provide one of 's' or 'd'!")
+        raise ValueError("Provide one of 's' (string) or 'd' (dict)!")
 
 
 def compare_models(ml1, ml2, stats=None, detailed_comparison=False):

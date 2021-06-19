@@ -1,7 +1,7 @@
 import json
 import os
 import warnings
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -129,7 +129,8 @@ class PastaStore:
 
     def get_distances(self, oseries: Optional[Union[list, str]] = None,
                       stresses: Optional[Union[list, str]] = None,
-                      kind: Optional[str] = None) -> FrameorSeriesUnion:
+                      kind: Optional[Union[str, List[str]]] = None) \
+            -> FrameorSeriesUnion:
         """Method to obtain the distances in meters between the oseries and
         stresses.
 

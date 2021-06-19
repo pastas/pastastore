@@ -7,7 +7,7 @@ import pastastore as pst
 
 
 params = ["arctic", "pystore", "dict", "pas"]
-# params = ["pas"]
+# params = ["dict"]
 
 
 def initialize_project(conn):
@@ -57,25 +57,25 @@ def initialize_project(conn):
 
 
 @pytest.fixture(scope="module", params=params)
-def pr(request):
+def conn(request):
     """Fixture that yields connection object.
     """
     name = f"test_{request.param}"
     # connect to dbase
     if request.param == "arctic":
         connstr = "mongodb://localhost:27017/"
-        pr = pst.ArcticConnector(name, connstr)
+        conn = pst.ArcticConnector(name, connstr)
     elif request.param == "pystore":
         path = "./tests/data/pystore"
-        pr = pst.PystoreConnector(name, path)
+        conn = pst.PystoreConnector(name, path)
     elif request.param == "dict":
-        pr = pst.DictConnector(name)
+        conn = pst.DictConnector(name)
     elif request.param == "pas":
-        pr = pst.PasConnector(name, "./tests/data/pas")
+        conn = pst.PasConnector(name, "./tests/data/pas")
     else:
         raise ValueError("Unrecognized parameter!")
-    pr.type = request.param  # added here for defining test dependencies
-    yield pr
+    conn.type = request.param  # added here for defining test dependencies
+    yield conn
 
 
 @pytest.fixture(scope="module", params=params)
