@@ -786,7 +786,7 @@ class ConnectorUtil:
         """
         # oseries
         if 'series' not in mdict['oseries']:
-            name = mdict["oseries"]['name']
+            name = str(mdict["oseries"]['name'])
             if name not in self.oseries.index:
                 msg = 'oseries {} not present in project'.format(name)
                 raise LookupError(msg)
@@ -803,7 +803,7 @@ class ConnectorUtil:
             if "stress" in ts.keys():
                 for stress in ts["stress"]:
                     if 'series' not in stress:
-                        name = stress['name']
+                        name = str(stress['name'])
                         if name in self.stresses.index:
                             stress['series'] = self.get_stresses(name)
                             # update tmin/tmax from timeseries
@@ -817,7 +817,7 @@ class ConnectorUtil:
             if ("prec" in ts.keys()) and ("evap" in ts.keys()):
                 for stress in [ts["prec"], ts["evap"]]:
                     if 'series' not in stress:
-                        name = stress['name']
+                        name = str(stress['name'])
                         if name in self.stresses.index:
                             stress['series'] = self.get_stresses(name)
                             # update tmin/tmax from timeseries
@@ -926,7 +926,7 @@ class ConnectorUtil:
         if isinstance(ml, ps.Model):
             name = ml.oseries.name
         elif isinstance(ml, dict):
-            name = ml["oseries"]["name"]
+            name = str(ml["oseries"]["name"])
         else:
             raise TypeError("Expected pastas.Model or dict!")
         if name not in self.oseries.index:
