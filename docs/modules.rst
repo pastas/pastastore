@@ -21,6 +21,7 @@ DictConnector
 
 .. autoclass:: pastastore.DictConnector
    :members:
+   :private-members:
    :show-inheritance:
 
 PasConnector
@@ -28,6 +29,7 @@ PasConnector
 
 .. autoclass:: pastastore.PasConnector
    :members:
+   :private-members:
    :show-inheritance:
 
 ArcticConnector
@@ -36,6 +38,7 @@ ArcticConnector
 .. autoclass:: pastastore.ArcticConnector
    :members:
    :undoc-members:
+   :private-members:
    :show-inheritance:
 
 PystoreConnector
@@ -44,6 +47,7 @@ PystoreConnector
 .. autoclass:: pastastore.PystoreConnector
    :members:
    :undoc-members:
+   :private-members:
    :show-inheritance:
 
 .. _Pastastore_API:

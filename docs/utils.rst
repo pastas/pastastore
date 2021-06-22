@@ -3,8 +3,8 @@ Utilities
 =========
 
 The `pastastore.util` submodule contains useful functions, i.e. for deleting
-databases, connector objects, and PastaStore objects or emptying a library of
-all its contents:
+databases, connector objects, and PastaStore objects, emptying a library of
+all its contents or copying all data to a new database:
 
 
 * :meth:`pastastore.util.delete_pastastore`
@@ -13,6 +13,7 @@ all its contents:
 * :meth:`pastastore.util.delete_pystore_connector`
 * :meth:`pastastore.util.delete_arctic_connector`
 * :meth:`pastastore.util.empty_library`
+* :meth:`pastastore.util.copy_database`
 
 
 It also contains a method for making a detailed comparison between two 
