@@ -1,5 +1,5 @@
 import os
-from typing import List, Optional
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -10,6 +10,10 @@ from tqdm import tqdm
 def _custom_warning(message, category=UserWarning, filename='', lineno=-1,
                     *args):
     print(f"{filename}:{lineno}: {category.__name__}: {message}")
+
+
+class ItemInLibraryException(Exception):
+    pass
 
 
 def delete_pystore_connector(path: Optional[str] = None,
@@ -83,7 +87,7 @@ def delete_arctic_connector(connstr: Optional[str] = None,
         name = conn.name
         connstr = conn.connstr
     elif name is None or connstr is None:
-        raise ValueError("Please provide 'name' and 'connstr' OR 'conn'!")
+        raise ValueError("Provide 'name' and 'connstr' OR 'conn'!")
 
     arc = arctic.Arctic(connstr)
 
@@ -94,8 +98,10 @@ def delete_arctic_connector(connstr: Optional[str] = None,
         for ilib in arc.list_libraries():
             if ilib.split(".")[0] == name:
                 libs.append(ilib)
-    else:
+    elif name is not None:
         libs = [name + "." + ilib for ilib in libraries]
+    else:
+        raise ValueError("Provide 'name' and 'connstr' OR 'conn'!")
 
     for lib in libs:
         arc.delete_library(lib)
@@ -203,7 +209,8 @@ def empty_library(pstore, libname: str,
 
 def validate_names(s: Optional[str] = None, d: Optional[dict] = None,
                    replace_space: Optional[str] = "_",
-                   deletechars: Optional[str] = None, **kwargs) -> str:
+                   deletechars: Optional[str] = None, **kwargs) \
+        -> Union[str, Dict]:
     """Remove invalid characters from string or dictionary keys.
 
     Parameters
@@ -237,7 +244,7 @@ def validate_names(s: Optional[str] = None, d: Optional[dict] = None,
             new_dict[validator(k)[0]] = v
         return new_dict
     else:
-        raise ValueError("Provide one of 's' or 'd'!")
+        raise ValueError("Provide one of 's' (string) or 'd' (dict)!")
 
 
 def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
@@ -353,3 +360,50 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
         return df
     else:
         return df["comparison"].all()
+
+
+def copy_database(conn1, conn2, libraries: Optional[List[str]] = None,
+                  overwrite: bool = False, progressbar: bool = False) -> None:
+    """Copy libraries from one database to another.
+
+    Parameters
+    ----------
+    conn1 : pastastore.*Connector
+        source Connector containing link to current database containing data
+    conn2 : pastastore.*Connector
+        destination Connector with link to database to which you want to copy
+    libraries : Optional[List[str]], optional
+        list of str containing names of libraries to copy, by default None,
+        which copies all libraries: ['oseries', 'stresses', 'models']
+    overwrite : bool, optional
+        overwrite data in destination database, by default False
+    progressbar : bool, optional
+        show progressbars, by default False
+
+    Raises
+    ------
+    ValueError
+        if library name is not understood
+    """
+    if libraries is None:
+        libraries = ["oseries", "stresses", "models"]
+
+    for lib in libraries:
+        if lib == "oseries":
+            for name in (tqdm(conn1.oseries_names, desc="copying oseries") if
+                         progressbar else conn1.oseries_names):
+                o, meta = conn1.get_oseries(name, return_metadata=True)
+                conn2.add_oseries(o, name, metadata=meta, overwrite=overwrite)
+        elif lib == "stresses":
+            for name in (tqdm(conn1.stresses_names, desc="copying oseries") if
+                         progressbar else conn1.stresses_names):
+                s, meta = conn1.get_stresses(name, return_metadata=True)
+                conn2.add_stress(s, name, kind=meta["kind"], metadata=meta,
+                                 overwrite=overwrite)
+        elif lib == "models":
+            for name in (tqdm(conn1.model_names, desc="copying oseries") if
+                         progressbar else conn1.model_names):
+                mldict = conn1.get_models(name, return_dict=True)
+                conn2.add_model(mldict, overwrite=overwrite)
+        else:
+            raise ValueError(f"Library name '{lib}' not recognized!")

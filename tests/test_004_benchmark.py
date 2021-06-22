@@ -1,8 +1,7 @@
-import pandas as pd
-import pytest
-import pastastore as pst
 import numpy as np
-
+import pandas as pd
+import pastastore as pst
+import pytest
 
 # %% write
 
