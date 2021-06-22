@@ -181,6 +181,8 @@ class BaseConnector(ABC):
         ItemInLibraryException
             if overwrite is False and name is already in the database
         """
+        if not isinstance(name, str):
+            name = str(name)
         self._validate_input_series(series)
         series = self._set_series_name(series, name)
         in_store = getattr(self, f"{libname}_names")
@@ -342,7 +344,8 @@ class BaseConnector(ABC):
             metadata = None
         else:
             raise TypeError("Expected pastas.Model or dict!")
-
+        if not isinstance(name, str):
+            name = str(name)
         if name not in self.model_names or overwrite:
             # check if oseries and stresses exist in store
             self._check_model_series_names_for_store(ml)
