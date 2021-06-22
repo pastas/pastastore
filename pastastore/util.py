@@ -360,3 +360,50 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
         return df
     else:
         return df["comparison"].all()
+
+
+def copy_database(conn1, conn2, libraries: Optional[List[str]] = None,
+                  overwrite: bool = False, progressbar: bool = False) -> None:
+    """Copy libraries from one database to another.
+
+    Parameters
+    ----------
+    conn1 : pastastore.*Connector
+        source Connector containing link to current database containing data
+    conn2 : pastastore.*Connector
+        destination Connector with link to database to which you want to copy
+    libraries : Optional[List[str]], optional
+        list of str containing names of libraries to copy, by default None,
+        which copies all libraries: ['oseries', 'stresses', 'models']
+    overwrite : bool, optional
+        overwrite data in destination database, by default False
+    progressbar : bool, optional
+        show progressbars, by default False
+
+    Raises
+    ------
+    ValueError
+        if library name is not understood
+    """
+    if libraries is None:
+        libraries = ["oseries", "stresses", "models"]
+
+    for lib in libraries:
+        if lib == "oseries":
+            for name in (tqdm(conn1.oseries_names, desc="copying oseries") if
+                         progressbar else conn1.oseries_names):
+                o, meta = conn1.get_oseries(name, return_metadata=True)
+                conn2.add_oseries(o, name, metadata=meta, overwrite=overwrite)
+        elif lib == "stresses":
+            for name in (tqdm(conn1.stresses_names, desc="copying oseries") if
+                         progressbar else conn1.stresses_names):
+                s, meta = conn1.get_stresses(name, return_metadata=True)
+                conn2.add_stress(s, name, kind=meta["kind"], metadata=meta,
+                                 overwrite=overwrite)
+        elif lib == "models":
+            for name in (tqdm(conn1.model_names, desc="copying oseries") if
+                         progressbar else conn1.model_names):
+                mldict = conn1.get_models(name, return_dict=True)
+                conn2.add_model(mldict, overwrite=overwrite)
+        else:
+            raise ValueError(f"Library name '{lib}' not recognized!")
