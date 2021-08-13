@@ -661,38 +661,38 @@ class BaseConnector(ABC):
         else:
             return models
 
-    @staticmethod
+    @ staticmethod
     def _clear_cache(libname: str) -> None:
         """Clear cached property."""
         getattr(BaseConnector, libname).fget.cache_clear()
 
-    @property  # type: ignore
-    @functools.lru_cache()
+    @ property  # type: ignore
+    @ functools.lru_cache()
     def oseries(self):
         """Dataframe with overview of oseries."""
         return self.get_metadata("oseries", self.oseries_names)
 
-    @property  # type: ignore
-    @functools.lru_cache()
+    @ property  # type: ignore
+    @ functools.lru_cache()
     def stresses(self):
         """Dataframe with overview of stresses."""
         return self.get_metadata("stresses", self.stresses_names)
 
-    @property  # type: ignore
-    @functools.lru_cache()
+    @ property  # type: ignore
+    @ functools.lru_cache()
     def models(self):
         """List of model names."""
         return self.model_names
 
-    @property
+    @ property
     def n_oseries(self):
         return len(self.oseries_names)
 
-    @property
+    @ property
     def n_stresses(self):
         return len(self.stresses_names)
 
-    @property
+    @ property
     def n_models(self):
         return len(self.model_names)
 
@@ -733,7 +733,7 @@ class ConnectorUtil:
         else:
             raise NotImplementedError(f"Cannot parse 'names': {names}")
 
-    @staticmethod
+    @ staticmethod
     def _meta_list_to_frame(metalist: list, names: list):
         """Convert list of metadata dictionaries to DataFrame.
 
@@ -793,10 +793,8 @@ class ConnectorUtil:
             mdict['oseries']['series'] = self.get_oseries(name)
             # update tmin/tmax from timeseries
             if update_ts_settings:
-                mdict["oseries"]["settings"]["tmin"] = \
-                    mdict['oseries']['series'].index[0]
-                mdict["oseries"]["settings"]["tmax"] = \
-                    mdict['oseries']['series'].index[-1]
+                mdict["oseries"]["settings"]["tmin"] = mdict['oseries']['series'].index[0]
+                mdict["oseries"]["settings"]["tmax"] = mdict['oseries']['series'].index[-1]
 
         # StressModel, StressModel2, WellModel
         for ts in mdict["stressmodels"].values():
@@ -808,10 +806,8 @@ class ConnectorUtil:
                             stress['series'] = self.get_stresses(name)
                             # update tmin/tmax from timeseries
                             if update_ts_settings:
-                                stress["settings"]["tmin"] = \
-                                    stress['series'].index[0]
-                                stress["settings"]["tmax"] = \
-                                    stress['series'].index[-1]
+                                stress["settings"]["tmin"] = stress['series'].index[0]
+                                stress["settings"]["tmax"] = stress['series'].index[-1]
 
             # RechargeModel
             if ("prec" in ts.keys()) and ("evap" in ts.keys()):
@@ -822,14 +818,20 @@ class ConnectorUtil:
                             stress['series'] = self.get_stresses(name)
                             # update tmin/tmax from timeseries
                             if update_ts_settings:
-                                stress["settings"]["tmin"] = \
-                                    stress['series'].index[0]
-                                stress["settings"]["tmax"] = \
-                                    stress['series'].index[-1]
+                                stress["settings"]["tmin"] = stress['series'].index[0]
+                                stress["settings"]["tmax"] = stress['series'].index[-1]
                         else:
                             msg = "stress '{}' not present in project".format(
                                 name)
                             raise KeyError(msg)
+        # hack for pcov w dtype object (when filled with NaNs on store?)
+        if "fit" in mdict:
+            if "pcov" in mdict["fit"]:
+                pcov = mdict["fit"]["pcov"]
+                if pcov.dtypes.apply(
+                        lambda dtyp: isinstance(dtyp, object)).any():
+                    mdict["fit"]["pcov"] = pcov.astype(float)
+
         try:
             # pastas>=0.15.0
             ml = ps.io.base._load_model(mdict)
