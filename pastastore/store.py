@@ -56,6 +56,42 @@ class PastaStore:
         for meth in methods:
             setattr(self, meth, getattr(self.conn, meth))
 
+    @property
+    def oseries(self):
+        return self.conn.oseries
+
+    @property
+    def stresses(self):
+        return self.conn.stresses
+
+    @property
+    def models(self):
+        return self.conn.models
+
+    @property
+    def oseries_names(self):
+        return self.conn.oseries_names
+
+    @property
+    def stresses_names(self):
+        return self.conn.stresses_names
+
+    @property
+    def model_names(self):
+        return self.conn.model_names
+
+    @property
+    def n_oseries(self):
+        return self.conn.n_oseries
+
+    @property
+    def n_stresses(self):
+        return self.conn.n_stresses
+
+    @property
+    def n_models(self):
+        return self.conn.n_models
+
     def __repr__(self):
         """Representation string of the object."""
         return f"<PastaStore> {self.name}: \n - " + self.conn.__str__()
@@ -697,7 +733,7 @@ class PastaStore:
                 pd.concat(metalist, axis=0).to_csv(
                     os.path.join(exportdir, f"metadata_{name}.csv"))
 
-    @ classmethod
+    @classmethod
     def from_zip(cls, fname: str, conn, storename: Optional[str] = None, progressbar: bool = True):
         """Load PastaStore from zipfile.
 
@@ -740,15 +776,3 @@ class PastaStore:
         if storename is None:
             storename = conn.name
         return cls(storename, conn)
-
-    @ property
-    def oseries(self):
-        return self.conn.oseries
-
-    @ property
-    def stresses(self):
-        return self.conn.stresses
-
-    @ property
-    def models(self):
-        return self.conn.models
