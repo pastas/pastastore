@@ -680,16 +680,18 @@ class PasConnector(BaseConnector, ConnectorUtil):
     def oseries_names(self):
         """List of oseries names."""
         lib = self._get_library("oseries")
-        return [i[:-4] for i in os.listdir(lib) if not i.endswith("_meta.pas")]
+        return [i[:-4] for i in os.listdir(lib) 
+                if i.endswith('.pas') if not i.endswith("_meta.pas")]
 
     @property
     def stresses_names(self):
         """List of stresses names."""
         lib = self._get_library("stresses")
-        return [i[:-4] for i in os.listdir(lib) if not i.endswith("_meta.pas")]
+        return [i[:-4] for i in os.listdir(lib) 
+                if i.endswith('.pas') if not i.endswith("_meta.pas")]
 
     @property
     def model_names(self):
         """List of model names."""
         lib = self._get_library("models")
-        return [i[:-4] for i in os.listdir(lib)]
+        return [i[:-4] for i in os.listdir(lib) if i.endswith('.pas')]
