@@ -670,7 +670,10 @@ class PasConnector(BaseConnector, ConnectorUtil):
         """
         lib = self._get_library(libname)
         mjson = os.path.join(lib, f"{name}_meta.pas")
-        imeta = self._metadata_from_json(mjson)
+        if os.path.isfile(mjson):
+            imeta = self._metadata_from_json(mjson)
+        else:
+            imeta = {}
         return imeta
 
     @property
