@@ -204,6 +204,14 @@ def empty_library(pstore, libname: str,
         for name in (tqdm(names, desc=f"Deleting items from {libname}")
                      if progressbar else names):
             _ = lib.pop(name)
+    elif pstore.conn.conn_type == "pas]":
+        for name in (tqdm(names, desc=f"Deleting items from {libname}")
+                     if progressbar else names):
+            pstore.conn._del_item(libname, name)
+    else:
+        raise ValueError(f"Connector type '{pstore.conn.conn_type}' "
+                         "not recognized!")
+
     print(f"Emptied library {libname} in {conn.name}: {conn.__class__}")
 
 
@@ -304,7 +312,12 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
             df.loc["- rfunc"] = (sm.rfunc._name if sm.rfunc is not None
                                  else "NA")
 
-            for ts in sm.stress:
+            if sm._name == "RechargeModel":
+                stresses = [sm.prec, sm.evap]
+            else:
+                stresses = sm.stress
+
+            for ts in stresses:
                 df.loc[f"- timeseries: '{ts.name}'"] = ts.name
                 for tsk in ts.settings.keys():
                     df.loc[f"  - {ts.name} settings: {tsk}"] = ts.settings[tsk]
@@ -328,8 +341,10 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                 counter += 1
 
         for p in ml.parameters.index:
-            df.loc[f"param: {p}", f"model {i}"] = \
-                ml.parameters.loc[p, "optimal"]
+            df.loc[f"param: {p} (init)", f"model {i}"] = \
+                ml.parameters.loc[p, "initial"]
+            df.loc[f"param: {p} (opt)", f"model {i}"] = \
+                ml.parameters.loc[p, "initial"]
 
         if stats:
             stats_df = ml.stats.summary(stats=stats)
