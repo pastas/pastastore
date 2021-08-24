@@ -26,6 +26,9 @@ class BaseConnector(ABC):
     """
 
     _default_library_names = ["oseries", "stresses", "models"]
+    
+    # whether to check model timeseries contents against stored copies
+    check_model_series_values = False
 
     def __repr__(self):
         """Representation string of the object."""
@@ -154,6 +157,25 @@ class BaseConnector(ABC):
         Property must be overriden by subclass.
         """
         pass
+
+    def set_check_model_series_values(self, b: bool):
+        """Turn check_model_series_values option on (True) or off (False).
+
+        The default option is off. When turned on, the model timeseries 
+        (ml.oseries.series_original, and stressmodel.stress.series_original) 
+        values are checked against the stored copies in the database. If 
+        these do not match, an error is raised, and the model is not added to 
+        the database. This check is somewhat computationally expensive, which 
+        is why it can be turned on or off. 
+
+        Parameters
+        ----------
+        b : bool
+            boolean indicating whether option should be turned on (True) or 
+            off (False). Option is off by default.
+        """
+        self.check_model_series_values = b
+        print(f"Model timeseries checking set to: {b}.")
 
     def _add_series(self, libname: str,
                     series: FrameorSeriesUnion,
@@ -935,6 +957,13 @@ class ConnectorUtil:
             msg = (f"Cannot add model because oseries '{name}' "
                    "is not contained in store.")
             raise LookupError(msg)
+        # expensive check
+        if self.check_model_series_values:
+            if ml.oseries.series_original.ne(
+                    self.get_oseries(name).squeeze()).any().all():
+                raise ValueError(
+                    f"Cannot add model because model oseries '{name}'"
+                    " is different from stored oseries!")
 
     def _check_stresses_in_store(self, ml: Union[ps.Model, dict]):
         """Internal method, check if stresses timeseries are contained in
@@ -956,6 +985,13 @@ class ConnectorUtil:
                         msg = (f"Cannot add model because stress '{s.name}' "
                                "is not contained in store.")
                         raise LookupError(msg)
+                    if self.check_model_series_values:
+                        if s.series_original.ne(
+                            self.get_stresses(
+                                s.name).squeeze()).any().all():
+                            raise ValueError(
+                                f"Cannot add model because model stress "
+                                f"'{s.name}' is different from stored stress!")
         elif isinstance(ml, dict):
             for sm in ml["stressmodels"].values():
                 if sm["stressmodel"] == "RechargeModel":
@@ -967,6 +1003,14 @@ class ConnectorUtil:
                         msg = (f"Cannot add model because stress '{s['name']}' "
                                "is not contained in store.")
                         raise LookupError(msg)
+                    if self.check_model_series_values:
+                        if s.series_original.ne(
+                                self.get_stresses(
+                                    s["name"]).squeeze()).any().all():
+                            raise ValueError(
+                                "Cannot add model because model stress "
+                                f"'{s['name']}' is different from stored "
+                                "stress!")
         else:
             raise TypeError("Expected pastas.Model or dict!")
 
@@ -1092,7 +1136,7 @@ class ConnectorUtil:
             jsondict = json.dumps(m, cls=PastasEncoder, indent=4)
             archive.writestr(f"models/{n}.pas", jsondict)
 
-    @staticmethod
+    @ staticmethod
     def _series_from_json(fjson: str):
         """Load timeseries from JSON.
 
@@ -1112,7 +1156,7 @@ class ConnectorUtil:
         s = s.sort_index()  # needed for some reason ...
         return s
 
-    @staticmethod
+    @ staticmethod
     def _metadata_from_json(fjson: str):
         """Load metadata dictionary from JSON.
 
