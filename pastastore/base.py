@@ -26,7 +26,7 @@ class BaseConnector(ABC):
     """
 
     _default_library_names = ["oseries", "stresses", "models"]
-    
+
     # whether to check model timeseries contents against stored copies
     check_model_series_values = False
 
@@ -161,17 +161,17 @@ class BaseConnector(ABC):
     def set_check_model_series_values(self, b: bool):
         """Turn check_model_series_values option on (True) or off (False).
 
-        The default option is off. When turned on, the model timeseries 
-        (ml.oseries.series_original, and stressmodel.stress.series_original) 
-        values are checked against the stored copies in the database. If 
-        these do not match, an error is raised, and the model is not added to 
-        the database. This check is somewhat computationally expensive, which 
-        is why it can be turned on or off. 
+        The default option is off. When turned on, the model timeseries
+        (ml.oseries.series_original, and stressmodel.stress.series_original)
+        values are checked against the stored copies in the database. If
+        these do not match, an error is raised, and the model is not added to
+        the database. This check is somewhat computationally expensive, which
+        is why it can be turned on or off.
 
         Parameters
         ----------
         b : bool
-            boolean indicating whether option should be turned on (True) or 
+            boolean indicating whether option should be turned on (True) or
             off (False). Option is off by default.
         """
         self.check_model_series_values = b
