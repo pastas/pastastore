@@ -20,7 +20,7 @@ def test_create_model(pstore):
 
 @pytest.mark.dependency()
 def test_properties(pstore):
-    
+
     pstore.add_oseries(pd.Series(), "deleteme")
     pstore.add_stress(pd.Series(), "deleteme", kind="useless")
 
@@ -31,7 +31,7 @@ def test_properties(pstore):
     try:
         assert pstore.n_oseries == pstore.conn.n_oseries
         assert pstore.n_stresses == pstore.conn.n_stresses
-    
+
     finally:
         pstore.del_oseries("deleteme")
         pstore.del_stress("deleteme")
