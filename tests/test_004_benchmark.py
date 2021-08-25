@@ -152,6 +152,7 @@ def test_benchmark_write_model_arctic(benchmark):
 
 # %%
 
+
 def write_model_checkts(conn, ml):
     conn.check_model_series_values = True
     conn.add_model(ml, overwrite=True)
