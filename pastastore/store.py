@@ -21,8 +21,8 @@ class PastaStore:
     Requires a Connector object to provide the interface to
     the database. Different Connectors are available, e.g.:
 
-        - ArcticConnector for saving data to MongoDB using the Arctic module
-        - PystoreConnector for saving data to disk using the Pystore module
+    - ArcticConnector for saving data to MongoDB using the Arctic module
+    - PystoreConnector for saving data to disk using the Pystore module
 
     Parameters
     ----------
