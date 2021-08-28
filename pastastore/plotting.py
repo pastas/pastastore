@@ -1,16 +1,16 @@
 """This module contains all the plotting methods for PastaStore.
 
 Pastastore comes with a number helpful plotting methods to quickly
-visualize timeseries or the locations of the timeseries contained in the 
+visualize timeseries or the locations of the timeseries contained in the
 store. Plotting timeseries or data availability is available through the
 `plots` attribute of the PastaStore object. Plotting locations of timeseries
-or model statistics on maps is available through the `maps` attribute. 
-For example, if we have a :class:`pastastore.PastaStore` called `pstore` 
-linking to an existing database, the plot and map methods are available as 
+or model statistics on maps is available through the `maps` attribute.
+For example, if we have a :class:`pastastore.PastaStore` called `pstore`
+linking to an existing database, the plot and map methods are available as
 follows::
 
     pstore.plots.oseries()
-    
+
     ax = pstore.maps.oseries()
     pstore.maps.add_background_map(ax)  # for adding a background map
 """
@@ -117,7 +117,7 @@ class Plots:
             list of oseries names to plot, by default None, which loads
             all oseries from store
         ax : matplotlib.Axes, optional
-            pass axes object to plot oseries on existing figure, 
+            pass axes object to plot oseries on existing figure,
             by default None, in which case a new figure is created
         split : bool, optional
             create a separate subplot for each timeseries, by default False.
@@ -146,7 +146,7 @@ class Plots:
             only plot stresses of a certain kind, by default None, which
             includes all stresses
         ax : matplotlib.Axes, optional
-            pass axes object to plot oseries on existing figure, 
+            pass axes object to plot oseries on existing figure,
             by default None, in which case a new figure is created
         split : bool, optional
             create a separate subplot for each timeseries, by default False.
@@ -183,7 +183,7 @@ class Plots:
         libname : str
             name of library to get timeseries from (oseries or stresses)
         names : list, optional
-            specify names in a list to plot data availability for certain 
+            specify names in a list to plot data availability for certain
             timeseries
         kind : str, optional
             if library is stresses, kind can be specified to obtain only
@@ -223,6 +223,51 @@ class Plots:
         series = self.pstore.conn._get_series(
             libname, names, progressbar=progressbar, squeeze=False).values()
 
+        ax = self._data_availability(series, names=names, intervals=intervals,
+                                     ignore=ignore, normtype=normtype,
+                                     cmap=cmap, set_yticks=set_yticks,
+                                     figsize=figsize, **kwargs)
+        return ax
+
+    @staticmethod
+    def _data_availability(series, names=None, intervals=None,
+                           ignore=['second', 'minute', '14 days'],
+                           normtype='log', cmap='viridis_r',
+                           set_yticks=False, figsize=(10, 8), **kwargs):
+        """Plot the data-availability for multiple timeseries.
+
+        Parameters
+        ----------
+        libname : list of pandas.Series
+            list of series to plot data availability for
+        names : list, optional
+            specify names of series, default is None in which case names
+            will be taken from series themselves.
+        kind : str, optional
+            if library is stresses, kind can be specified to obtain only
+            stresses of a specific kind
+        intervals: dict, optional
+            A dict with frequencies as keys and number of seconds as values
+        ignore : list, optional
+            A list with frequencies in intervals to ignore
+        normtype : str, optional
+            Determines the type of color normalisations, default is 'log'
+        cmap : str, optional
+            A reference to a matplotlib colormap
+        set_yticks : bool, optional
+            Set the names of the series as yticks
+        figsize : tuple, optional
+            The size of the new figure in inches (h,v)
+        progressbar : bool
+            show progressbar
+        kwargs : dict, optional
+            Extra arguments are passed to matplotlib.pyplot.subplots()
+
+        Returns
+        -------
+        ax : matplotlib Axes
+            The axes in which the data-availability is plotted
+        """
         # a good colormap is cmap='RdYlGn_r' or 'cubehelix'
         f, ax = plt.subplots(figsize=figsize, **kwargs)
         ax.invert_yaxis()
@@ -265,6 +310,8 @@ class Plots:
         cb.ax.minorticks_off()
         if set_yticks:
             ax.set_yticks(np.arange(0.5, len(series) + 0.5))
+            if names is None:
+                names = [s.name for s in series]
             ax.set_yticklabels(names)
         else:
             ax.set_ylabel('Timeseries (-)')
@@ -280,10 +327,10 @@ class Maps:
 
     Usage
     -----
-    Example usage of the maps methods::
+    Example usage of the maps methods: :
 
-    >>> ax = pstore.maps.oseries()  # plot oseries locations
-    >>> pstore.maps.add_background_map(ax)  # add background map
+    >> > ax = pstore.maps.oseries()  # plot oseries locations
+    >> > pstore.maps.add_background_map(ax)  # add background map
     """
 
     def __init__(self, pstore):
@@ -291,7 +338,7 @@ class Maps:
 
         Parameters
         ----------
-        pstore : pastastore.Pastastore
+        pstore: pastastore.Pastastore
             Pastastore object
         """
         self.pstore = pstore
@@ -301,17 +348,17 @@ class Maps:
 
         Parameters
         ----------
-        kind : str, optional
+        kind: str, optional
             if passed, only plot stresses of a specific kind, default is None
             which plots all stresses.
-        labels : bool, optional
+        labels: bool, optional
             label models, by default True
-        figsize : tuple, optional
-            figure size, by default (10, 8)
+        figsize: tuple, optional
+            figure size, by default(10, 8)
 
         Returns
         -------
-        ax : matplotlib.Axes
+        ax: matplotlib.Axes
             axes object
 
         See also
@@ -339,14 +386,14 @@ class Maps:
 
         Parameters
         ----------
-        labels : bool, optional
+        labels: bool, optional
             label models, by default True
-        figsize : tuple, optional
-            figure size, by default (10, 8)
+        figsize: tuple, optional
+            figure size, by default(10, 8)
 
         Returns
         -------
-        ax : matplotlib.Axes
+        ax: matplotlib.Axes
             axes object
 
         See also
@@ -367,14 +414,14 @@ class Maps:
 
         Parameters
         ----------
-        labels : bool, optional
+        labels: bool, optional
             label models, by default True
-        figsize : tuple, optional
-            figure size, by default (10, 8)
+        figsize: tuple, optional
+            figure size, by default(10, 8)
 
         Returns
         -------
-        ax : matplotlib.Axes
+        ax: matplotlib.Axes
             axes object
 
         See also
@@ -402,24 +449,24 @@ class Maps:
 
         Parameters
         ----------
-        statistic : str
+        statistic: str
             name of the statistic, e.g. "evp" or "aic"
-        label : bool, optional
+        label: bool, optional
             label points, by default True
-        cmap : str or colormap, optional
+        cmap: str or colormap, optional
             (name of) the colormap, by default "viridis"
-        norm : norm, optional
+        norm: norm, optional
             normalization for colorbar, by default None
-        vmin : float, optional
+        vmin: float, optional
             vmin for colorbar, by default None
-        vmax : float, optional
+        vmax: float, optional
             vmax for colorbar, by default None
-        figsize : tuple, optional
-            figuresize, by default (10, 8)
+        figsize: tuple, optional
+            figuresize, by default(10, 8)
 
         Returns
         -------
-        ax : matplotlib.Axes
+        ax: matplotlib.Axes
             axes object
 
         See also
@@ -462,25 +509,25 @@ class Maps:
 
         Parameters
         ----------
-        df : pandas.DataFrame
+        df: pandas.DataFrame
             DataFrame containing coordinates and data to plot, with
             index providing names for each location
-        x : str, optional
-            name of the column with x-coordinate data, by default "x"
-        y : str, optional
-            name of the column with y-coordinate data, by default "y"
-        column : str, optional
+        x: str, optional
+            name of the column with x - coordinate data, by default "x"
+        y: str, optional
+            name of the column with y - coordinate data, by default "y"
+        column: str, optional
             name of the column containing data used for determining the
             color of each point, by default None (all one color)
-        scatter_kwargs : dict, optional
-            dictionary containing keyword arguments for ax.scatter, 
+        scatter_kwargs: dict, optional
+            dictionary containing keyword arguments for ax.scatter,
             by default None
-        figsize : tuple, optional
-            figure size, by default (10, 8)
+        figsize: tuple, optional
+            figure size, by default(10, 8)
 
         Returns
         -------
-        ax : matplotlib.Axes
+        ax: matplotlib.Axes
             axes object
         """
 
@@ -533,9 +580,9 @@ class Maps:
             pastas model or name of pastas model to plot on map
         label: bool, optional, default is True
             add labels to points on map
-        metadata_source : str, optional
-            whether to obtain metadata from model Timeseries ("model") or from
-            metadata in pastastore ("store"), default is "model"
+        metadata_source: str, optional
+            whether to obtain metadata from model Timeseries("model") or from
+            metadata in pastastore("store"), default is "model"
 
         Returns
         -------
@@ -651,13 +698,13 @@ class Maps:
 
         Parameters
         ----------
-        ax : matplotlib.Axes
+        ax: matplotlib.Axes
             axes to add background map to
-        map_provider : str, optional
+        map_provider: str, optional
             name of map provider, see `contextily.providers` for options.
             Default is 'OpenStreetMap.Mapnik'
-        proj : pyproj.Proj or str, optional
-            projection for background map, default is 'epsg:28992' 
+        proj: pyproj.Proj or str, optional
+            projection for background map, default is 'epsg:28992'
             (RD Amersfoort, a projection for the Netherlands)
         """
         import contextily as ctx
@@ -686,11 +733,11 @@ class Maps:
 
         Parameters
         ----------
-        df : pd.DataFrame
-            DataFrame containing x,y-data. Index is used as label
-        ax : matplotlib.Axes
+        df: pd.DataFrame
+            DataFrame containing x, y - data. Index is used as label
+        ax: matplotlib.Axes
             axes object to label points on
-        **kwargs : 
+        **kwargs:
             keyword arguments to ax.annotate
 
         """
@@ -719,7 +766,7 @@ class Maps:
         """Plot oseries and stresses for one model on map.
 
         Working with different CRS codes requires pyproj to be installed. For
-        backgroundmap=True, contextily needs to be installed.
+        backgroundmap = True, contextily needs to be installed.
 
         Parameters
         ----------
@@ -727,18 +774,18 @@ class Maps:
             pastas model or name of pastas model to plot on map
         label: bool, optional, default is False
             add labels to points on map
-        backgroundmap : bool, optional
+        backgroundmap: bool, optional
             add OpenTopo background map, default is False
-        metadata_source : str, optional
-            whether to obtain metadata from model Timeseries ("model") or from
-            metadata in pastastore ("store"), default is "model"
-        model_crs : str, optional
+        metadata_source: str, optional
+            whether to obtain metadata from model Timeseries("model") or from
+            metadata in pastastore("store"), default is "model"
+        model_crs: str, optional
             coordinate reference system for model coordinates,
-            default is epsg:28992 (Amersfoort RD)
-        map_crs : str, optional
+            default is epsg: 28992 (Amersfoort RD)
+        map_crs: str, optional
             coordinate reference system for map,
-            by default epsg:28992 (Amersfoort RD)
-        map_provider : str, optional
+            by default epsg: 28992 (Amersfoort RD)
+        map_provider: str, optional
             name of map provider, see `contextily.providers` for options.
 
         Returns
