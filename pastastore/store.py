@@ -9,6 +9,7 @@ import pastas as ps
 from pastas.io.pas import pastas_hook
 from tqdm import tqdm
 
+from .plotting import Plots, Maps
 from .util import _custom_warning
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
@@ -47,6 +48,10 @@ class PastaStore:
         self.name = name
         self.conn = connector
         self._register_connector_methods()
+
+        # register map and plot classes
+        self.maps = Maps(self)
+        self.plots = Plots(self)
 
     def _register_connector_methods(self):
         """Internal method for registering connector methods."""

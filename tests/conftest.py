@@ -81,22 +81,19 @@ def pstore(request):
         connstr = "mongodb://localhost:27017/"
         name = "test_project"
         connector = pst.ArcticConnector(name, connstr)
-        pstore = initialize_project(connector)
     elif request.param == "pystore":
         name = "test_project"
         path = "./tests/data/pystore"
         pystore.set_path(path)
         connector = pst.PystoreConnector(name, path)
-        pstore = initialize_project(connector)
     elif request.param == "dict":
         name = "test_project"
         connector = pst.DictConnector(name)
-        pstore = initialize_project(connector)
     elif request.param == "pas":
         name = "test_project"
         connector = pst.PasConnector(name, "./tests/data/pas")
-        pstore = initialize_project(connector)
     else:
         raise ValueError("Unrecognized parameter!")
+    pstore = initialize_project(connector)
     pstore.type = request.param  # added here for defining test dependencies
     yield pstore

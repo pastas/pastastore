@@ -58,6 +58,24 @@ PastaStore
 .. automodule:: pastastore.store
     :members:
 
+
+Plots
+-----
+
+.. autoclass:: pastastore.plotting.Plots
+   :members:
+   :undoc-members:
+   :private-members:
+
+Maps
+----
+
+.. autoclass:: pastastore.plotting.Maps
+   :members:
+   :undoc-members:
+   :private-members:
+
+
 Util
 ----
 
