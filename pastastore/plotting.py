@@ -176,7 +176,7 @@ class Plots:
                           normtype='log', cmap='viridis_r',
                           set_yticks=False, figsize=(10, 8),
                           progressbar=True, **kwargs):
-        """Plot the data-availability for multiple timeseries.
+        """Plot the data-availability for multiple timeseries in pastastore.
 
         Parameters
         ----------
@@ -234,7 +234,7 @@ class Plots:
                            ignore=['second', 'minute', '14 days'],
                            normtype='log', cmap='viridis_r',
                            set_yticks=False, figsize=(10, 8), **kwargs):
-        """Plot the data-availability for multiple timeseries.
+        """Plot the data-availability for a list of timeseries.
 
         Parameters
         ----------
