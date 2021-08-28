@@ -172,7 +172,7 @@ class Plots:
 
     def data_availability(self, libname, names=None, kind=None,
                           intervals=None,
-                          ignore=['second', 'minute', '14 days'],
+                          ignore=('second', 'minute', '14 days'),
                           normtype='log', cmap='viridis_r',
                           set_yticks=False, figsize=(10, 8),
                           progressbar=True, **kwargs):
@@ -209,7 +209,6 @@ class Plots:
         -------
         ax : matplotlib Axes
             The axes in which the data-availability is plotted
-
         """
         names = self.pstore.conn._parse_names(names, libname)
 
@@ -231,7 +230,7 @@ class Plots:
 
     @staticmethod
     def _data_availability(series, names=None, intervals=None,
-                           ignore=['second', 'minute', '14 days'],
+                           ignore=('second', 'minute', '14 days'),
                            normtype='log', cmap='viridis_r',
                            set_yticks=False, figsize=(10, 8), **kwargs):
         """Plot the data-availability for a list of timeseries.
@@ -375,7 +374,7 @@ class Maps:
         mask0 = (stresses["x"] != 0.0) | (stresses["y"] != 0.0)
 
         ax = self._plotmap_dataframe(stresses.loc[mask0], figsize=figsize,
-                                     scatter_kwargs=kwargs)
+                                     **kwargs)
         if labels:
             self.add_labels(stresses, ax)
 
@@ -403,7 +402,7 @@ class Maps:
         oseries = self.pstore.oseries
         mask0 = (oseries["x"] != 0.0) | (oseries["y"] != 0.0)
         ax = self._plotmap_dataframe(oseries.loc[mask0], figsize=figsize,
-                                     scatter_kwargs=kwargs)
+                                     **kwargs)
         if labels:
             self.add_labels(oseries, ax)
 
@@ -437,7 +436,7 @@ class Maps:
         # mask out 0.0 coordinates
         mask0 = (models["x"] != 0.0) | (models["y"] != 0.0)
         ax = self._plotmap_dataframe(models.loc[mask0], figsize=figsize,
-                                     scatter_kwargs=kwargs)
+                                     **kwargs)
         if labels:
             self.add_labels(models, ax)
 
@@ -492,67 +491,72 @@ class Maps:
 
         scatter_kwargs.update(kwargs)
 
-        ax = self._plotmap_dataframe(df, column=statistic,
-                                     scatter_kwargs=scatter_kwargs,
-                                     figsize=figsize)
+        ax = self._plotmap_dataframe(df,
+                                     column=statistic,
+                                     figsize=figsize,
+                                     **scatter_kwargs)
         if label:
             df.set_index("index", inplace=True)
             self.add_labels(df, ax)
         return ax
 
-    def _plotmap_dataframe(self, df, x="x", y="y", column=None,
-                           scatter_kwargs=None,
-                           figsize=(10, 8)):
+    @staticmethod
+    def _plotmap_dataframe(df, x="x", y="y", column=None, ax=None,
+                           figsize=(10, 8), **kwargs):
         """Internal method for plotting dataframe with point locations.
 
         Can be called directly for more control over plot characteristics.
 
         Parameters
         ----------
-        df: pandas.DataFrame
+        df : pandas.DataFrame
             DataFrame containing coordinates and data to plot, with
             index providing names for each location
-        x: str, optional
+        x : str, optional
             name of the column with x - coordinate data, by default "x"
-        y: str, optional
+        y : str, optional
             name of the column with y - coordinate data, by default "y"
-        column: str, optional
+        column : str, optional
             name of the column containing data used for determining the
             color of each point, by default None (all one color)
-        scatter_kwargs: dict, optional
+        ax : matplotlib Axes
+            axes handle to plot dataframe, optional, default is None
+            which creates a new figure
+        figsize : tuple, optional
+            figure size, by default(10, 8)
+        **kwargs :
             dictionary containing keyword arguments for ax.scatter,
             by default None
-        figsize: tuple, optional
-            figure size, by default(10, 8)
 
         Returns
         -------
-        ax: matplotlib.Axes
+        ax : matplotlib.Axes
             axes object
         """
 
-        fig, ax = plt.subplots(figsize=figsize)
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize)
+        else:
+            fig = ax.figure
 
         # set default size and marker if not passed
-        if scatter_kwargs:
-            s = scatter_kwargs.pop("s", 30)
-            marker = scatter_kwargs.pop("marker", "o")
+        if kwargs:
+            s = kwargs.pop("s", 30)
+            marker = kwargs.pop("marker", "o")
         else:
             s = 30
             marker = "o"
-            scatter_kwargs = {}
+            kwargs = {}
 
         # if column is passed for coloring pts
         if column:
             c = df[column]
-            if "cmap" not in scatter_kwargs:
-                scatter_kwargs["cmap"] = "viridis"
+            if "cmap" not in kwargs:
+                kwargs["cmap"] = "viridis"
         else:
             c = None
 
-        sc = ax.scatter(df[x], df[y], marker=marker,
-                        s=s, c=c, **scatter_kwargs)
-
+        sc = ax.scatter(df[x], df[y], marker=marker, s=s, c=c, **kwargs)
         # add colorbar
         if column:
             cbar = fig.colorbar(sc, ax=ax, shrink=1.0)
@@ -739,7 +743,6 @@ class Maps:
             axes object to label points on
         **kwargs:
             keyword arguments to ax.annotate
-
         """
 
         stroke = [patheffects.withStroke(linewidth=3, foreground="w")]
@@ -792,7 +795,6 @@ class Maps:
         -------
         ax: axes object
             axis handle of the resulting figure
-
         """
         if isinstance(ml, str):
             ml = self.pstore.get_models(ml)
