@@ -187,7 +187,7 @@ def empty_library(pstore, libname: str,
         if True show progressbar (default)
     """
     conn = pstore.conn
-    lib = conn.get_library(libname)
+    lib = conn._get_library(libname)
     names = conn._parse_names(None, libname)
 
     if pstore.conn.conn_type == "arctic":
