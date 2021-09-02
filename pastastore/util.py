@@ -299,9 +299,22 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
             df.loc["oseries: series_validated", f"model {i}"] = True
             df.loc["oseries: series_series", f"model {i}"] = True
         elif i == 1:
-            compare_oso = (oso == ml.oseries.series_original).all()
-            compare_osv = (osv == ml.oseries.series_original).all()
-            compare_oss = (oss == ml.oseries.series_original).all()
+            try:
+                compare_oso = (oso == ml.oseries.series_original).all()
+            except ValueError:
+                # series are not identical in length or index does not match
+                compare_oso = False
+            try:
+                compare_osv = (osv == ml.oseries.series_original).all()
+            except ValueError:
+                # series are not identical in length or index does not match
+                compare_osv = False
+            try:
+                compare_oss = (oss == ml.oseries.series_original).all()
+            except ValueError:
+                # series are not identical in length or index does not match
+                compare_oso = False
+
             df.loc["oseries: series_original", f"model {i}"] = compare_oso
             df.loc["oseries: series_validated", f"model {i}"] = compare_osv
             df.loc["oseries: series_series", f"model {i}"] = compare_oss
@@ -331,9 +344,19 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                     df.loc[f"  - {ts.name}: series"] = True
 
                 elif i == 1:
-                    compare_so1 = (so1[counter] == ts.series_original).all()
-                    compare_sv1 = (sv1[counter] == ts.series_validated).all()
-                    compare_ss1 = (ss1[counter] == ts.series).all()
+                    # ValueError if series cannot be compared, set result to False
+                    try:
+                        compare_so1 = (so1[counter] == ts.series_original).all()
+                    except ValueError:
+                        compare_so1 = False
+                    try:
+                        compare_sv1 = (sv1[counter] == ts.series_validated).all()
+                    except ValueError:
+                        compare_sv1 = False
+                    try:
+                        compare_ss1 = (ss1[counter] == ts.series).all()
+                    except ValueError:
+                        compare_ss1 = False
                     df.loc[f"  - {ts.name}: series_original"] = compare_so1
                     df.loc[f"  - {ts.name}: series_validated"] = compare_sv1
                     df.loc[f"  - {ts.name}: series"] = compare_ss1
