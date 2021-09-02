@@ -13,12 +13,12 @@ def initialize_project(conn):
 
     # oseries 1
     o = pd.read_csv("./tests/data/obs.csv", index_col=0, parse_dates=True)
-    pstore.add_oseries(o, "oseries1", metadata={"x": 100000,
-                                                "y": 400000})
+    pstore.add_oseries(o, "oseries1", metadata={"x": 165000,
+                                                "y": 424000})
     # oseries 2
     o = pd.read_csv("./tests/data/head_nb1.csv", index_col=0, parse_dates=True)
-    pstore.add_oseries(o, "oseries2", metadata={"x": 100300,
-                                                "y": 400400})
+    pstore.add_oseries(o, "oseries2", metadata={"x": 164000,
+                                                "y": 423000})
 
     # oseries 3
     o = pd.read_csv("./tests/data/gw_obs.csv", index_col=0, parse_dates=True)
@@ -27,23 +27,23 @@ def initialize_project(conn):
 
     # prec 1
     s = pd.read_csv("./tests/data/rain.csv", index_col=0, parse_dates=True)
-    pstore.add_stress(s, "prec1", kind="prec", metadata={"x": 100000,
-                                                         "y": 400000})
+    pstore.add_stress(s, "prec1", kind="prec", metadata={"x": 165050,
+                                                         "y": 424050})
 
     # prec 2
     s = pd.read_csv("./tests/data/rain_nb1.csv", index_col=0, parse_dates=True)
-    pstore.add_stress(s, "prec2", kind="prec", metadata={"x": 100300,
-                                                         "y": 400400})
+    pstore.add_stress(s, "prec2", kind="prec", metadata={"x": 164010,
+                                                         "y": 423000})
 
     # evap 1
     s = pd.read_csv("./tests/data/evap.csv", index_col=0, parse_dates=True)
-    pstore.add_stress(s, "evap1", kind="evap", metadata={"x": 100000,
-                                                         "y": 400000})
+    pstore.add_stress(s, "evap1", kind="evap", metadata={"x": 164500,
+                                                         "y": 424000})
 
     # evap 2
     s = pd.read_csv("./tests/data/evap_nb1.csv", index_col=0, parse_dates=True)
-    pstore.add_stress(s, "evap2", kind="evap", metadata={"x": 100300,
-                                                         "y": 400400})
+    pstore.add_stress(s, "evap2", kind="evap", metadata={"x": 164000,
+                                                         "y": 423030})
 
     # well 1
     s = pd.read_csv("./tests/data/well.csv", index_col=0, parse_dates=True)
