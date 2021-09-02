@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 import pastas as ps
 from matplotlib import patheffects
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 class Plots:
@@ -432,6 +433,7 @@ class Maps:
             "oseries"]["name"] for m in self.pstore.model_names]
 
         models = self.pstore.oseries.loc[model_oseries]
+        models.index = self.pstore.model_names
 
         # mask out 0.0 coordinates
         mask0 = (models["x"] != 0.0) | (models["y"] != 0.0)
@@ -541,10 +543,10 @@ class Maps:
 
         # set default size and marker if not passed
         if kwargs:
-            s = kwargs.pop("s", 30)
+            s = kwargs.pop("s", 70)
             marker = kwargs.pop("marker", "o")
         else:
-            s = 30
+            s = 70
             marker = "o"
             kwargs = {}
 
@@ -559,7 +561,9 @@ class Maps:
         sc = ax.scatter(df[x], df[y], marker=marker, s=s, c=c, **kwargs)
         # add colorbar
         if column:
-            cbar = fig.colorbar(sc, ax=ax, shrink=1.0)
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="3%", pad=0.05)
+            cbar = fig.colorbar(sc, ax=ax, cax=cax)
             cbar.set_label(column)
 
         # set axes properties
@@ -575,7 +579,7 @@ class Maps:
         return ax
 
     def model(self, ml, label=True,
-              metadata_source="model"):
+              metadata_source="model", offset=0.0):
         """Plot oseries and stresses from one model on a map.
 
         Parameters
@@ -585,8 +589,11 @@ class Maps:
         label: bool, optional, default is True
             add labels to points on map
         metadata_source: str, optional
-            whether to obtain metadata from model Timeseries("model") or from
+            whether to obtain metadata from model Timeseries or from
             metadata in pastastore("store"), default is "model"
+        offset : float, optional
+            add offset to current extent of model timeseries, useful
+            for zooming out around models
 
         Returns
         -------
@@ -633,7 +640,7 @@ class Maps:
         fig, ax = plt.subplots(1, 1, figsize=(10, 10))
 
         # add oseries
-        osize = 30
+        osize = 50
         oserieslabel = ml.oseries.name
 
         if metadata_source == "model":
@@ -653,7 +660,7 @@ class Maps:
         legend_list = [po]
 
         # add stresses
-        ax.scatter(stresses["x"], stresses["y"], s=30, c=stresses.color,
+        ax.scatter(stresses["x"], stresses["y"], s=50, c=stresses.color,
                    marker="o", edgecolors="k", linewidths=0.75)
 
         # label oseries
@@ -682,6 +689,12 @@ class Maps:
             label.set_rotation(90)
             label.set_verticalalignment("center")
 
+        if offset > 0.0:
+            xmin, xmax = ax.get_xlim()
+            ymin, ymax = ax.get_ylim()
+            ax.set_xlim(xmin - offset, xmax + offset)
+            ax.set_ylim(ymin - offset, ymax + offset)
+
         # label stresses
         if label:
             for name, row in stresses.iterrows():
@@ -696,8 +709,33 @@ class Maps:
         return ax
 
     @staticmethod
+    def _list_contextily_providers():
+        """List contextily providers.
+
+        Taken from contextily notebooks.
+
+        Returns
+        -------
+        providers : dict
+            dictionary containing all providers. See keys for names
+            that can be passed as map_provider arguments.
+        """
+        import contextily as ctx
+        providers = {}
+
+        def get_providers(provider):
+            if "url" in provider:
+                providers[provider['name']] = provider
+            else:
+                for prov in provider.values():
+                    get_providers(prov)
+        get_providers(ctx.providers)
+        return providers
+
+    @staticmethod
     def add_background_map(ax, proj="epsg:28992",
-                           map_provider="OpenStreetMap.Mapnik"):
+                           map_provider="OpenStreetMap.Mapnik",
+                           **kwargs):
         """Add background map to axes using contextily.
 
         Parameters
@@ -713,21 +751,13 @@ class Maps:
         """
         import contextily as ctx
 
-        providers = {}
-
         if isinstance(proj, str):
             import pyproj
             proj = pyproj.Proj(proj)
 
-        def get_providers(provider):
-            if "url" in provider:
-                providers[provider['name']] = provider
-            else:
-                for prov in provider.values():
-                    get_providers(prov)
-
-        get_providers(ctx.providers)
-        ctx.add_basemap(ax, source=providers[map_provider], crs=proj.srs)
+        providers = Maps._list_contextily_providers()
+        ctx.add_basemap(ax, source=providers[map_provider], crs=proj.srs,
+                        **kwargs)
 
     @staticmethod
     def add_labels(df, ax, **kwargs):
@@ -747,7 +777,7 @@ class Maps:
 
         stroke = [patheffects.withStroke(linewidth=3, foreground="w")]
 
-        fontsize = kwargs.pop("fontsize", 6)
+        fontsize = kwargs.pop("fontsize", 10)
         textcoords = kwargs.pop("textcoords", "offset points")
         xytext = kwargs.pop("xytext", (10, 10))
 
