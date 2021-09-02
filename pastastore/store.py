@@ -781,3 +781,38 @@ class PastaStore:
         if storename is None:
             storename = conn.name
         return cls(storename, conn)
+
+    def search(self, libname: str, s: str, case_sensitive=False):
+        """Search for names of timeseries or models starting with s.
+
+        Parameters
+        ----------
+        libname : str
+            name of the library to search in
+        s : str
+            find names starting with this string or part of string 
+        case_sensitive : bool, optional
+            whether search should be case sensitive, by default False
+
+        Returns
+        -------
+        matches : list
+            list of names that match search result
+        """
+
+        df = getattr(self, libname)
+
+        if libname == "models":
+            if case_sensitive:
+                matches = [mlnam for mlnam in df if
+                           mlnam.lower().startswith(s.lower())]
+            else:
+                matches = [mlnam for mlnam in df if mlnam.startswith(s)]
+        else:
+            if case_sensitive:
+                mask = df.index.str.startswith(s)
+            else:
+                mask = df.index.str.lower().str.startswith(s.lower())
+            matches = df.index[mask].tolist()
+
+        return matches
