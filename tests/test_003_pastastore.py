@@ -1,6 +1,7 @@
 import os
 import warnings
 
+import pandas as pd
 import pastas as ps
 import pytest
 from numpy import allclose
@@ -19,9 +20,22 @@ def test_create_model(pstore):
 
 @pytest.mark.dependency()
 def test_properties(pstore):
+
+    pstore.add_oseries(pd.Series(), "deleteme")
+    pstore.add_stress(pd.Series(), "deleteme", kind="useless")
+
     _ = pstore.oseries
     _ = pstore.stresses
     _ = pstore.models
+
+    try:
+        assert pstore.n_oseries == pstore.conn.n_oseries
+        assert pstore.n_stresses == pstore.conn.n_stresses
+
+    finally:
+        pstore.del_oseries("deleteme")
+        pstore.del_stress("deleteme")
+
     return
 
 
@@ -139,7 +153,7 @@ def test_copy_dbase(pstore):
 
 def test_to_from_zip(pstore):
     zipname = f"test_{pstore.type}.zip"
-    pstore.to_zip(zipname, progressbar=False)
+    pstore.to_zip(zipname, progressbar=False, overwrite=True)
     conn = pst.DictConnector("test")
     try:
         store = pst.PastaStore.from_zip(zipname, conn)

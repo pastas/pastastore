@@ -9,6 +9,7 @@ import pastas as ps
 from pastas.io.pas import pastas_hook
 from tqdm import tqdm
 
+from .plotting import Maps, Plots
 from .util import _custom_warning
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
@@ -21,8 +22,8 @@ class PastaStore:
     Requires a Connector object to provide the interface to
     the database. Different Connectors are available, e.g.:
 
-        - ArcticConnector for saving data to MongoDB using the Arctic module
-        - PystoreConnector for saving data to disk using the Pystore module
+    - ArcticConnector for saving data to MongoDB using the Arctic module
+    - PystoreConnector for saving data to disk using the Pystore module
 
     Parameters
     ----------
@@ -48,6 +49,10 @@ class PastaStore:
         self.conn = connector
         self._register_connector_methods()
 
+        # register map and plot classes
+        self.maps = Maps(self)
+        self.plots = Plots(self)
+
     def _register_connector_methods(self):
         """Internal method for registering connector methods."""
         methods = [func for func in dir(self.conn) if
@@ -55,6 +60,42 @@ class PastaStore:
                    not func.startswith("_")]
         for meth in methods:
             setattr(self, meth, getattr(self.conn, meth))
+
+    @property
+    def oseries(self):
+        return self.conn.oseries
+
+    @property
+    def stresses(self):
+        return self.conn.stresses
+
+    @property
+    def models(self):
+        return self.conn.models
+
+    @property
+    def oseries_names(self):
+        return self.conn.oseries_names
+
+    @property
+    def stresses_names(self):
+        return self.conn.stresses_names
+
+    @property
+    def model_names(self):
+        return self.conn.model_names
+
+    @property
+    def n_oseries(self):
+        return self.conn.n_oseries
+
+    @property
+    def n_stresses(self):
+        return self.conn.n_stresses
+
+    @property
+    def n_models(self):
+        return self.conn.n_models
 
     def __repr__(self):
         """Representation string of the object."""
@@ -697,8 +738,9 @@ class PastaStore:
                 pd.concat(metalist, axis=0).to_csv(
                     os.path.join(exportdir, f"metadata_{name}.csv"))
 
-    @ classmethod
-    def from_zip(cls, fname: str, conn, storename: Optional[str] = None, progressbar: bool = True):
+    @classmethod
+    def from_zip(cls, fname: str, conn, storename: Optional[str] = None,
+                 progressbar: bool = True):
         """Load PastaStore from zipfile.
 
         Parameters
@@ -741,14 +783,37 @@ class PastaStore:
             storename = conn.name
         return cls(storename, conn)
 
-    @ property
-    def oseries(self):
-        return self.conn.oseries
+    def search(self, libname: str, s: str, case_sensitive=False):
+        """Search for names of timeseries or models starting with s.
 
-    @ property
-    def stresses(self):
-        return self.conn.stresses
+        Parameters
+        ----------
+        libname : str
+            name of the library to search in
+        s : str
+            find names starting with this string or part of string
+        case_sensitive : bool, optional
+            whether search should be case sensitive, by default False
 
-    @ property
-    def models(self):
-        return self.conn.models
+        Returns
+        -------
+        matches : list
+            list of names that match search result
+        """
+
+        df = getattr(self, libname)
+
+        if libname == "models":
+            if case_sensitive:
+                matches = [mlnam for mlnam in df if
+                           mlnam.lower().startswith(s.lower())]
+            else:
+                matches = [mlnam for mlnam in df if mlnam.startswith(s)]
+        else:
+            if case_sensitive:
+                mask = df.index.str.startswith(s)
+            else:
+                mask = df.index.str.lower().str.startswith(s.lower())
+            matches = df.index[mask].tolist()
+
+        return matches

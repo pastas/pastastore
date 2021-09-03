@@ -46,7 +46,7 @@ Arctic
 The :ref:`ArcticConnector` is an object that creates a
 connection with a MongoDB database. This can be an existing or a new database.
 For each of the datasets a collection or library is created. These are named
-using the following convention: `<database name>.<collection name>`.
+using the following convention: `<database name>.<library name>`.
 
 The Arctic implementation uses the following structure:
 
@@ -61,14 +61,12 @@ are stored as pandas.DataFrames. Models are stored in JSON (actually binary
 JSON) and *do not* contain the timeseries themselves. These are picked up from
 the other libraries when the model is loaded from the database.
 
-The `ArcticConnector` object allows the user to add different versions for
-datasets, which can be used to keep a history of older models for example.
-
 Pystore
 -------
 The :ref:`PystoreConnector` is an object that links
 to a location on disk. This can either be an existing or a new Pystore. A new
-store is created with collections that hold the different datasets:
+store is created with collections (or libraries) that hold the different 
+datasets:
 
 * observation timeseries
 * stresses timeseries
@@ -79,7 +77,7 @@ The Pystores have the following structure:
 .. code-block:: bash
 
    +-- store
-   |   +-- collections... (i.e. oseries, stresses, models)
+   |   +-- collections or libraries... (i.e. oseries, stresses, models)
    |   |   +-- items... (i.e. individual timeseries or models)
 
 
@@ -91,8 +89,7 @@ design allows the models to be saved in a PyStore. The timeseries are picked
 up from their respective stores when the model is loaded from disk.
 
 PyStore supports so-called snapshots (which store the current state of the
-store) but this has not been actively implemented in this module. Pystore does
-not have the same versioning capabilities as Arctic.
+store) but this has not been actively implemented in this module.
 
 Custom Connectors
 -----------------
@@ -100,12 +97,12 @@ It should be relatively straightforward to write your own custom connector
 object. The :ref:`Base` submodule contains the
 `BaseConnector` class that defines which methods and properties *must*
 be defined. The `ConnectorUtil` mix-in class contains some general methods that
-are used by each connector. Each Connector object should inherit from these
+are used by each connector. Each Connector object should inherit from these two
 classes.
 
 The `BaseConnector` class also shows the expected call signature for each
 method. Following the same call signature should ensure that your new connector
-works directly with `PastaStore`. Though extra keyword arguments can be
+works directly with `PastaStore`. Extra keyword arguments can be
 added in the custom class.
 
 Below is a small snippet showing a custom Connector class::
@@ -113,6 +110,6 @@ Below is a small snippet showing a custom Connector class::
    class MyCustomConnector(BaseConnector, ConnectorUtil):
       """Must override each method and property in BaseConnector, e.g."""
 
-      def get_oseries(self, name, progressbar=False):
-         # your code to get oseries from database here
+      def _get_item(self, name, progressbar=False):
+         # your code here for getting an item from your database
          pass

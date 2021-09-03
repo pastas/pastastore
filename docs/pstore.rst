@@ -3,7 +3,7 @@ PastaStore object
 =================
 
 The `PastaStore` object is essentially a class for working with timeseries and
-pastas Models. A connector has to be passed to the object which manages the
+pastas Models. A Connector has to be passed to the object which manages the
 retrieval and storage of data.
 
 Methods are available for the following tasks:

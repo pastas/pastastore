@@ -27,6 +27,9 @@ class BaseConnector(ABC):
 
     _default_library_names = ["oseries", "stresses", "models"]
 
+    # whether to check model timeseries contents against stored copies
+    check_model_series_values = False
+
     def __repr__(self):
         """Representation string of the object."""
         return (f"<{type(self).__name__} object> '{self.name}': "
@@ -155,6 +158,25 @@ class BaseConnector(ABC):
         """
         pass
 
+    def set_check_model_series_values(self, b: bool):
+        """Turn check_model_series_values option on (True) or off (False).
+
+        The default option is off. When turned on, the model timeseries
+        (ml.oseries.series_original, and stressmodel.stress.series_original)
+        values are checked against the stored copies in the database. If
+        these do not match, an error is raised, and the model is not added to
+        the database. This check is somewhat computationally expensive, which
+        is why it can be turned on or off.
+
+        Parameters
+        ----------
+        b : bool
+            boolean indicating whether option should be turned on (True) or
+            off (False). Option is off by default.
+        """
+        self.check_model_series_values = b
+        print(f"Model timeseries checking set to: {b}.")
+
     def _add_series(self, libname: str,
                     series: FrameorSeriesUnion,
                     name: str,
@@ -181,6 +203,8 @@ class BaseConnector(ABC):
         ItemInLibraryException
             if overwrite is False and name is already in the database
         """
+        if not isinstance(name, str):
+            name = str(name)
         self._validate_input_series(series)
         series = self._set_series_name(series, name)
         in_store = getattr(self, f"{libname}_names")
@@ -342,7 +366,8 @@ class BaseConnector(ABC):
             metadata = None
         else:
             raise TypeError("Expected pastas.Model or dict!")
-
+        if not isinstance(name, str):
+            name = str(name)
         if name not in self.model_names or overwrite:
             # check if oseries and stresses exist in store
             self._check_model_series_names_for_store(ml)
@@ -658,38 +683,65 @@ class BaseConnector(ABC):
         else:
             return models
 
-    @staticmethod
+    def empty_library(self, libname: str, prompt: bool = True,
+                      progressbar: bool = True):
+        """Empty library of all its contents.
+
+        Parameters
+        ----------
+        libname : str
+            name of the library
+        prompt : bool, optional
+            prompt user for input before deleting
+            contents, by default True. Default answer is
+            "n", user must enter 'y' to delete contents
+        progressbar : bool, optional
+            show progressbar, by default True
+        """
+        if prompt:
+            ui = input(f"Do you want to empty '{libname}'"
+                       " library of all its contents? [y/N] ")
+            if ui.lower() != "y":
+                return
+        names = self._parse_names(None, libname)
+        for name in (tqdm(names, desc=f"Deleting items from {libname}")
+                     if progressbar else names):
+            self._del_item(libname, name)
+        print(f"Emptied library {libname} in {self.name}: "
+              f"{self.__class__}")
+
+    @ staticmethod
     def _clear_cache(libname: str) -> None:
         """Clear cached property."""
         getattr(BaseConnector, libname).fget.cache_clear()
 
-    @property  # type: ignore
-    @functools.lru_cache()
+    @ property  # type: ignore
+    @ functools.lru_cache()
     def oseries(self):
         """Dataframe with overview of oseries."""
         return self.get_metadata("oseries", self.oseries_names)
 
-    @property  # type: ignore
-    @functools.lru_cache()
+    @ property  # type: ignore
+    @ functools.lru_cache()
     def stresses(self):
         """Dataframe with overview of stresses."""
         return self.get_metadata("stresses", self.stresses_names)
 
-    @property  # type: ignore
-    @functools.lru_cache()
+    @ property  # type: ignore
+    @ functools.lru_cache()
     def models(self):
         """List of model names."""
         return self.model_names
 
-    @property
+    @ property
     def n_oseries(self):
         return len(self.oseries_names)
 
-    @property
+    @ property
     def n_stresses(self):
         return len(self.stresses_names)
 
-    @property
+    @ property
     def n_models(self):
         return len(self.model_names)
 
@@ -730,7 +782,7 @@ class ConnectorUtil:
         else:
             raise NotImplementedError(f"Cannot parse 'names': {names}")
 
-    @staticmethod
+    @ staticmethod
     def _meta_list_to_frame(metalist: list, names: list):
         """Convert list of metadata dictionaries to DataFrame.
 
@@ -783,7 +835,7 @@ class ConnectorUtil:
         """
         # oseries
         if 'series' not in mdict['oseries']:
-            name = mdict["oseries"]['name']
+            name = str(mdict["oseries"]['name'])
             if name not in self.oseries.index:
                 msg = 'oseries {} not present in project'.format(name)
                 raise LookupError(msg)
@@ -800,7 +852,7 @@ class ConnectorUtil:
             if "stress" in ts.keys():
                 for stress in ts["stress"]:
                     if 'series' not in stress:
-                        name = stress['name']
+                        name = str(stress['name'])
                         if name in self.stresses.index:
                             stress['series'] = self.get_stresses(name)
                             # update tmin/tmax from timeseries
@@ -814,7 +866,7 @@ class ConnectorUtil:
             if ("prec" in ts.keys()) and ("evap" in ts.keys()):
                 for stress in [ts["prec"], ts["evap"]]:
                     if 'series' not in stress:
-                        name = stress['name']
+                        name = str(stress['name'])
                         if name in self.stresses.index:
                             stress['series'] = self.get_stresses(name)
                             # update tmin/tmax from timeseries
@@ -827,6 +879,14 @@ class ConnectorUtil:
                             msg = "stress '{}' not present in project".format(
                                 name)
                             raise KeyError(msg)
+        # hack for pcov w dtype object (when filled with NaNs on store?)
+        if "fit" in mdict:
+            if "pcov" in mdict["fit"]:
+                pcov = mdict["fit"]["pcov"]
+                if pcov.dtypes.apply(
+                        lambda dtyp: isinstance(dtyp, object)).any():
+                    mdict["fit"]["pcov"] = pcov.astype(float)
+
         try:
             # pastas>=0.15.0
             ml = ps.io.base._load_model(mdict)
@@ -923,13 +983,20 @@ class ConnectorUtil:
         if isinstance(ml, ps.Model):
             name = ml.oseries.name
         elif isinstance(ml, dict):
-            name = ml["oseries"]["name"]
+            name = str(ml["oseries"]["name"])
         else:
             raise TypeError("Expected pastas.Model or dict!")
         if name not in self.oseries.index:
             msg = (f"Cannot add model because oseries '{name}' "
                    "is not contained in store.")
             raise LookupError(msg)
+        # expensive check
+        if self.check_model_series_values:
+            if ml.oseries.series_original.ne(
+                    self.get_oseries(name).squeeze()).any().all():
+                raise ValueError(
+                    f"Cannot add model because model oseries '{name}'"
+                    " is different from stored oseries!")
 
     def _check_stresses_in_store(self, ml: Union[ps.Model, dict]):
         """Internal method, check if stresses timeseries are contained in
@@ -951,6 +1018,13 @@ class ConnectorUtil:
                         msg = (f"Cannot add model because stress '{s.name}' "
                                "is not contained in store.")
                         raise LookupError(msg)
+                    if self.check_model_series_values:
+                        if s.series_original.ne(
+                            self.get_stresses(
+                                s.name).squeeze()).any().all():
+                            raise ValueError(
+                                f"Cannot add model because model stress "
+                                f"'{s.name}' is different from stored stress!")
         elif isinstance(ml, dict):
             for sm in ml["stressmodels"].values():
                 if sm["stressmodel"] == "RechargeModel":
@@ -962,6 +1036,14 @@ class ConnectorUtil:
                         msg = (f"Cannot add model because stress '{s['name']}' "
                                "is not contained in store.")
                         raise LookupError(msg)
+                    if self.check_model_series_values:
+                        if s.series_original.ne(
+                                self.get_stresses(
+                                    s["name"]).squeeze()).any().all():
+                            raise ValueError(
+                                "Cannot add model because model stress "
+                                f"'{s['name']}' is different from stored "
+                                "stress!")
         else:
             raise TypeError("Expected pastas.Model or dict!")
 
@@ -1087,7 +1169,7 @@ class ConnectorUtil:
             jsondict = json.dumps(m, cls=PastasEncoder, indent=4)
             archive.writestr(f"models/{n}.pas", jsondict)
 
-    @staticmethod
+    @ staticmethod
     def _series_from_json(fjson: str):
         """Load timeseries from JSON.
 
@@ -1107,7 +1189,7 @@ class ConnectorUtil:
         s = s.sort_index()  # needed for some reason ...
         return s
 
-    @staticmethod
+    @ staticmethod
     def _metadata_from_json(fjson: str):
         """Load metadata dictionary from JSON.
 

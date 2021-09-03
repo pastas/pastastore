@@ -306,7 +306,8 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             # read series and convert to pandas
             item = lib.item(name)
             s = item.to_pandas()
-            # remove _is_series key and return pd.Series if user passed in Series
+            # remove _is_series key and return pd.Series
+            # if user passed in Series
             is_series = item.metadata.pop("_is_series")
             if is_series:
                 s = s.squeeze()
@@ -670,23 +671,28 @@ class PasConnector(BaseConnector, ConnectorUtil):
         """
         lib = self._get_library(libname)
         mjson = os.path.join(lib, f"{name}_meta.pas")
-        imeta = self._metadata_from_json(mjson)
+        if os.path.isfile(mjson):
+            imeta = self._metadata_from_json(mjson)
+        else:
+            imeta = {}
         return imeta
 
     @property
     def oseries_names(self):
         """List of oseries names."""
         lib = self._get_library("oseries")
-        return [i[:-4] for i in os.listdir(lib) if not i.endswith("_meta.pas")]
+        return [i[:-4] for i in os.listdir(lib)
+                if i.endswith('.pas') if not i.endswith("_meta.pas")]
 
     @property
     def stresses_names(self):
         """List of stresses names."""
         lib = self._get_library("stresses")
-        return [i[:-4] for i in os.listdir(lib) if not i.endswith("_meta.pas")]
+        return [i[:-4] for i in os.listdir(lib)
+                if i.endswith('.pas') if not i.endswith("_meta.pas")]
 
     @property
     def model_names(self):
         """List of model names."""
         lib = self._get_library("models")
-        return [i[:-4] for i in os.listdir(lib)]
+        return [i[:-4] for i in os.listdir(lib) if i.endswith('.pas')]
