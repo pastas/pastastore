@@ -692,8 +692,8 @@ class BaseConnector(ABC):
         libname : str
             name of the library
         prompt : bool, optional
-            prompt user for input before deleting 
-            contents, by default True. Default answer is 
+            prompt user for input before deleting
+            contents, by default True. Default answer is
             "n", user must enter 'y' to delete contents
         progressbar : bool, optional
             show progressbar, by default True
