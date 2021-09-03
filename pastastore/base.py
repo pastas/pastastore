@@ -683,6 +683,33 @@ class BaseConnector(ABC):
         else:
             return models
 
+    def empty_library(self, libname: str, prompt: bool = True,
+                      progressbar: bool = True):
+        """Empty library of all its contents.
+
+        Parameters
+        ----------
+        libname : str
+            name of the library
+        prompt : bool, optional
+            prompt user for input before deleting 
+            contents, by default True. Default answer is 
+            "n", user must enter 'y' to delete contents
+        progressbar : bool, optional
+            show progressbar, by default True
+        """
+        if prompt:
+            ui = input(f"Do you want to empty '{libname}'"
+                       " library of all its contents? [y/N] ")
+            if ui.lower() != "y":
+                return
+        names = self._parse_names(None, libname)
+        for name in (tqdm(names, desc=f"Deleting items from {libname}")
+                     if progressbar else names):
+            self._del_item(libname, name)
+        print(f"Emptied library {libname} in {self.name}: "
+                f"{self.__class__}")
+
     @ staticmethod
     def _clear_cache(libname: str) -> None:
         """Clear cached property."""

@@ -16,29 +16,25 @@ class ItemInLibraryException(Exception):
     pass
 
 
-def delete_pystore_connector(path: Optional[str] = None,
+def delete_pystore_connector(conn=None,
+                             path: Optional[str] = None,
                              name: Optional[str] = None,
-                             conn=None,
                              libraries: Optional[List[str]] = None) -> None:
     """Delete libraries from pystore.
 
     Parameters
     ----------
+    conn : PystoreConnector, optional
+        PystoreConnector object
     path : str, optional
         path to pystore
     name : str, optional
         name of the pystore
-    conn : PystoreConnector, optional
-        PystoreConnector object
     libraries : Optional[List[str]], optional
         list of library names to delete, by default None which deletes
         all libraries
     """
-    try:
-        import pystore
-    except ModuleNotFoundError as e:
-        print("Please install `pystore`!")
-        raise e
+    import pystore
 
     if conn is not None:
         name = conn.name
@@ -59,29 +55,25 @@ def delete_pystore_connector(path: Optional[str] = None,
             print(f" - deleted: {lib}")
 
 
-def delete_arctic_connector(connstr: Optional[str] = None,
+def delete_arctic_connector(conn=None,
+                            connstr: Optional[str] = None,
                             name: Optional[str] = None,
-                            conn=None,
                             libraries: Optional[List[str]] = None) -> None:
     """Delete libraries from arctic database.
 
     Parameters
     ----------
+    conn : pastastore.ArcticConnector
+        ArcticConnector object
     connstr : str, optional
         connection string to the database
     name : str, optional
         name of the database
-    conn : pastastore.ArcticConnector
-        ArcticConnector object
     libraries : Optional[List[str]], optional
         list of library names to delete, by default None which deletes
         all libraries
     """
-    try:
-        import arctic
-    except ModuleNotFoundError as e:
-        print("Please install `arctic`!")
-        raise e
+    import arctic
 
     if conn is not None:
         name = conn.name
@@ -171,48 +163,6 @@ def delete_pastastore(pstore, libraries: Optional[List[str]] = None) -> None:
     else:
         raise TypeError("Unrecognized pastastore Connector type: "
                         f"{pstore.conn.conn_type}")
-
-
-def empty_library(pstore, libname: str,
-                  progressbar: Optional[bool] = True) -> None:
-    """Empty an entire library in a PastaStore.
-
-    Parameters
-    ----------
-    pstore : pastastore.PastaStore
-        PastaStore object to delete library contents from
-    libname : str
-        name of the library to delete all items from
-    progressbar : bool, optional
-        if True show progressbar (default)
-    """
-    conn = pstore.conn
-    lib = conn._get_library(libname)
-    names = conn._parse_names(None, libname)
-
-    if pstore.conn.conn_type == "arctic":
-        for name in (tqdm(names, desc=f"Deleting items from {libname}")
-                     if progressbar else names):
-            lib.delete(name)
-        conn._clear_cache(libname)
-    elif pstore.conn.conn_type == "pystore":
-        for name in (tqdm(names, desc=f"Deleting items from {libname}")
-                     if progressbar else names):
-            lib.delete_item(name)
-        conn._clear_cache(libname)
-    elif pstore.conn.conn_type == "dict":
-        for name in (tqdm(names, desc=f"Deleting items from {libname}")
-                     if progressbar else names):
-            _ = lib.pop(name)
-    elif pstore.conn.conn_type == "pas]":
-        for name in (tqdm(names, desc=f"Deleting items from {libname}")
-                     if progressbar else names):
-            pstore.conn._del_item(libname, name)
-    else:
-        raise ValueError(f"Connector type '{pstore.conn.conn_type}' "
-                         "not recognized!")
-
-    print(f"Emptied library {libname} in {conn.name}: {conn.__class__}")
 
 
 def validate_names(s: Optional[str] = None, d: Optional[dict] = None,
@@ -346,11 +296,13 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                 elif i == 1:
                     # ValueError if series cannot be compared, set result to False
                     try:
-                        compare_so1 = (so1[counter] == ts.series_original).all()
+                        compare_so1 = (
+                            so1[counter] == ts.series_original).all()
                     except ValueError:
                         compare_so1 = False
                     try:
-                        compare_sv1 = (sv1[counter] == ts.series_validated).all()
+                        compare_sv1 = (
+                            sv1[counter] == ts.series_validated).all()
                     except ValueError:
                         compare_sv1 = False
                     try:

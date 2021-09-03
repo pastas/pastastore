@@ -176,12 +176,23 @@ def test_del_stress(request, conn):
 
 @pytest.mark.dependency()
 def test_delete(request, conn):
+    s1 = pd.Series(index=pd.date_range("2000", periods=10, freq="D"), data=1.0)
+    s1.name = "test_series"
+    conn.add_oseries(s1, "test_series", metadata=None)
+    conn.empty_library("stresses", prompt=False, progressbar=False)
+    return
+
+
+@pytest.mark.dependency()
+def test_delete(request, conn):
+    # no need to delete dictconnector (in memory)
     if conn.conn_type == "arctic":
-        pst.util.delete_arctic_connector(
-            conn.connstr, conn.name, libraries=["oseries"])
-        pst.util.delete_arctic_connector(conn.connstr, conn.name)
+        pst.util.delete_arctic_connector(conn, libraries=["oseries"])
+        pst.util.delete_arctic_connector(conn)
     elif conn.conn_type == "pystore":
-        pst.util.delete_pystore_connector(
-            conn.path, conn.name, libraries=["oseries"])
-        pst.util.delete_pystore_connector(conn.path, conn.name)
+        pst.util.delete_pystore_connector(conn, libraries=["oseries"])
+        pst.util.delete_pystore_connector(conn)
+    elif conn.conn_type == "pas":
+        pst.util.delete_pas_connector(conn, libraries=["oseries"])
+        pst.util.delete_pas_connector(conn)
     return
