@@ -294,7 +294,8 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                     df.loc[f"  - {ts.name}: series"] = True
 
                 elif i == 1:
-                    # ValueError if series cannot be compared, set result to False
+                    # ValueError if series cannot be compared, 
+                    # set result to False
                     try:
                         compare_so1 = (
                             so1[counter] == ts.series_original).all()

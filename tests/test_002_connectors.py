@@ -175,7 +175,7 @@ def test_del_stress(request, conn):
 
 
 @pytest.mark.dependency()
-def test_delete(request, conn):
+def test_empty_library(request, conn):
     s1 = pd.Series(index=pd.date_range("2000", periods=10, freq="D"), data=1.0)
     s1.name = "test_series"
     conn.add_oseries(s1, "test_series", metadata=None)

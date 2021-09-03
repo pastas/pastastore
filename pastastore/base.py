@@ -708,7 +708,7 @@ class BaseConnector(ABC):
                      if progressbar else names):
             self._del_item(libname, name)
         print(f"Emptied library {libname} in {self.name}: "
-                f"{self.__class__}")
+              f"{self.__class__}")
 
     @ staticmethod
     def _clear_cache(libname: str) -> None:
@@ -842,8 +842,10 @@ class ConnectorUtil:
             mdict['oseries']['series'] = self.get_oseries(name)
             # update tmin/tmax from timeseries
             if update_ts_settings:
-                mdict["oseries"]["settings"]["tmin"] = mdict['oseries']['series'].index[0]
-                mdict["oseries"]["settings"]["tmax"] = mdict['oseries']['series'].index[-1]
+                mdict["oseries"]["settings"]["tmin"] = \
+                    mdict['oseries']['series'].index[0]
+                mdict["oseries"]["settings"]["tmax"] = \
+                    mdict['oseries']['series'].index[-1]
 
         # StressModel, StressModel2, WellModel
         for ts in mdict["stressmodels"].values():
@@ -855,8 +857,10 @@ class ConnectorUtil:
                             stress['series'] = self.get_stresses(name)
                             # update tmin/tmax from timeseries
                             if update_ts_settings:
-                                stress["settings"]["tmin"] = stress['series'].index[0]
-                                stress["settings"]["tmax"] = stress['series'].index[-1]
+                                stress["settings"]["tmin"] = \
+                                    stress['series'].index[0]
+                                stress["settings"]["tmax"] = \
+                                    stress['series'].index[-1]
 
             # RechargeModel
             if ("prec" in ts.keys()) and ("evap" in ts.keys()):
@@ -867,8 +871,10 @@ class ConnectorUtil:
                             stress['series'] = self.get_stresses(name)
                             # update tmin/tmax from timeseries
                             if update_ts_settings:
-                                stress["settings"]["tmin"] = stress['series'].index[0]
-                                stress["settings"]["tmax"] = stress['series'].index[-1]
+                                stress["settings"]["tmin"] = \
+                                    stress['series'].index[0]
+                                stress["settings"]["tmax"] = \
+                                    stress['series'].index[-1]
                         else:
                             msg = "stress '{}' not present in project".format(
                                 name)

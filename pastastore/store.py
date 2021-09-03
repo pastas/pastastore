@@ -739,7 +739,8 @@ class PastaStore:
                     os.path.join(exportdir, f"metadata_{name}.csv"))
 
     @classmethod
-    def from_zip(cls, fname: str, conn, storename: Optional[str] = None, progressbar: bool = True):
+    def from_zip(cls, fname: str, conn, storename: Optional[str] = None,
+                 progressbar: bool = True):
         """Load PastaStore from zipfile.
 
         Parameters

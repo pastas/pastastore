@@ -306,7 +306,8 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             # read series and convert to pandas
             item = lib.item(name)
             s = item.to_pandas()
-            # remove _is_series key and return pd.Series if user passed in Series
+            # remove _is_series key and return pd.Series 
+            # if user passed in Series
             is_series = item.metadata.pop("_is_series")
             if is_series:
                 s = s.squeeze()
