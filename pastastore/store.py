@@ -790,7 +790,7 @@ class PastaStore:
         libname : str
             name of the library to search in
         s : str
-            find names starting with this string or part of string 
+            find names starting with this string or part of string
         case_sensitive : bool, optional
             whether search should be case sensitive, by default False
 
