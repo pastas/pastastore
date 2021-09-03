@@ -9,7 +9,7 @@ import pastas as ps
 from pastas.io.pas import pastas_hook
 from tqdm import tqdm
 
-from .plotting import Plots, Maps
+from .plotting import Maps, Plots
 from .util import _custom_warning
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
