@@ -386,13 +386,13 @@ def copy_database(conn1, conn2, libraries: Optional[List[str]] = None,
                 o, meta = conn1.get_oseries(name, return_metadata=True)
                 conn2.add_oseries(o, name, metadata=meta, overwrite=overwrite)
         elif lib == "stresses":
-            for name in (tqdm(conn1.stresses_names, desc="copying oseries") if
+            for name in (tqdm(conn1.stresses_names, desc="copying stresses") if
                          progressbar else conn1.stresses_names):
                 s, meta = conn1.get_stresses(name, return_metadata=True)
                 conn2.add_stress(s, name, kind=meta["kind"], metadata=meta,
                                  overwrite=overwrite)
         elif lib == "models":
-            for name in (tqdm(conn1.model_names, desc="copying oseries") if
+            for name in (tqdm(conn1.model_names, desc="copying models") if
                          progressbar else conn1.model_names):
                 mldict = conn1.get_models(name, return_dict=True)
                 conn2.add_model(mldict, overwrite=overwrite)
