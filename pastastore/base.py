@@ -246,7 +246,8 @@ class BaseConnector(ABC):
         update.update(series)
         # metadata
         update_meta = self._get_metadata(libname, name)
-        update_meta.update(metadata)
+        if metadata is not None:
+            update_meta.update(metadata)
         self._add_series(libname, update, name, metadata=update_meta,
                          overwrite=True)
 
