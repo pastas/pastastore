@@ -29,7 +29,7 @@ setup(
     ],
     platforms='Windows, MacOS, *nix',
     install_requires=["numpy>=1.15",
-                      "pandas>=1.0,<1.2.0",  # for now, until Arctic is updated
+                      "pandas>=1.0",  # note 1.1.5 necessary for Arctic for now
                       "tqdm>=4.36",
                       "pastas>=0.13"],
     packages=find_packages(exclude=[]),
