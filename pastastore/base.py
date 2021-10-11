@@ -993,8 +993,8 @@ class ConnectorUtil:
             raise LookupError(msg)
         # expensive check
         if self.check_model_series_values:
-            if ml.oseries.series_original.ne(
-                    self.get_oseries(name).squeeze()).any().all():
+            s_org = self.get_oseries(name).squeeze()
+            if not ml.oseries.series_original.equals(s_org):
                 raise ValueError(
                     f"Cannot add model because model oseries '{name}'"
                     " is different from stored oseries!")
@@ -1020,9 +1020,8 @@ class ConnectorUtil:
                                "is not contained in store.")
                         raise LookupError(msg)
                     if self.check_model_series_values:
-                        if s.series_original.ne(
-                            self.get_stresses(
-                                s.name).squeeze()).any().all():
+                        s_org = self.get_stresses(s.name).squeeze()
+                        if not s.series_original.equals(s_org):
                             raise ValueError(
                                 f"Cannot add model because model stress "
                                 f"'{s.name}' is different from stored stress!")
@@ -1038,9 +1037,8 @@ class ConnectorUtil:
                                "is not contained in store.")
                         raise LookupError(msg)
                     if self.check_model_series_values:
-                        if s.series_original.ne(
-                                self.get_stresses(
-                                    s["name"]).squeeze()).any().all():
+                        s_org = self.get_stresses(s["name"]).squeeze()
+                        if not s.series_original.equals(s_org):
                             raise ValueError(
                                 "Cannot add model because model stress "
                                 f"'{s['name']}' is different from stored "
