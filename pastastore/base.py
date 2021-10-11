@@ -28,7 +28,7 @@ class BaseConnector(ABC):
     _default_library_names = ["oseries", "stresses", "models"]
 
     # whether to check model timeseries contents against stored copies
-    check_model_series_values = False
+    check_model_series_values = True
 
     def __repr__(self):
         """Representation string of the object."""
@@ -992,9 +992,9 @@ class ConnectorUtil:
                    "is not contained in store.")
             raise LookupError(msg)
         # expensive check
-        if self.check_model_series_values:
-            s_org = self.get_oseries(name).squeeze()
-            if not ml.oseries.series_original.equals(s_org):
+        if self.check_model_series_values and isinstance(ml, ps.Model):
+            s_org = self.get_oseries(name).squeeze().dropna()
+            if not ml.oseries.series_original.dropna().equals(s_org):
                 raise ValueError(
                     f"Cannot add model because model oseries '{name}'"
                     " is different from stored oseries!")
@@ -1036,13 +1036,6 @@ class ConnectorUtil:
                         msg = (f"Cannot add model because stress '{s['name']}' "
                                "is not contained in store.")
                         raise LookupError(msg)
-                    if self.check_model_series_values:
-                        s_org = self.get_stresses(s["name"]).squeeze()
-                        if not s.series_original.equals(s_org):
-                            raise ValueError(
-                                "Cannot add model because model stress "
-                                f"'{s['name']}' is different from stored "
-                                "stress!")
         else:
             raise TypeError("Expected pastas.Model or dict!")
 
