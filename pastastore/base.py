@@ -993,8 +993,8 @@ class ConnectorUtil:
             raise LookupError(msg)
         # expensive check
         if self.check_model_series_values and isinstance(ml, ps.Model):
-            s_org = self.get_oseries(name).squeeze()
-            if not ml.oseries.series_original.equals(s_org):
+            s_org = self.get_oseries(name).squeeze().dropna()
+            if not ml.oseries.series_original.dropna().equals(s_org):
                 raise ValueError(
                     f"Cannot add model because model oseries '{name}'"
                     " is different from stored oseries!")
