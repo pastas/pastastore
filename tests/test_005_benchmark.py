@@ -153,34 +153,34 @@ def test_benchmark_write_model_arctic(benchmark):
 # %%
 
 
-def write_model_checkts(conn, ml):
-    conn.check_model_series_values = True
+def write_model_nocheckts(conn, ml):
+    conn.set_check_model_series_values(False)
     conn.add_model(ml, overwrite=True)
 
 
 @pytest.mark.benchmark(group="write_model")
-def test_benchmark_write_model_checkts_pas(benchmark):
+def test_benchmark_write_model_nocheckts_pas(benchmark):
     conn = pst.PasConnector("test", "./tests/data/pas")
     ml = build_model(conn)
-    _ = benchmark(write_model_checkts, conn=conn, ml=ml)
+    _ = benchmark(write_model_nocheckts, conn=conn, ml=ml)
     return
 
 
 @pytest.mark.benchmark(group="write_model")
-def test_benchmark_write_model_checkts_pystore(benchmark):
+def test_benchmark_write_model_nocheckts_pystore(benchmark):
     path = "./tests/data/pystore"
     conn = pst.PystoreConnector("test", path)
     ml = build_model(conn)
-    _ = benchmark(write_model_checkts, conn=conn, ml=ml)
+    _ = benchmark(write_model_nocheckts, conn=conn, ml=ml)
     return
 
 
 @pytest.mark.benchmark(group="write_model")
-def test_benchmark_write_model_checkts_arctic(benchmark):
+def test_benchmark_write_model_nocheckts_arctic(benchmark):
     connstr = "mongodb://localhost:27017/"
     conn = pst.ArcticConnector("test", connstr)
     ml = build_model(conn)
-    _ = benchmark(write_model_checkts, conn=conn, ml=ml)
+    _ = benchmark(write_model_nocheckts, conn=conn, ml=ml)
     return
 # %% read model
 
