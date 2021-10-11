@@ -1,5 +1,6 @@
 import warnings
 
+import numpy as np
 import pandas as pd
 import pastas as ps
 import pytest
@@ -30,6 +31,23 @@ def test_add_get_series(request, conn):
         assert (o1 == o2).all()
     finally:
         conn.del_oseries("test_series")
+    return
+
+
+def test_add_get_series_wnans(request, conn):
+    o1 = pd.Series(index=pd.date_range("2000", periods=10, freq="D"), data=1.0)
+    o1.iloc[-3:] = np.nan
+    o1.name = "test_series_nans"
+    conn.add_oseries(o1, "test_series_nans", metadata=None)
+    o2 = conn.get_oseries("test_series_nans")
+    # PasConnector has no logic for preserving Series
+    if conn.conn_type == "pas":
+        o2 = o2.squeeze()
+    try:
+        assert isinstance(o2, pd.Series)
+        assert o1.equals(o2).all()
+    finally:
+        conn.del_oseries("test_series_nans")
     return
 
 
