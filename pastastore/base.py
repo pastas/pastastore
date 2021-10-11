@@ -28,7 +28,7 @@ class BaseConnector(ABC):
     _default_library_names = ["oseries", "stresses", "models"]
 
     # whether to check model timeseries contents against stored copies
-    check_model_series_values = False
+    check_model_series_values = True
 
     def __repr__(self):
         """Representation string of the object."""
