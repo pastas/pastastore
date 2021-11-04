@@ -708,6 +708,7 @@ class BaseConnector(ABC):
         for name in (tqdm(names, desc=f"Deleting items from {libname}")
                      if progressbar else names):
             self._del_item(libname, name)
+        self._clear_cache(libname)
         print(f"Emptied library {libname} in {self.name}: "
               f"{self.__class__}")
 
