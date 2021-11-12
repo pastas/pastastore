@@ -689,7 +689,7 @@ class PastaStore:
     def export_model_series_to_csv(self,
                                    names: Optional[Union[list, str]] = None,
                                    exportdir: str = ".",
-                                   exportmeta: bool = True):
+                                   exportmeta: bool = True):  # pragma: no cover
         """Export model timeseries to csv files.
 
         Parameters

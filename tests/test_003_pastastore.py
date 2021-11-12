@@ -26,6 +26,20 @@ def test_iter_stresses(pstore):
 
 
 @pytest.mark.dependency()
+def test_get_tmintmax(pstore):
+    _ = pstore.get_tmin_tmax()
+    return
+
+
+@pytest.mark.dependency()
+def test_search(pstore):
+    results = pstore.search("oser")
+    assert len(results) == 3
+    assert results[0] == "oseries1"
+    return
+
+
+@pytest.mark.dependency()
 def test_create_model(pstore):
     ml = pstore.create_model("oseries1")
     return ml
