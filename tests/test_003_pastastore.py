@@ -27,13 +27,14 @@ def test_iter_stresses(pstore):
 
 @pytest.mark.dependency()
 def test_get_tmintmax(pstore):
-    _ = pstore.get_tmin_tmax()
+    _ = pstore.get_tmin_tmax("oseries")
+    _ = pstore.get_tmin_tmax("stresses")
     return
 
 
 @pytest.mark.dependency()
 def test_search(pstore):
-    results = pstore.search("oser")
+    results = pstore.search("oseries", "oser")
     assert len(results) == 3
     assert results[0] == "oseries1"
     return
