@@ -34,9 +34,9 @@ def test_get_tmintmax(pstore):
 
 @pytest.mark.dependency()
 def test_search(pstore):
-    results = pstore.search("oseries", "oser")
+    results = pstore.search("oseries", "OSER", case_sensitive=False)
     assert len(results) == 3
-    assert len(set(results) - {"oseries1", "oseries2", "oseries3"})
+    assert (len(set(results) - {"oseries1", "oseries2", "oseries3"}) == 0)
     return
 
 
