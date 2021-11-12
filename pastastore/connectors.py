@@ -8,7 +8,7 @@ from typing import Dict, Optional, Union
 import pandas as pd
 from pastas.io.pas import PastasEncoder, pastas_hook
 
-from .base import BaseConnector, ConnectorUtil
+from .base import BaseConnector, ConnectorUtil, ModelAccessor
 from .util import _custom_warning
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
@@ -45,6 +45,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         self.libs: dict = {}
         self.arc = arctic.Arctic(connstr)
         self._initialize()
+        self.models = ModelAccessor(self)
 
     def _initialize(self) -> None:
         """Internal method to initalize the libraries."""
@@ -210,6 +211,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         self.store = pystore.store(self.name)
         self.libs: dict = {}
         self._initialize()
+        self.models = ModelAccessor(self)
 
     def _initialize(self) -> None:
         """Internal method to initalize the libraries (stores)."""
@@ -402,6 +404,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         # create empty dictionaries for series and models
         for val in self._default_library_names:
             setattr(self, "lib_" + val, {})
+        self.models = ModelAccessor(self)
 
     def _get_library(self, libname: str):
         """Get reference to dictionary holding data.
@@ -535,6 +538,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         self.name = name
         self.path = os.path.abspath(path)
         self._initialize()
+        self.models = ModelAccessor(self)
 
     def _initialize(self) -> None:
         """Internal method to initialize the libraries."""

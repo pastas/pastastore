@@ -380,7 +380,7 @@ class BaseConnector(ABC):
         else:
             raise ItemInLibraryException(f"Model with name '{name}' "
                                          "already in 'models' library!")
-        self._clear_cache("models")
+        self._clear_cache("_modelnames_cache")
 
     @staticmethod
     def _parse_series_input(series: Union[FrameorSeriesUnion, ps.TimeSeries],
@@ -459,7 +459,7 @@ class BaseConnector(ABC):
         """
         for n in self._parse_names(names, libname="models"):
             self._del_item("models", n)
-        self._clear_cache("models")
+        self._clear_cache("_modelnames_cache")
 
     def del_oseries(self, names: Union[list, str]):
         """Delete oseries from the database.
@@ -714,6 +714,8 @@ class BaseConnector(ABC):
     @ staticmethod
     def _clear_cache(libname: str) -> None:
         """Clear cached property."""
+        if libname == "models":
+            libname = "_modelnames_cache"
         getattr(BaseConnector, libname).fget.cache_clear()
 
     @ property  # type: ignore
@@ -730,7 +732,7 @@ class BaseConnector(ABC):
 
     @ property  # type: ignore
     @ functools.lru_cache()
-    def models(self):
+    def _modelnames_cache(self):
         """List of model names."""
         return self.model_names
 
@@ -1198,3 +1200,60 @@ class ConnectorUtil:
         with open(fjson, "r") as f:
             meta = json.load(f)
         return meta
+
+
+class ModelAccessor:
+    """Object for managing access to stored models.
+
+    Provides dict-like access to models (i.e. PastaStore.models["model1"]),
+    or allows adding models to the PastaStore using dict-like assignment
+    (i.e. PastaStore.models["model1"] = ml), and it can serve as an iterator
+    (i.e. [ml for ml in pstore.models]).
+    """
+
+    def __init__(self, conn):
+        """Initialize model accessor.
+
+        Parameters
+        ----------
+        conn : pastastore.*Connector type
+            connector
+        """
+        self.conn = conn
+
+    def __repr__(self):
+        """Representation of the object is a list of modelnames."""
+        return self.conn._modelnames_cache.__repr__()
+
+    def __getitem__(self, name):
+        """Get model from store with model name as key.
+
+        Parameters
+        ----------
+        name : str
+            name of the model
+        """
+        return self.conn.get_models(name)
+
+    def __setitem__(self, name, ml):
+        """Set item.
+
+        Parameters
+        ----------
+        name : str
+            name of the model
+        ml : pastas.Model or dict
+            model to add to the pastastore
+        """
+        ml.name = name
+        self.conn.add_model(ml, overwrite=True)
+
+    def __iter__(self):
+        """Iterate over models.
+
+        Yields
+        -------
+        ml : pastas.Model
+            model
+        """
+        yield from self.conn.iter_models()
