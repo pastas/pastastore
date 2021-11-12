@@ -32,7 +32,7 @@ class BaseConnector(ABC):
 
     def __repr__(self):
         """Representation string of the object."""
-        return (f"<{type(self).__name__} object> '{self.name}': "
+        return (f"<{type(self).__name__}> '{self.name}': "
                 f"{self.n_oseries} oseries, "
                 f"{self.n_stresses} stresses, "
                 f"{self.n_models} models")
@@ -251,11 +251,35 @@ class BaseConnector(ABC):
         self._add_series(libname, update, name, metadata=update_meta,
                          overwrite=True)
 
+    def _upsert_series(self, libname: str,
+                       series: FrameorSeriesUnion,
+                       name: str,
+                       metadata: Optional[dict] = None) -> None:
+        """Update or insert series depending on whether it exists in store.
+
+        Parameters
+        ----------
+        libname : str
+            name of library
+        series : FrameorSeriesUnion
+            timeseries to update/insert
+        name : str
+            name of the timeseries
+        metadata : Optional[dict], optional
+            metadata dictionary, by default None
+        """
+        if libname not in ["oseries", "stresses"]:
+            raise ValueError("Library must be 'oseries' or 'stresses'!")
+        if name in getattr(self, f"{libname}_names"):
+            self._update_series(libname, series, name, metadata=metadata)
+        else:
+            self._add_series(libname, series, name, metadata=metadata)
+
     def update_metadata(self, libname: str, name: str, metadata: dict) -> None:
         """Update metadata.
 
         Note: also retrieves and stores timeseries as updating only metadata
-        is not really supported.
+        is not supported for some Connectors.
 
         Parameters
         ----------
@@ -429,6 +453,23 @@ class BaseConnector(ABC):
         series, metadata = self._parse_series_input(series, metadata)
         self._update_series("oseries", series, name, metadata=metadata)
 
+    def upsert_oseries(self, series: Union[FrameorSeriesUnion, ps.TimeSeries],
+                       name: str, metadata: Optional[dict] = None) -> None:
+        """Update or insert oseries values depending on whether it exists.
+
+        Parameters
+        ----------
+        series : Union[FrameorSeriesUnion, ps.TimeSeries]
+            timeseries to update/insert
+        name : str
+            name of the oseries
+        metadata : Optional[dict], optional
+            optionally provide metadata, which will update
+            the stored metadata dictionary if it exists, by default None
+        """
+        series, metadata = self._parse_series_input(series, metadata)
+        self._upsert_series("oseries", series, name, metadata=metadata)
+
     def update_stress(self, series: Union[FrameorSeriesUnion, ps.TimeSeries],
                       name: str, metadata: Optional[dict] = None) -> None:
         """Update stresses values.
@@ -448,6 +489,27 @@ class BaseConnector(ABC):
         """
         series, metadata = self._parse_series_input(series, metadata)
         self._update_series("stresses", series, name, metadata=metadata)
+
+    def upsert_stress(self, series: Union[FrameorSeriesUnion, ps.TimeSeries],
+                      name: str, kind: str,
+                      metadata: Optional[dict] = None) -> None:
+        """Update or insert stress values depending on whether it exists.
+
+        Parameters
+        ----------
+        series : Union[FrameorSeriesUnion, ps.TimeSeries]
+            timeseries to update/insert
+        name : str
+            name of the stress
+        metadata : Optional[dict], optional
+            optionally provide metadata, which will update
+            the stored metadata dictionary if it exists, by default None
+        """
+        series, metadata = self._parse_series_input(series, metadata)
+        if metadata is None:
+            metadata = {}
+        metadata["kind"] = kind
+        self._upsert_series("stresses", series, name, metadata=metadata)
 
     def del_models(self, names: Union[list, str]) -> None:
         """Delete model(s) from the database.
@@ -712,6 +774,85 @@ class BaseConnector(ABC):
         print(f"Emptied library {libname} in {self.name}: "
               f"{self.__class__}")
 
+    def _iter_series(self, libname: str, names: Optional[List[str]] = None):
+        """Internal method iterate over timeseries in library.
+
+        Parameters
+        ----------
+        libname : str
+            name of library (e.g. 'oseries' or 'stresses')
+        names : Optional[List[str]], optional
+            list of names, by default None, which defaults to
+            all stored series
+
+
+        Yields
+        -------
+        pandas.Series or pandas.DataFrame
+            timeseries contained in library
+        """
+        names = self._parse_names(names, libname)
+        for nam in names:
+            yield self._get_series(libname, nam, progressbar=False)
+
+    def iter_oseries(self, names: Optional[List[str]] = None):
+        """Iterate over oseries in library.
+
+        Parameters
+        ----------
+        names : Optional[List[str]], optional
+            list of oseries names, by default None, which defaults to
+            all stored series
+
+
+        Yields
+        -------
+        pandas.Series or pandas.DataFrame
+            oseries contained in library
+        """
+        yield from self._iter_series("oseries", names=names)
+
+    def iter_stresses(self, names: Optional[List[str]] = None):
+        """Iterate over stresses in library.
+
+        Parameters
+        ----------
+        names : Optional[List[str]], optional
+            list of stresses names, by default None, which defaults to
+            all stored series
+
+
+        Yields
+        -------
+        pandas.Series or pandas.DataFrame
+            stresses contained in library
+        """
+        yield from self._iter_series("stresses", names=names)
+
+    def iter_models(self, modelnames: Optional[List[str]] = None,
+                    return_dict: bool = False):
+        """Iterate over models in library.
+
+        Parameters
+        ----------
+        modelnames : Optional[List[str]], optional
+            list of models to iterate over, by default None which uses
+            all models
+        return_dict : bool, optional
+            if True, return model as dictionary, by default False,
+            which returns a pastas.Model.
+
+        Yields
+        -------
+        pastas.Model or dict
+            timeseries model
+        """
+
+        modelnames = self._parse_names(modelnames, "models")
+        for mlnam in modelnames:
+            yield self.get_models(mlnam, return_dict=return_dict,
+                                  progressbar=False)
+
     @ staticmethod
     def _clear_cache(libname: str) -> None:
         """Clear cached property."""
@@ -749,7 +890,11 @@ class BaseConnector(ABC):
 
 
 class ConnectorUtil:
-    """Mix-in class for general Connector helper functions."""
+    """Mix-in class for general Connector helper functions.
+
+    Only for internal methods, and not methods that are related to CRUD
+    operations on database.
+    """
 
     def _parse_names(self, names: Optional[Union[list, str]] = None,
                      libname: Optional[str] = "oseries") -> list:
