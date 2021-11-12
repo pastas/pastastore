@@ -59,6 +59,24 @@ def test_store_model(request, pstore):
 
 
 @pytest.mark.dependency()
+def test_model_accessor(request, pstore):
+    depends(request, [f"test_store_model[{pstore.type}]"])
+    # repr
+    pstore.models.__repr__()
+    # getter
+    ml = pstore.models["oseries1"]
+    # setter
+    pstore.models["oseries2"] = ml
+    # iter
+    mnames = [ml.name for ml in pstore.models]
+    try:
+        assert mnames == ["oseries1", "oseries2"]
+    finally:
+        pstore.del_models("oseries2")
+    return
+
+
+@pytest.mark.dependency()
 def test_store_model_missing_series(request, pstore):
     depends(request, [f"test_create_model[{pstore.type}]",
                       f"test_store_model[{pstore.type}]"])
