@@ -13,6 +13,18 @@ with warnings.catch_warnings():
 
 
 @pytest.mark.dependency()
+def test_iter_oseries(pstore):
+    _ = list(pstore.iter_oseries())
+    return
+
+
+@pytest.mark.dependency()
+def test_iter_stresses(pstore):
+    _ = list(pstore.iter_stresses())
+    return
+
+
+@pytest.mark.dependency()
 def test_create_model(pstore):
     ml = pstore.create_model("oseries1")
     return ml
@@ -31,7 +43,6 @@ def test_properties(pstore):
     try:
         assert pstore.n_oseries == pstore.conn.n_oseries
         assert pstore.n_stresses == pstore.conn.n_stresses
-
     finally:
         pstore.del_oseries("deleteme")
         pstore.del_stress("deleteme")
@@ -98,6 +109,13 @@ def test_get_parameters(request, pstore):
     assert p.index.size == 2
     assert p.isna().sum().sum() == 0
     return p
+
+
+@pytest.mark.dependency()
+def test_iter_models(request, pstore):
+    depends(request, [f"test_create_models[{pstore.type}]"])
+    _ = list(pstore.iter_models())
+    return
 
 
 @pytest.mark.dependency()

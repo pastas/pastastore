@@ -96,6 +96,44 @@ def test_update_series(request, conn):
     return
 
 
+def test_upsert_oseries(request, conn):
+    o1 = pd.DataFrame(data=1.0, columns=["test_df"],
+                      index=pd.date_range("2000", periods=10, freq="D"))
+    o1.index.name = "test_idx"
+    conn.upsert_oseries(o1, "test_df", metadata={"x": 100000.})
+    o2 = pd.DataFrame(data=2.0, columns=["test_df"],
+                      index=pd.date_range("2000-01-05", periods=10, freq="D"))
+    o2.index.name = "test_idx"
+    conn.upsert_oseries(o2, "test_df", metadata={"x": 200000., "y": 400000})
+    o3 = conn.get_oseries("test_df")
+    try:
+        assert (o3.iloc[-10:] == 2.0).all().all()
+        assert o3.index.size == 14
+    finally:
+        conn.del_oseries("test_df")
+    return
+
+
+def test_upsert_stress(request, conn):
+    s1 = pd.DataFrame(data=1.0, columns=["test_df"],
+                      index=pd.date_range("2000", periods=10, freq="D"))
+    s1.index.name = "test_idx"
+    conn.upsert_stress(s1, "test_df", kind="useless", metadata={"x": 100000.})
+    s2 = pd.DataFrame(data=2.0, columns=["test_df"],
+                      index=pd.date_range("2000-01-05", periods=10, freq="D"))
+    s2.index.name = "test_idx"
+    conn.upsert_stress(s2, "test_df", kind="not useless",
+                       metadata={"x": 200000., "y": 400000})
+    s3 = conn.get_stresses("test_df")
+    try:
+        assert (s3.iloc[-10:] == 2.0).all().all()
+        assert s3.index.size == 14
+        assert conn.stresses.loc["test_df", "kind"] == "not useless"
+    finally:
+        conn.del_stress("test_df")
+    return
+
+
 def test_update_metadata(request, conn):
     o1 = pd.DataFrame(data=1.0, columns=["test_df"],
                       index=pd.date_range("2000", periods=10, freq="D"))

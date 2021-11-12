@@ -1,7 +1,7 @@
 import json
 import os
 import warnings
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -817,3 +817,90 @@ class PastaStore:
             matches = df.index[mask].tolist()
 
         return matches
+
+    def get_model_timeseries_names(
+            self,
+            modelnames: Optional[Union[list, str]] = None,
+            dropna: bool = True,
+            progressbar: bool = True) -> FrameorSeriesUnion:
+        """Get timeseries names contained in model.
+
+        Parameters
+        ----------
+        modelnames : Optional[Union[list, str]], optional
+            list or name of models to get timeseries names for,
+            by default None which will use all modelnames
+        dropna : bool, optional
+            drop stresses from table if stress is not included in any
+            model, by default True
+        progressbar : bool, optional
+            show progressbar, by default True
+
+        Returns
+        -------
+        structure : pandas.DataFrame
+            returns DataFrame with oseries name per model, and a flag
+            indicating whether a stress is contained within a timeseries
+            model.
+        """
+
+        model_names = self.conn._parse_names(modelnames, libname="models")
+        structure = pd.DataFrame(index=model_names,
+                                 columns=["oseries"] + self.stresses_names)
+
+        for mlnam in (tqdm(model_names, desc="Get model timeseries names")
+                      if progressbar else self.model_names):
+            iml = self.get_models(mlnam, return_dict=True)
+
+            # oseries
+            structure.loc[mlnam, "oseries"] = iml["oseries"]["name"]
+
+            for sm in iml["stressmodels"].values():
+                if sm["stressmodel"] == "RechargeModel":
+                    pnam = sm["prec"]["name"]
+                    enam = sm["prec"]["name"]
+                    structure.loc[mlnam, pnam] = 1
+                    structure.loc[mlnam, enam] = 1
+                else:
+                    for s in sm["stress"]:
+                        structure.loc[mlnam, s["name"]] = 1
+        if dropna:
+            return structure.dropna(how="all", axis=1)
+        else:
+            return structure
+
+    def get_oseries_model_list(self,
+                               modelnames: Optional[Union[list, str]] = None,
+                               progressbar: bool = True) -> Dict:
+        """Get a list of model names for each oseries.
+
+        Parameters
+        ----------
+        modelnames : Optional[Union[list, str]], optional
+            list of modelnames to consider, by default None, which
+            defaults to all models
+        progressbar : bool, optional
+            show progressbar, by default False
+
+        Returns
+        -------
+        oseries_model_dict : dict
+            dictionary with oseries names as keys, and list of model names
+            as values
+        """
+
+        modelnames = self.conn._parse_names(modelnames, libname="models")
+
+        oseries_model_dict = {}
+
+        for mlnam in (tqdm(modelnames, desc="Get model oseries names")
+                      if progressbar else modelnames):
+            iml = self.get_models(mlnam, returndict=True)
+            oname = iml["oseries"]["name"]
+            if oname in oseries_model_dict:
+                oseries_model_dict[oname] = oseries_model_dict[oname].append(
+                    oname)
+            else:
+                oseries_model_dict[oname] = [oname]
+
+        return oseries_model_dict
