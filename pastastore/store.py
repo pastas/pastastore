@@ -800,7 +800,8 @@ class PastaStore:
         matches : list
             list of names that match search result
         """
-
+        if libname == "models":
+            libname = "_modelnames_cache"
         df = getattr(self, libname)
 
         if libname == "models":
