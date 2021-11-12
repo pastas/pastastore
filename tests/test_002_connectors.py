@@ -19,7 +19,8 @@ def test_get_library(conn):
 
 
 def test_add_get_series(request, conn):
-    o1 = pd.Series(index=pd.date_range("2000", periods=10, freq="D"), data=1.0)
+    o1 = pd.Series(index=pd.date_range("2000", periods=10, freq="D"), data=1.0,
+                   dtype=np.float64)
     o1.name = "test_series"
     conn.add_oseries(o1, "test_series", metadata=None)
     o2 = conn.get_oseries("test_series")
@@ -35,7 +36,8 @@ def test_add_get_series(request, conn):
 
 
 def test_add_get_series_wnans(request, conn):
-    o1 = pd.Series(index=pd.date_range("2000", periods=10, freq="D"), data=1.0)
+    o1 = pd.Series(index=pd.date_range("2000", periods=10, freq="D"), data=1.0,
+                   dtype=np.float64)
     o1.iloc[-3:] = np.nan
     o1.name = "test_series_nans"
     conn.add_oseries(o1, "test_series_nans", metadata=None)
@@ -232,7 +234,8 @@ def test_del_stress(request, conn):
 
 @pytest.mark.dependency()
 def test_empty_library(request, conn):
-    s1 = pd.Series(index=pd.date_range("2000", periods=10, freq="D"), data=1.0)
+    s1 = pd.Series(index=pd.date_range("2000", periods=10, freq="D"), data=1.0,
+                   dtype=np.float64)
     s1.name = "test_series"
     conn.add_oseries(s1, "test_series", metadata=None)
     conn.empty_library("stresses", prompt=False, progressbar=False)
