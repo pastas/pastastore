@@ -1,6 +1,7 @@
 import os
 import warnings
 
+import numpy as np
 import pandas as pd
 import pastas as ps
 import pytest
@@ -33,8 +34,8 @@ def test_create_model(pstore):
 @pytest.mark.dependency()
 def test_properties(pstore):
 
-    pstore.add_oseries(pd.Series(), "deleteme")
-    pstore.add_stress(pd.Series(), "deleteme", kind="useless")
+    pstore.add_oseries(pd.Series(dtype=np.float64), "deleteme")
+    pstore.add_stress(pd.Series(dtype=np.float64), "deleteme", kind="useless")
 
     _ = pstore.oseries
     _ = pstore.stresses
@@ -70,7 +71,9 @@ def test_model_accessor(request, pstore):
     # iter
     mnames = [ml.name for ml in pstore.models]
     try:
-        assert mnames == ["oseries1", "oseries2"]
+        assert len(mnames) == 2
+        assert mnames[0] in ["oseries1", "oseries2"]
+        assert mnames[1] in ["oseries1", "oseries2"]
     finally:
         pstore.del_models("oseries2")
     return
