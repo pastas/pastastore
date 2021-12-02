@@ -556,7 +556,7 @@ class Maps:
             if "cmap" not in kwargs:
                 kwargs["cmap"] = "viridis"
         else:
-            c = None
+            c = kwargs.pop("c", None)
 
         sc = ax.scatter(df[x], df[y], marker=marker, s=s, c=c, **kwargs)
         # add colorbar
