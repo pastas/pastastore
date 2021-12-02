@@ -233,7 +233,7 @@ class Plots:
     def _data_availability(series, names=None, intervals=None,
                            ignore=('second', 'minute', '14 days'),
                            normtype='log', cmap='viridis_r',
-                           set_yticks=False, figsize=(10, 8), 
+                           set_yticks=False, figsize=(10, 8),
                            dropna=True, **kwargs):
         """Plot the data-availability for a list of timeseries.
 
