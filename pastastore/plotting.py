@@ -202,7 +202,9 @@ class Plots:
         figsize : tuple, optional
             The size of the new figure in inches (h,v)
         progressbar : bool
-            show progressbar
+            Show progressbar
+        dropna : bool
+            Do not show NaNs as available data
         kwargs : dict, optional
             Extra arguments are passed to matplotlib.pyplot.subplots()
 
@@ -260,7 +262,9 @@ class Plots:
         figsize : tuple, optional
             The size of the new figure in inches (h,v)
         progressbar : bool
-            show progressbar
+            Show progressbar
+        dropna : bool
+            Do not show NaNs as available data
         kwargs : dict, optional
             Extra arguments are passed to matplotlib.pyplot.subplots()
 
