@@ -176,7 +176,7 @@ class Plots:
                           ignore=('second', 'minute', '14 days'),
                           normtype='log', cmap='viridis_r',
                           set_yticks=False, figsize=(10, 8),
-                          progressbar=True, **kwargs):
+                          progressbar=True, dropna=True, **kwargs):
         """Plot the data-availability for multiple timeseries in pastastore.
 
         Parameters
@@ -226,14 +226,15 @@ class Plots:
         ax = self._data_availability(series, names=names, intervals=intervals,
                                      ignore=ignore, normtype=normtype,
                                      cmap=cmap, set_yticks=set_yticks,
-                                     figsize=figsize, **kwargs)
+                                     figsize=figsize, dropna=dropna, **kwargs)
         return ax
 
     @staticmethod
     def _data_availability(series, names=None, intervals=None,
                            ignore=('second', 'minute', '14 days'),
                            normtype='log', cmap='viridis_r',
-                           set_yticks=False, figsize=(10, 8), **kwargs):
+                           set_yticks=False, figsize=(10, 8), 
+                           dropna=True, **kwargs):
         """Plot the data-availability for a list of timeseries.
 
         Parameters
@@ -298,6 +299,8 @@ class Plots:
 
         for i, s in enumerate(series):
             if not s.empty:
+                if dropna:
+                    s = s.dropna()
                 pc = ax.pcolormesh(s.index, [i, i + 1],
                                    [np.diff(s.index).astype(float)],
                                    norm=norm, cmap=cmap,
