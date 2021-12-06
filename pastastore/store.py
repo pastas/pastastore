@@ -97,6 +97,10 @@ class PastaStore:
     def n_models(self):
         return self.conn.n_models
 
+    @property
+    def oseries_models(self):
+        return self.conn.oseries_models
+
     def __repr__(self):
         """Representation string of the object."""
         return f"<PastaStore> {self.name}: \n - " + self.conn.__str__()
@@ -869,39 +873,3 @@ class PastaStore:
             return structure.dropna(how="all", axis=1)
         else:
             return structure
-
-    def get_oseries_model_list(self,
-                               modelnames: Optional[Union[list, str]] = None,
-                               progressbar: bool = True) -> Dict:
-        """Get a list of model names for each oseries.
-
-        Parameters
-        ----------
-        modelnames : Optional[Union[list, str]], optional
-            list of modelnames to consider, by default None, which
-            defaults to all models
-        progressbar : bool, optional
-            show progressbar, by default False
-
-        Returns
-        -------
-        oseries_model_dict : dict
-            dictionary with oseries names as keys, and list of model names
-            as values
-        """
-
-        modelnames = self.conn._parse_names(modelnames, libname="models")
-
-        oseries_model_dict = {}
-
-        for mlnam in (tqdm(modelnames, desc="Get model oseries names")
-                      if progressbar else modelnames):
-            iml = self.get_models(mlnam, returndict=True)
-            oname = iml["oseries"]["name"]
-            if oname in oseries_model_dict:
-                oseries_model_dict[oname] = oseries_model_dict[oname].append(
-                    oname)
-            else:
-                oseries_model_dict[oname] = [oname]
-
-        return oseries_model_dict
