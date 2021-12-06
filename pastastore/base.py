@@ -405,6 +405,7 @@ class BaseConnector(ABC):
             raise ItemInLibraryException(f"Model with name '{name}' "
                                          "already in 'models' library!")
         self._clear_cache("_modelnames_cache")
+        self.oseries_models._add_model(mldict["oseries"]["name"], name)
 
     @staticmethod
     def _parse_series_input(series: Union[FrameorSeriesUnion, ps.TimeSeries],
@@ -520,7 +521,10 @@ class BaseConnector(ABC):
             name(s) of the model to delete
         """
         for n in self._parse_names(names, libname="models"):
+            mldict = self.get_models(n, return_dict=True)
+            oname = mldict["oseries"]["name"]
             self._del_item("models", n)
+            self.oseries_models._del_model(oname, n)
         self._clear_cache("_modelnames_cache")
 
     def del_oseries(self, names: Union[list, str]):
@@ -1371,7 +1375,7 @@ class ModelAccessor:
         """Representation of the object is a list of modelnames."""
         return self.conn._modelnames_cache.__repr__()
 
-    def __getitem__(self, name):
+    def __getitem__(self, name: str):
         """Get model from store with model name as key.
 
         Parameters
@@ -1381,7 +1385,7 @@ class ModelAccessor:
         """
         return self.conn.get_models(name)
 
-    def __setitem__(self, name, ml):
+    def __setitem__(self, name: str, ml: ps.Model):
         """Set item.
 
         Parameters
@@ -1403,3 +1407,105 @@ class ModelAccessor:
             model
         """
         yield from self.conn.iter_models()
+
+
+class OseriesModelsAccessor:
+    """Object for getting list of model names per oseries.
+
+    Provides dict-like access for obtaining models for a certain
+    location/oseries (i.e. PastaStore.oseries_models["oseries1"]). On 
+    initialization of a Connector this dictionary is built by running
+    through all models and storing a list of model names per oseries name.
+    """
+
+    def __init__(self, conn):
+        """Initialize oseries models accessor.
+
+        Parameters
+        ----------
+        conn : pastastore.*Connector
+            pastastore Connector object
+        """
+        self.conn = conn
+        self.oseries_models_dict = {}
+        self._build_dict()
+
+    def __repr__(self):
+        """String represenation.
+
+        Returns
+        -------
+        str
+            string representation of oseries_models dictionary.
+        """
+        return self.oseries_models_dict.__repr__()
+
+    def __getitem__(self, name: str):
+        """Get list of model names with oseries name as key.
+
+        Parameters
+        ----------
+        name : str
+            name of oseries
+
+        Returns
+        -------
+        list
+            list of model names (str)
+        """
+        return self.oseries_models_dict[name]
+
+    def __setitem__(self, oseries_name: str, model_name: str):
+        """Add model name to oseries_models dictionary.
+
+        Parameters
+        ----------
+        oseries_name : str
+            name of oseries
+        model_name : str
+            name of model
+        """
+        self._add_model(oseries_name, model_name)
+
+    def _build_dict(self):
+        """Build dictionary with list of model names per oseries.
+        """
+        if self.conn.n_models > 0:
+            for mlnam in tqdm(self.conn._modelnames_cache,
+                              desc="Build oseries_model dictionary"):
+                ml = self.conn.get_models(mlnam, return_dict=True)
+                onam = ml["oseries"]["name"]
+                if onam in self.oseries_models_dict:
+                    self.oseries_models_dict[onam].append(mlnam)
+                else:
+                    self.oseries_models_dict[onam] = [mlnam]
+
+    def _add_model(self, oseries_name: str, model_name: str):
+        """Add model name to list for oseries.
+
+        Parameters
+        ----------
+        oseries_name : str
+            name of oseries
+        model_name : str
+            name of models
+        """
+        if oseries_name in self.oseries_models_dict:
+            if model_name not in self.oseries_models_dict[oseries_name]:
+                self.oseries_models_dict[oseries_name].append(model_name)
+        else:
+            self.oseries_models_dict[oseries_name] = [model_name]
+
+    def _del_model(self, oseries_name: str, model_name: str):
+        """Delete model name from list for oseries.
+
+        Parameters
+        ----------
+        oseries_name : str
+            name of oseries
+        model_name : str
+            name of model
+        """
+        self.oseries_models_dict[oseries_name].remove(model_name)
+        if len(self.oseries_models_dict[oseries_name]) == 0:
+            del self.oseries_models_dict[oseries_name]
