@@ -82,15 +82,37 @@ def test_model_accessor(request, pstore):
     # getter
     ml = pstore.models["oseries1"]
     # setter
-    pstore.models["oseries2"] = ml
+    pstore.models["oseries1_2"] = ml
     # iter
     mnames = [ml.name for ml in pstore.models]
     try:
         assert len(mnames) == 2
-        assert mnames[0] in ["oseries1", "oseries2"]
-        assert mnames[1] in ["oseries1", "oseries2"]
+        assert mnames[0] in ["oseries1", "oseries1_2"]
+        assert mnames[1] in ["oseries1", "oseries1_2"]
     finally:
-        pstore.del_models("oseries2")
+        pstore.del_models("oseries1_2")
+    return
+
+
+@pytest.mark.dependency()
+def test_oseries_model_accessor(request, pstore):
+    depends(request, [f"test_store_model[{pstore.type}]"])
+    # repr
+    pstore.oseries_models.__repr__()
+    # get model names
+    ml = pstore.models["oseries1"]
+    ml_list1 = pstore.oseries_models["oseries1"]
+    assert len(ml_list1) == 1
+
+    # add model
+    pstore.models["oseries1_2"] = ml
+    ml_list2 = pstore.oseries_models["oseries1"]
+    assert len(ml_list2) == 2
+
+    # delete model
+    pstore.del_models("oseries1_2")
+    ml_list3 = pstore.oseries_models["oseries1"]
+    assert len(ml_list3) == 1
     return
 
 
