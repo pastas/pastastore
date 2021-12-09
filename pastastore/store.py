@@ -337,7 +337,7 @@ class PastaStore:
         modelnames = self.conn._parse_names(modelnames, libname="models")
 
         # create dataframe for results
-        p = pd.DataFrame(index=modelnames, columns=parameters, data=np.nan)
+        p = pd.DataFrame(index=modelnames, columns=parameters)
 
         # loop through model names and store results
         desc = "Get model parameters"
@@ -348,6 +348,7 @@ class PastaStore:
                                          progressbar=False)
             except Exception as e:
                 if ignore_errors:
+                    p.loc[mlname, :] = np.nan
                     continue
                 else:
                     raise e
