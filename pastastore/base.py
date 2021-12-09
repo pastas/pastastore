@@ -1413,9 +1413,10 @@ class OseriesModelsAccessor:
     """Object for getting list of model names per oseries.
 
     Provides dict-like access for obtaining models for a certain
-    location/oseries (i.e. PastaStore.oseries_models["oseries1"]). On 
+    location/oseries (i.e. PastaStore.oseries_models["oseries1"]). On
     initialization of a Connector this dictionary is built by running
-    through all models and storing a list of model names per oseries name.
+    through all models and storing a list of model names per oseries
+    name.
     """
 
     def __init__(self, conn):
@@ -1468,8 +1469,7 @@ class OseriesModelsAccessor:
         self._add_model(oseries_name, model_name)
 
     def _build_dict(self):
-        """Build dictionary with list of model names per oseries.
-        """
+        """Build dictionary with list of model names per oseries."""
         if self.conn.n_models > 0:
             for mlnam in tqdm(self.conn._modelnames_cache,
                               desc="Build oseries_model dictionary"):

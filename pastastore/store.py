@@ -86,6 +86,10 @@ class PastaStore:
         return self.conn.model_names
 
     @property
+    def _modelnames_cache(self):
+        return self.conn._modelnames_cache
+
+    @property
     def n_oseries(self):
         return self.conn.n_oseries
 
@@ -299,8 +303,12 @@ class PastaStore:
             tmintmax.loc[n, "tmax"] = s.last_valid_index()
         return tmintmax
 
-    def get_parameters(self, parameters=None, modelnames=None,
-                       param_value="optimal", progressbar=False):
+    def get_parameters(self, parameters: Optional[List[str]] = None,
+                       modelnames: Optional[List[str]] = None,
+                       param_value: Optional[str] = "optimal",
+                       progressbar: Optional[bool] = False,
+                       ignore_errors: Optional[bool] = False) \
+            -> FrameorSeriesUnion:
         """Get model parameters. NaN-values are returned when the parameters
         are not present in the model or the model is not optimized.
 
@@ -317,6 +325,9 @@ class PastaStore:
             default "optimal" which retrieves the optimized parameters.
         progressbar : bool, optional
             show progressbar, default is False
+        ignore_errors : bool, optional
+            ignore errors when True, i.e. when non-existent model is
+            encountered in modelnames, by default False
 
         Returns
         -------
@@ -326,14 +337,20 @@ class PastaStore:
         modelnames = self.conn._parse_names(modelnames, libname="models")
 
         # create dataframe for results
-        p = pd.DataFrame(index=modelnames, columns=parameters)
+        p = pd.DataFrame(index=modelnames, columns=parameters, data=np.nan)
 
         # loop through model names and store results
         desc = "Get model parameters"
         for mlname in (tqdm(modelnames, desc=desc)
                        if progressbar else modelnames):
-            mldict = self.get_models(mlname, return_dict=True,
-                                     progressbar=False)
+            try:
+                mldict = self.get_models(mlname, return_dict=True,
+                                         progressbar=False)
+            except Exception as e:
+                if ignore_errors:
+                    continue
+                else:
+                    raise e
             if parameters is None:
                 pindex = mldict["parameters"].index
             else:
@@ -346,8 +363,11 @@ class PastaStore:
         p = p.squeeze()
         return p.astype(float)
 
-    def get_statistics(self, statistics, modelnames=None, progressbar=False,
-                       **kwargs):
+    def get_statistics(self, statistics: List[str],
+                       modelnames: Optional[List[str]] = None,
+                       progressbar: Optional[bool] = False,
+                       ignore_errors: Optional[bool] = False, **kwargs) \
+            -> FrameorSeriesUnion:
         """Get model statistics.
 
         Parameters
@@ -360,6 +380,9 @@ class PastaStore:
             uses all models in the store
         progressbar : bool, optional
             show progressbar, by default False
+        ignore_errors : bool, optional
+            ignore errors when True, i.e. when trying to calculate statistics
+            for non-existent model in modelnames, default is False
         **kwargs
             any arguments that can be passed to the methods for calculating
             statistics
@@ -372,13 +395,19 @@ class PastaStore:
         modelnames = self.conn._parse_names(modelnames, libname="models")
 
         # create dataframe for results
-        s = pd.DataFrame(index=modelnames, columns=statistics)
+        s = pd.DataFrame(index=modelnames, columns=statistics, data=np.nan)
 
         # loop through model names
         desc = "Get model statistics"
         for mlname in (tqdm(modelnames, desc=desc)
                        if progressbar else modelnames):
-            ml = self.get_models(mlname, progressbar=False)
+            try:
+                ml = self.get_models(mlname, progressbar=False)
+            except Exception as e:
+                if ignore_errors:
+                    continue
+                else:
+                    raise e
             for stat in statistics:
                 value = ml.stats.__getattribute__(stat)(**kwargs)
                 s.loc[mlname, stat] = value
