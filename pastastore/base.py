@@ -1000,7 +1000,7 @@ class ConnectorUtil:
                 mdict["oseries"]["settings"]["tmax"] = \
                     mdict['oseries']['series'].index[-1]
 
-        # StressModel, StressModel2, WellModel
+        # StressModel, WellModel
         for ts in mdict["stressmodels"].values():
             if "stress" in ts.keys():
                 for stress in ts["stress"]:
@@ -1015,7 +1015,7 @@ class ConnectorUtil:
                                 stress["settings"]["tmax"] = \
                                     stress['series'].index[-1]
 
-            # RechargeModel, TarsoModel, WellModel
+            # RechargeModel, TarsoModel
             if ("prec" in ts.keys()) and ("evap" in ts.keys()):
                 for stress in [ts["prec"], ts["evap"]]:
                     if 'series' not in stress:
