@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 import pastas as ps
+from numpy import isin
 from pastas.io.pas import PastasEncoder
 from tqdm import tqdm
 
@@ -1000,7 +1001,7 @@ class ConnectorUtil:
                 mdict["oseries"]["settings"]["tmax"] = \
                     mdict['oseries']['series'].index[-1]
 
-        # StressModel, StressModel2, WellModel
+        # StressModel, WellModel
         for ts in mdict["stressmodels"].values():
             if "stress" in ts.keys():
                 for stress in ts["stress"]:
@@ -1015,7 +1016,7 @@ class ConnectorUtil:
                                 stress["settings"]["tmax"] = \
                                     stress['series'].index[-1]
 
-            # RechargeModel
+            # RechargeModel, TarsoModel
             if ("prec" in ts.keys()) and ("evap" in ts.keys()):
                 for stress in [ts["prec"], ts["evap"]]:
                     if 'series' not in stress:
@@ -1095,28 +1096,34 @@ class ConnectorUtil:
 
     @staticmethod
     def _check_model_series_names_for_store(ml):
+        prec_evap_model = ["RechargeModel", "TarsoModel"]
         if isinstance(ml, ps.Model):
+            # non RechargeModel nor Tarsomodel stressmodels
             series_names = [istress.series.name
                             for sm in ml.stressmodels.values()
-                            if sm._name != "RechargeModel"
+                            if sm._name not in prec_evap_model
                             for istress in sm.stress]
-            if "RechargeModel" in [i._name for i in ml.stressmodels.values()]:
+            # RechargeModel, TarsoModel
+            if isin(prec_evap_model,
+                    [i._name for i in ml.stressmodels.values()]
+                    ).any():
                 series_names += [istress.series.name
                                  for sm in ml.stressmodels.values()
-                                 if sm._name == "RechargeModel"
+                                 if sm._name in prec_evap_model
                                  for istress in sm.stress]
         elif isinstance(ml, dict):
-            # non RechargeModel stressmodels
+            # non RechargeModel nor Tarsomodel stressmodels
             series_names = [istress["name"] for sm in
                             ml["stressmodels"].values()
-                            if sm["stressmodel"] != "RechargeModel"
+                            if sm["stressmodel"] not in prec_evap_model
                             for istress in sm["stress"]]
-            # RechargeModel
-            if "RechargeModel" in [i["stressmodel"] for i in
-                                   ml["stressmodels"].values()]:
+            # RechargeModel, TarsoModel
+            if isin(prec_evap_model,
+                    [i["stressmodel"] for i in ml["stressmodels"].values()]
+                    ).any():
                 series_names += [istress["name"] for sm in
                                  ml["stressmodels"].values()
-                                 if sm["stressmodel"] == "RechargeModel"
+                                 if sm["stressmodel"] in prec_evap_model
                                  for istress in [sm["prec"], sm["evap"]]]
         else:
             raise TypeError("Expected pastas.Model or dict!")
@@ -1160,9 +1167,10 @@ class ConnectorUtil:
         ml : Union[ps.Model, dict]
             pastas Model
         """
+        prec_evap_model = ["RechargeModel", "TarsoModel"]
         if isinstance(ml, ps.Model):
             for sm in ml.stressmodels.values():
-                if sm._name == "RechargeModel":
+                if sm._name in prec_evap_model:
                     stresses = [sm.prec, sm.evap]
                 else:
                     stresses = sm.stress
@@ -1179,7 +1187,7 @@ class ConnectorUtil:
                                 f"'{s.name}' is different from stored stress!")
         elif isinstance(ml, dict):
             for sm in ml["stressmodels"].values():
-                if sm["stressmodel"] == "RechargeModel":
+                if sm["stressmodel"] in prec_evap_model:
                     stresses = [sm["prec"], sm["evap"]]
                 else:
                     stresses = sm["stress"]
