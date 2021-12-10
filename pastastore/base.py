@@ -1114,7 +1114,7 @@ class ConnectorUtil:
                             if sm["stressmodel"] not in prec_evap_model
                             for istress in sm["stress"]]
             # RechargeModel, TarsoModel
-            if sum(isin(prec_evap_model), [i["stressmodel"] for i in ml["stressmodels"].values()]) > 1:
+            if sum(isin(prec_evap_model, [i["stressmodel"] for i in ml["stressmodels"].values()])) > 1:
                 series_names += [istress["name"] for sm in
                                  ml["stressmodels"].values()
                                  if sm["stressmodel"] in prec_evap_model
