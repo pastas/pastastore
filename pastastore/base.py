@@ -1098,11 +1098,15 @@ class ConnectorUtil:
     def _check_model_series_names_for_store(ml):
         prec_evap_model = ["RechargeModel", "TarsoModel"]
         if isinstance(ml, ps.Model):
+            # non RechargeModel nor Tarsomodel stressmodels
             series_names = [istress.series.name
                             for sm in ml.stressmodels.values()
                             if sm._name not in prec_evap_model
                             for istress in sm.stress]
-            if sum(isin(prec_evap_model, [i._name for i in ml.stressmodels.values()])) >= 1:
+            # RechargeModel, TarsoModel
+            if isin(prec_evap_model,
+                    [i._name for i in ml.stressmodels.values()]
+                    ).any():
                 series_names += [istress.series.name
                                  for sm in ml.stressmodels.values()
                                  if sm._name in prec_evap_model
@@ -1114,7 +1118,9 @@ class ConnectorUtil:
                             if sm["stressmodel"] not in prec_evap_model
                             for istress in sm["stress"]]
             # RechargeModel, TarsoModel
-            if sum(isin(prec_evap_model, [i["stressmodel"] for i in ml["stressmodels"].values()])) >= 1:
+            if isin(prec_evap_model,
+                    [i["stressmodel"] for i in ml["stressmodels"].values()]
+                    ).any():
                 series_names += [istress["name"] for sm in
                                  ml["stressmodels"].values()
                                  if sm["stressmodel"] in prec_evap_model
