@@ -541,6 +541,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         """
         self.name = name
         self.path = os.path.abspath(path)
+        self.relpath = os.path.relpath(path)
         self._initialize()
         self.models = ModelAccessor(self)
         self.oseries_models = OseriesModelsAccessor(self)
