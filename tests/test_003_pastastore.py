@@ -203,6 +203,45 @@ def test_save_and_load_model(request, pstore):
     assert pst.util.compare_models(ml, ml2)
     return ml, ml2
 
+
+def test_update_ts_settings(request, pstore):
+    pstore.set_check_model_series_values(False)
+
+    o = pstore.get_oseries("oseries2")
+    ml = ps.Model(o.loc[:"2013"], name="ml_oseries2")
+
+    pnam = pstore.get_nearest_stresses("oseries2", kind="prec").iloc[0]
+    p = pstore.get_stresses(pnam)
+    enam = pstore.get_nearest_stresses("oseries2", kind="evap").iloc[0]
+    e = pstore.get_stresses(enam)
+    rm = ps.RechargeModel(p.loc[:"2013"], e.loc[:"2013"])
+    ml.add_stressmodel(rm)
+    tmax = p.index.intersection(e.index).max()
+
+    p2 = pstore.get_stresses("prec1")
+    sm = ps.StressModel(p2.loc[:"2013"], ps.Exponential, "prec")
+    ml.add_stressmodel(sm)
+
+    pstore.add_model(ml)
+
+    ml2 = pstore.get_models(ml.name, update_ts_settings=True)
+
+    try:
+        # print(f"oseries: tmax = {ml2.oseries.settings['tmax']}", o.index[-1])
+        # print(f"RechargeModel: prec tmax = {ml2.stressmodels['recharge'].prec.settings['tmax']}", tmax)
+        # print(f"RechargeModel: evap tmax = {ml2.stressmodels['recharge'].evap.settings['tmax']}", tmax)
+        # print(f"StressModel: prec tmax = {ml2.stressmodels['prec'].stress[0].settings['tmax']}", p2.index[-1])
+        assert ml2.oseries.settings["tmax"] == o.index[-1]
+        assert ml2.stressmodels["recharge"].prec.settings["tmax"] == tmax
+        assert ml2.stressmodels["recharge"].evap.settings["tmax"] == tmax
+        assert ml2.stressmodels["prec"].stress[0].settings["tmax"] == p2.index[-1]
+    except AssertionError:
+        pstore.del_models("ml_oseries2")
+        pstore.set_check_model_series_values(True)
+        raise
+    return
+
+
 # @pytest.mark.dependency()
 # def test_model_results(request, pstore):
 #     depends(request, [f"test_create_models[{pstore.type}]",
