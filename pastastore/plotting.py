@@ -715,6 +715,74 @@ class Maps:
 
         return ax
 
+    def spaghetti_cluster(self, kinds=None, model_subnames=None, color_lines=False,
+                          alpha=0.3, figsize=(10, 8), legend=True):
+        """Create a map for (a selection of) models with their accompanied
+        kinds of stresses to plot. 
+
+        Parameters
+        ----------
+            kinds: list, optional
+                Kinds of stresses to plot. Defaults to None.
+            model_subnames: list, optional
+                Substring in model names to create selection of models
+            color_lines: bool, optional
+                Give connecting line the same colors as locations
+            alpha: float, optional
+                Alpha value for the connecting lines.
+            figsize : tuple, optional
+                Figure size, by default(10, 8)
+            legend: bool, optional
+                Create a legend for all unique kinds
+        Returns
+        -------
+        ax: axes object
+            axis handle of the resulting figure
+
+        See also
+        --------
+        self.add_background_map
+        """
+        if model_subnames:
+            m_idx = np.array([])
+            for mod_name in model_subnames:
+                m_idx = np.append(
+                    m_idx, [name for name in self.model_names if mod_name in name])
+        else:
+            m_idx = self.pstore.model_names
+        struct = self.pstore.get_model_timeseries_names().loc[m_idx]
+
+        skind = self.pstore.stresses.kind.unique()
+        if kinds == None:
+            kinds = skind
+
+        fig = plt.figure(figsize=figsize)
+        ax = plt.subplot(1, 1, 1)
+        for m in struct.index:
+            os = self.pstore.oseries.loc[struct.loc[m, 'oseries']]
+            ax.scatter(os['x'], os['y'], color='C0', label='oseries')
+            mstresses = struct.loc[m].drop('oseries').dropna().index
+            st = self.pstore.stresses.loc[mstresses]
+            for s in mstresses:
+                if np.isin(st.loc[s, 'kind'], kinds):
+                    c, = np.where(skind == st.loc[s, 'kind'])
+                    ax.scatter(st.loc[s, 'x'], st.loc[s, 'y'],
+                               color=f'C{c[0]+1}', label=st.loc[s, 'kind'])
+                    if color_lines:
+                        color = f'C{c[0]+1}'
+                    else:
+                        color = 'k'
+                    ax.plot([os['x'], st.loc[s, 'x']], [
+                            os['y'], st.loc[s, 'y']], color=color, alpha=alpha)
+
+        if legend:
+            handles, labels = ax.get_legend_handles_labels()
+            unique_labels = [(h, l) for i, (h, l) in enumerate(
+                zip(handles, labels)) if l not in labels[:i]]
+            ax.legend(*zip(*unique_labels))
+
+        return ax
+
     @staticmethod
     def _list_contextily_providers():
         """List contextily providers.
