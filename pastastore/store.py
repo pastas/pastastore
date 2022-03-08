@@ -893,7 +893,7 @@ class PastaStore:
             for sm in iml["stressmodels"].values():
                 if sm["stressmodel"] == "RechargeModel":
                     pnam = sm["prec"]["name"]
-                    enam = sm["prec"]["name"]
+                    enam = sm["evap"]["name"]
                     structure.loc[mlnam, pnam] = 1
                     structure.loc[mlnam, enam] = 1
                 else:
