@@ -717,7 +717,7 @@ class Maps:
         return ax
 
     def stresslinks(self, kinds=None, model_subnames=None, color_lines=False,
-                    alpha=0.3, figsize=(10, 8), legend=True):
+                    alpha=0.3, figsize=(10, 8), legend=True, labels=True):
         """Create a map for (a selection of) models with their accompanied
         kinds of stresses to plot. 
 
@@ -772,6 +772,8 @@ class Maps:
                     ax.plot([os['x'], st.loc[s, 'x']], [
                             os['y'], st.loc[s, 'y']], color=color,
                             alpha=alpha, linewidth=0.5)
+                    if labels:
+                        self.add_labels(st, ax)
 
         if legend:
             handles, labels = ax.get_legend_handles_labels()
