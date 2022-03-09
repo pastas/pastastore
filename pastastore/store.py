@@ -817,40 +817,47 @@ class PastaStore:
             storename = conn.name
         return cls(storename, conn)
 
-    def search(self, libname: str, s: str, case_sensitive=False):
+    def search(self, libname: str, s: Optional[Union[list, str]] = None, case_sensitive=True):
         """Search for names of timeseries or models starting with s.
 
         Parameters
         ----------
         libname : str
             name of the library to search in
-        s : str
-            find names starting with this string or part of string
+        s : str, lst
+            find names with part of this string or strings in list
         case_sensitive : bool, optional
-            whether search should be case sensitive, by default False
+            whether search should be case sensitive, by default True
 
         Returns
         -------
         matches : list
             list of names that match search result
         """
-        if libname == "models":
-            libname = "_modelnames_cache"
-        df = getattr(self, libname)
 
         if libname == "models":
-            if case_sensitive:
-                matches = [mlnam for mlnam in df if
-                           mlnam.lower().startswith(s.lower())]
-            else:
-                matches = [mlnam for mlnam in df if mlnam.startswith(s)]
+            lib_names = getattr(self, 'model_names')
+        elif libname == "stresses":
+            lib_names = getattr(self, 'stresses_names')
+        elif libname == "oseries":
+            lib_names = getattr(self, 'oseries_names')
         else:
+            raise ValueError("Provide valid libname: 'models', 'stresses' or 'oseries'")
+        
+        if type(s) == str:
             if case_sensitive:
-                mask = df.index.str.startswith(s)
+                matches = [n for n in lib_names if s in n]
             else:
-                mask = df.index.str.lower().str.startswith(s.lower())
-            matches = df.index[mask].tolist()
-
+                matches = [n for n in lib_names if s.lower() in n.lower()]
+        if type(s) == list:
+            m = np.array([])
+            for sub in s:
+                if case_sensitive:
+                    m = np.append(m, [n for n in lib_names if sub in n])
+                else: 
+                    m = np.append(m, [n for n in lib_names if sub.lower() in n.lower()])
+            matches = list(m)
+        
         return matches
 
     def get_model_timeseries_names(
