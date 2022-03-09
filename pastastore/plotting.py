@@ -717,7 +717,7 @@ class Maps:
         return ax
 
     def stresslinks(self, kinds=None, model_subnames=None, color_lines=False,
-                    alpha=0.3, figsize=(10, 8), legend=True, labels=True):
+                    alpha=0.3, figsize=(10, 8), legend=True, labels=False):
         """Create a map for (a selection of) models with their accompanied
         kinds of stresses to plot. 
 
@@ -726,15 +726,19 @@ class Maps:
             kinds: list, optional
                 Kinds of stresses to plot. Defaults to None.
             model_subnames: list, optional
-                Substring in model names to create selection of models
+                Substring in model names to create selection of models.
+                Defaults to None.
             color_lines: bool, optional
-                Give connecting line the same colors as locations
+                Give connecting line the same colors as locations.
+                Defaults to False.
             alpha: float, optional
-                Alpha value for the connecting lines.
+                Alpha value for the connecting lines. Defaults to 0.3.
             figsize : tuple, optional
                 Figure size, by default(10, 8)
             legend: bool, optional
-                Create a legend for all unique kinds
+                Create a legend for all unique kinds. Defaults to True.
+            legend: bool, optional
+                Add labels for stresses. Defaults to False.
         Returns
         -------
         ax: axes object
@@ -748,7 +752,8 @@ class Maps:
             m_idx = self.pstore.search(libname='models', s=model_subnames)
         else:
             m_idx = self.pstore.model_names
-        struct = self.pstore.get_model_timeseries_names(progressbar=False).loc[m_idx]
+        struct = self.pstore.get_model_timeseries_names(
+            progressbar=False).loc[m_idx]
 
         stresses = self.pstore.stresses
         skind = stresses.kind.unique()
