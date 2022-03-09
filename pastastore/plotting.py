@@ -14,6 +14,7 @@ follows::
     ax = pstore.maps.oseries()
     pstore.maps.add_background_map(ax)  # for adding a background map
 """
+from click import progressbar
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -715,8 +716,8 @@ class Maps:
 
         return ax
 
-    def spaghetti_cluster(self, kinds=None, model_subnames=None, color_lines=False,
-                          alpha=0.3, figsize=(10, 8), legend=True):
+    def stresslinks(self, kinds=None, model_subnames=None, color_lines=False,
+                    alpha=0.3, figsize=(10, 8), legend=True):
         """Create a map for (a selection of) models with their accompanied
         kinds of stresses to plot. 
 
@@ -744,25 +745,23 @@ class Maps:
         self.add_background_map
         """
         if model_subnames:
-            m_idx = np.array([])
-            for mod_name in model_subnames:
-                m_idx = np.append(
-                    m_idx, [name for name in self.model_names if mod_name in name])
+            m_idx = self.pstore.search(libname='models', s=model_subnames)
         else:
             m_idx = self.pstore.model_names
-        struct = self.pstore.get_model_timeseries_names().loc[m_idx]
+        struct = self.pstore.get_model_timeseries_names(progressbar=False).loc[m_idx]
 
-        skind = self.pstore.stresses.kind.unique()
+        stresses = self.pstore.stresses
+        skind = stresses.kind.unique()
         if kinds == None:
             kinds = skind
 
-        fig = plt.figure(figsize=figsize)
-        ax = plt.subplot(1, 1, 1)
+        _, ax = plt.subplots(figsize=figsize)
+        color = 'k'
         for m in struct.index:
             os = self.pstore.oseries.loc[struct.loc[m, 'oseries']]
             ax.scatter(os['x'], os['y'], color='C0', label='oseries')
             mstresses = struct.loc[m].drop('oseries').dropna().index
-            st = self.pstore.stresses.loc[mstresses]
+            st = stresses.loc[mstresses]
             for s in mstresses:
                 if np.isin(st.loc[s, 'kind'], kinds):
                     c, = np.where(skind == st.loc[s, 'kind'])
@@ -770,10 +769,9 @@ class Maps:
                                color=f'C{c[0]+1}', label=st.loc[s, 'kind'])
                     if color_lines:
                         color = f'C{c[0]+1}'
-                    else:
-                        color = 'k'
                     ax.plot([os['x'], st.loc[s, 'x']], [
-                            os['y'], st.loc[s, 'y']], color=color, alpha=alpha)
+                            os['y'], st.loc[s, 'y']], color=color,
+                            alpha=alpha, linewidth=0.5)
 
         if legend:
             handles, labels = ax.get_legend_handles_labels()
