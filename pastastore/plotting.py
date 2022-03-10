@@ -14,12 +14,15 @@ follows::
     ax = pstore.maps.oseries()
     pstore.maps.add_background_map(ax)  # for adding a background map
 """
-import matplotlib as mpl
-import matplotlib.pyplot as plt
+
 import numpy as np
 import pandas as pd
 import pastas as ps
+import matplotlib.pyplot as plt
 from matplotlib import patheffects
+from matplotlib.colors import LogNorm, BoundaryNorm
+from matplotlib.collections import LineCollection
+from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
@@ -294,10 +297,9 @@ class Plots:
         bounds = bounds.astype(float) * (10**9)
         labels = intervals.keys()
         if normtype == 'log':
-            norm = mpl.colors.LogNorm(vmin=bounds[0], vmax=bounds[-1])
+            norm = LogNorm(vmin=bounds[0], vmax=bounds[-1])
         else:
-            norm = mpl.colors.BoundaryNorm(
-                boundaries=bounds, ncolors=256)
+            norm = BoundaryNorm(boundaries=bounds, ncolors=256)
         cmap = plt.cm.get_cmap(cmap, 256)
         cmap.set_over((1., 1., 1.))
 
@@ -716,28 +718,29 @@ class Maps:
         return ax
 
     def stresslinks(self, kinds=None, model_subnames=None, color_lines=False,
-                    alpha=0.3, figsize=(10, 8), legend=True, labels=False):
+                    alpha=0.4, figsize=(10, 8), legend=True, labels=False):
         """Create a map for (a selection of) models with their accompanied
         kinds of stresses to plot. 
 
         Parameters
         ----------
             kinds: list, optional
-                Kinds of stresses to plot. Defaults to None.
-            model_subnames: list, optional
-                Substring in model names to create selection of models.
-                Defaults to None.
+                kinds of stresses to plot, defaults to None.
+            model_names: list, optional
+                list of model names to plot,
+                substrings of model names are also accepted,
+                defaults to None.
             color_lines: bool, optional
-                Give connecting line the same colors as locations.
-                Defaults to False.
+                give connecting line the same colors as locations,
+                defaults to False.
             alpha: float, optional
-                Alpha value for the connecting lines. Defaults to 0.3.
+                alpha value for the connecting lines, defaults to 0.4.
             figsize : tuple, optional
-                Figure size, by default(10, 8)
+                figure size, by default(10, 8)
             legend: bool, optional
-                Create a legend for all unique kinds. Defaults to True.
-            legend: bool, optional
-                Add labels for stresses. Defaults to False.
+                create a legend for all unique kinds, defaults to True.
+            labels: bool, optional
+                add labels for stresses, defaults to False.
         Returns
         -------
         ax: axes object
@@ -754,36 +757,49 @@ class Maps:
         struct = self.pstore.get_model_timeseries_names(
             progressbar=False).loc[m_idx]
 
+        oseries = self.pstore.oseries
         stresses = self.pstore.stresses
         skind = stresses.kind.unique()
         if kinds == None:
             kinds = skind
 
         _, ax = plt.subplots(figsize=figsize)
-        color = 'k'
+        segments = []
+        segment_colors = []
+        ax.scatter(oseries.loc[struct['oseries'], 'x'],
+                   oseries.loc[struct['oseries'], 'y'], color='C0')
         for m in struct.index:
-            os = self.pstore.oseries.loc[struct.loc[m, 'oseries']]
-            ax.scatter(os['x'], os['y'], color='C0', label='oseries')
+            os = oseries.loc[struct.loc[m, 'oseries']]
             mstresses = struct.loc[m].drop('oseries').dropna().index
             st = stresses.loc[mstresses]
             for s in mstresses:
                 if np.isin(st.loc[s, 'kind'], kinds):
                     c, = np.where(skind == st.loc[s, 'kind'])
-                    ax.scatter(st.loc[s, 'x'], st.loc[s, 'y'],
-                               color=f'C{c[0]+1}', label=st.loc[s, 'kind'])
                     if color_lines:
                         color = f'C{c[0]+1}'
-                    ax.plot([os['x'], st.loc[s, 'x']], [
-                            os['y'], st.loc[s, 'y']], color=color,
-                            alpha=alpha, linewidth=0.5)
+                    else:
+                        color = 'k'
+                    segments.append([[os['x'], os['y']],
+                                     [st.loc[s, 'x'], st.loc[s, 'y']]])
+                    segment_colors.append(color)
                     if labels:
                         self.add_labels(st, ax)
 
+        ax.scatter([x[1][0] for x in segments], [y[1][1]
+                   for y in segments], color=segment_colors)
+        ax.add_collection(LineCollection(segments, colors=segment_colors,
+                                         linewidths=0.5, alpha=alpha))
+
         if legend:
-            handles, legend_labels = ax.get_legend_handles_labels()
-            unique_labels = [(h, l) for i, (h, l) in enumerate(
-                zip(handles, legend_labels)) if l not in legend_labels[:i]]
-            ax.legend(*zip(*unique_labels))
+            legend_elements = [Line2D([], [], marker='o', color='w',
+                                      markerfacecolor='C0',
+                                      label='oseries', markersize=10)]
+            for kind in skind:
+                c, = np.where(skind == kind)
+                legend_elements.append(Line2D([], [], marker='o', color='w',
+                                              markerfacecolor=f'C{c[0]+1}',
+                                              label=kind, markersize=10))
+            ax.legend(handles=legend_elements)
 
         return ax
 
