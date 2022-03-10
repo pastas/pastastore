@@ -732,7 +732,7 @@ class Maps:
                 models.
             color_lines: bool, optional
                 if True, connecting lines have the same colors as the stresses,
-                defaults to False, which uses a black line
+                defaults to False, which uses a black line.
             alpha: float, optional
                 alpha value for the connecting lines, defaults to 0.4.
             figsize : tuple, optional
