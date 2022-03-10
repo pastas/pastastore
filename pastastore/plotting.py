@@ -14,7 +14,6 @@ follows::
     ax = pstore.maps.oseries()
     pstore.maps.add_background_map(ax)  # for adding a background map
 """
-from click import progressbar
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -781,9 +780,9 @@ class Maps:
                         self.add_labels(st, ax)
 
         if legend:
-            handles, labels = ax.get_legend_handles_labels()
+            handles, legend_labels = ax.get_legend_handles_labels()
             unique_labels = [(h, l) for i, (h, l) in enumerate(
-                zip(handles, labels)) if l not in labels[:i]]
+                zip(handles, legend_labels)) if l not in legend_labels[:i]]
             ax.legend(*zip(*unique_labels))
 
         return ax
