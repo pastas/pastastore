@@ -14,12 +14,15 @@ follows::
     ax = pstore.maps.oseries()
     pstore.maps.add_background_map(ax)  # for adding a background map
 """
-import matplotlib as mpl
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pastas as ps
 from matplotlib import patheffects
+from matplotlib.collections import LineCollection
+from matplotlib.colors import BoundaryNorm, LogNorm
+from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
@@ -294,10 +297,9 @@ class Plots:
         bounds = bounds.astype(float) * (10**9)
         labels = intervals.keys()
         if normtype == 'log':
-            norm = mpl.colors.LogNorm(vmin=bounds[0], vmax=bounds[-1])
+            norm = LogNorm(vmin=bounds[0], vmax=bounds[-1])
         else:
-            norm = mpl.colors.BoundaryNorm(
-                boundaries=bounds, ncolors=256)
+            norm = BoundaryNorm(boundaries=bounds, ncolors=256)
         cmap = plt.cm.get_cmap(cmap, 256)
         cmap.set_over((1., 1., 1.))
 
@@ -712,6 +714,92 @@ class Maps:
                 txt.set_path_effects(stroke)
 
         fig.tight_layout()
+
+        return ax
+
+    def stresslinks(self, kinds=None, model_names=None, color_lines=False,
+                    alpha=0.4, figsize=(10, 8), legend=True, labels=False):
+        """Create a map linking models with their stresses.
+
+        Parameters
+        ----------
+            kinds: list, optional
+                kinds of stresses to plot, defaults to None, which selects
+                all kinds.
+            model_names: list, optional
+                list of model names to plot, substrings of model names 
+                are also accepted, defaults to None, which selects all
+                models.
+            color_lines: bool, optional
+                if True, connecting lines have the same colors as the stresses,
+                defaults to False, which uses a black line
+            alpha: float, optional
+                alpha value for the connecting lines, defaults to 0.4.
+            figsize : tuple, optional
+                figure size, by default (10, 8)
+            legend: bool, optional
+                create a legend for all unique kinds, defaults to True.
+            labels: bool, optional
+                add labels for stresses, defaults to False.
+        Returns
+        -------
+        ax: axes object
+            axis handle of the resulting figure
+
+        See also
+        --------
+        self.add_background_map
+        """
+        if model_names:
+            m_idx = self.pstore.search(libname='models', s=model_names)
+        else:
+            m_idx = self.pstore.model_names
+        struct = self.pstore.get_model_timeseries_names(
+            progressbar=False).loc[m_idx]
+
+        oseries = self.pstore.oseries
+        stresses = self.pstore.stresses
+        skind = stresses.kind.unique()
+        if kinds == None:
+            kinds = skind
+
+        _, ax = plt.subplots(figsize=figsize)
+        segments = []
+        segment_colors = []
+        ax.scatter(oseries.loc[struct['oseries'], 'x'],
+                   oseries.loc[struct['oseries'], 'y'], color='C0')
+        for m in struct.index:
+            os = oseries.loc[struct.loc[m, 'oseries']]
+            mstresses = struct.loc[m].drop('oseries').dropna().index
+            st = stresses.loc[mstresses]
+            for s in mstresses:
+                if np.isin(st.loc[s, 'kind'], kinds):
+                    c, = np.where(skind == st.loc[s, 'kind'])
+                    if color_lines:
+                        color = f'C{c[0]+1}'
+                    else:
+                        color = 'k'
+                    segments.append([[os['x'], os['y']],
+                                     [st.loc[s, 'x'], st.loc[s, 'y']]])
+                    segment_colors.append(color)
+                    if labels:
+                        self.add_labels(st, ax)
+
+        ax.scatter([x[1][0] for x in segments], [y[1][1]
+                                                 for y in segments], color=segment_colors)
+        ax.add_collection(LineCollection(segments, colors=segment_colors,
+                                         linewidths=0.5, alpha=alpha))
+
+        if legend:
+            legend_elements = [Line2D([], [], marker='o', color='w',
+                                      markerfacecolor='C0',
+                                      label='oseries', markersize=10)]
+            for kind in skind:
+                c, = np.where(skind == kind)
+                legend_elements.append(Line2D([], [], marker='o', color='w',
+                                              markerfacecolor=f'C{c[0]+1}',
+                                              label=kind, markersize=10))
+            ax.legend(handles=legend_elements)
 
         return ax
 

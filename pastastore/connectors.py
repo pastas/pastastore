@@ -8,8 +8,8 @@ from typing import Dict, Optional, Union
 import pandas as pd
 from pastas.io.pas import PastasEncoder, pastas_hook
 
-from .base import (BaseConnector, ConnectorUtil,
-                   ModelAccessor, OseriesModelsAccessor)
+from .base import (BaseConnector, ConnectorUtil, ModelAccessor,
+                   OseriesModelsAccessor)
 from .util import _custom_warning
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
@@ -365,7 +365,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         list
             list of oseries in library
         """
-        return self._get_library("oseries").list_items()
+        return list(self._get_library("oseries").list_items())
 
     @property
     def stresses_names(self):
@@ -376,7 +376,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         list
             list of stresses in library
         """
-        return self._get_library("stresses").list_items()
+        return list(self._get_library("stresses").list_items())
 
     @property
     def model_names(self):
@@ -387,7 +387,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         list
             list of models in library
         """
-        return self._get_library("models").list_items()
+        return list(self._get_library("models").list_items())
 
 
 class DictConnector(BaseConnector, ConnectorUtil):
