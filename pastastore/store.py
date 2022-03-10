@@ -842,8 +842,9 @@ class PastaStore:
         elif libname == "oseries":
             lib_names = getattr(self, 'oseries_names')
         else:
-            raise ValueError("Provide valid libname: 'models', 'stresses' or 'oseries'")
-        
+            raise ValueError(
+                "Provide valid libname: 'models', 'stresses' or 'oseries'")
+
         if type(s) == str:
             if case_sensitive:
                 matches = [n for n in lib_names if s in n]
@@ -854,10 +855,11 @@ class PastaStore:
             for sub in s:
                 if case_sensitive:
                     m = np.append(m, [n for n in lib_names if sub in n])
-                else: 
-                    m = np.append(m, [n for n in lib_names if sub.lower() in n.lower()])
+                else:
+                    m = np.append(
+                        m, [n for n in lib_names if sub.lower() in n.lower()])
             matches = list(np.unique(m))
-        
+
         return matches
 
     def get_model_timeseries_names(
