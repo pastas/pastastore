@@ -856,7 +856,7 @@ class PastaStore:
                     m = np.append(m, [n for n in lib_names if sub in n])
                 else: 
                     m = np.append(m, [n for n in lib_names if sub.lower() in n.lower()])
-            matches = list(m)
+            matches = list(np.unique(m))
         
         return matches
 
