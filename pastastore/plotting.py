@@ -15,13 +15,13 @@ follows::
     pstore.maps.add_background_map(ax)  # for adding a background map
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pastas as ps
-import matplotlib.pyplot as plt
 from matplotlib import patheffects
-from matplotlib.colors import LogNorm, BoundaryNorm
 from matplotlib.collections import LineCollection
+from matplotlib.colors import BoundaryNorm, LogNorm
 from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
@@ -719,24 +719,24 @@ class Maps:
 
     def stresslinks(self, kinds=None, model_names=None, color_lines=False,
                     alpha=0.4, figsize=(10, 8), legend=True, labels=False):
-        """Create a map for (a selection of) models with their accompanied
-        kinds of stresses to plot. 
+        """Create a map linking models with their stresses.
 
         Parameters
         ----------
             kinds: list, optional
-                kinds of stresses to plot, defaults to None.
+                kinds of stresses to plot, defaults to None, which selects
+                all kinds.
             model_names: list, optional
-                list of model names to plot,
-                substrings of model names are also accepted,
-                defaults to None.
+                list of model names to plot, substrings of model names 
+                are also accepted, defaults to None, which selects all
+                models.
             color_lines: bool, optional
-                give connecting line the same colors as locations,
-                defaults to False.
+                if True, connecting lines have the same colors as the stresses,
+                defaults to False, which uses a black line
             alpha: float, optional
                 alpha value for the connecting lines, defaults to 0.4.
             figsize : tuple, optional
-                figure size, by default(10, 8)
+                figure size, by default (10, 8)
             legend: bool, optional
                 create a legend for all unique kinds, defaults to True.
             labels: bool, optional
@@ -786,7 +786,7 @@ class Maps:
                         self.add_labels(st, ax)
 
         ax.scatter([x[1][0] for x in segments], [y[1][1]
-                   for y in segments], color=segment_colors)
+                                                 for y in segments], color=segment_colors)
         ax.add_collection(LineCollection(segments, colors=segment_colors,
                                          linewidths=0.5, alpha=alpha))
 
