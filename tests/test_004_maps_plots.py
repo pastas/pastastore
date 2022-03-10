@@ -46,7 +46,9 @@ def test_map_stresses(pstore):
     plt.close(ax.figure)
     return
 
-def test_map_stresses(pstore):
+def test_map_stresslinks(pstore):
+    ml = pstore.create_model("oseries1", modelname="ml1")
+    pstore.add_model(ml)
     ax = pstore.maps.stresslinks()
     plt.close(ax.figure)
     return
