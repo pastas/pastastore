@@ -717,7 +717,7 @@ class Maps:
 
         return ax
 
-    def stresslinks(self, kinds=None, model_subnames=None, color_lines=False,
+    def stresslinks(self, kinds=None, model_names=None, color_lines=False,
                     alpha=0.4, figsize=(10, 8), legend=True, labels=False):
         """Create a map for (a selection of) models with their accompanied
         kinds of stresses to plot. 
@@ -750,8 +750,8 @@ class Maps:
         --------
         self.add_background_map
         """
-        if model_subnames:
-            m_idx = self.pstore.search(libname='models', s=model_subnames)
+        if model_names:
+            m_idx = self.pstore.search(libname='models', s=model_names)
         else:
             m_idx = self.pstore.model_names
         struct = self.pstore.get_model_timeseries_names(
