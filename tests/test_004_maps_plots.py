@@ -46,6 +46,10 @@ def test_map_stresses(pstore):
     plt.close(ax.figure)
     return
 
+def test_map_stresses(pstore):
+    ax = pstore.maps.stresslinks()
+    plt.close(ax.figure)
+    return
 
 @pytest.mark.dependency()
 def test_map_models(request, pstore):
