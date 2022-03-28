@@ -328,6 +328,88 @@ class Plots:
         f.tight_layout(pad=0.0)
         return ax
 
+    def cumulative_hist(self, statistic='rsq', modelnames=None,
+                        extend=False, ax=None, figsize=(6, 6),
+                        label=None, legend=True):
+        """Plot a cumulative step histogram for a model statistic.
+
+        Parameters
+        ----------
+        statistic: str
+            name of the statistic, e.g. "evp" or "rmse", by default "rsq"
+        modelnames: list of str, optional
+            modelnames to plot statistic for, by default None, which
+            uses all models in the store
+        extend: bool, optional
+            force extend the stats Series with a dummy value to move the
+            horizontal line outside figure bounds. If True the results 
+            are skewed a bit, especially if number of models is low.
+        ax: matplotlib.Axes, optional
+            axes to plot histogram, by default None which creates an Axes
+        figsize: tuple, optional
+            figure size, by default (6,6)
+        label: str, optional
+            label for the legend, by default None, which shows the number 
+            of models
+        legend: bool, optional
+            show legend, by default True
+
+        Returns
+        -------
+        ax : matplotlib Axes
+            The axes in which the cumulative histogram is plotted
+        """
+
+        statsdf = self.pstore.get_statistics([statistic],
+                                             modelnames=modelnames,
+                                             progressbar=False)
+
+        if ax == None:
+            _, ax = plt.subplots(1, 1, figsize=figsize)
+            ax.set_xticks(np.linspace(0, 1, 11))
+            ax.set_xlim(0, 1)
+            ax.set_ylabel(statistic)
+            ax.set_xlabel('Density')
+            ax.set_title('Cumulative Step Histogram')
+        if statistic == 'evp':
+            ax.set_yticks(np.linspace(0, 100, 11))
+            if extend:
+                statsdf = statsdf.append(
+                    pd.Series(100, index=['dummy']))
+                ax.set_ylim(0, 100)
+            else:
+                ax.set_ylim(0, statsdf.max())
+        elif statistic in ('rsq', 'nse', 'kge_2012'):
+            ax.set_yticks(np.linspace(0, 1, 11))
+            if extend:
+                statsdf = statsdf.append(
+                    pd.Series(1, index=['dummy']))
+                ax.set_ylim(0, 1)
+            else:
+                ax.set_ylim(0, statsdf.max())
+        elif statistic in ('aic', 'bic'):
+            ax.set_ylim(statsdf.min(), statsdf.max())
+        else:
+            if extend:
+                statsdf = statsdf.append(
+                    pd.Series(0, index=['dummy']))
+            ax.set_ylim(0, statsdf.max())
+
+        if label == None:
+            if extend:
+                label = f'No. Models = {len(statsdf)-1}'
+            else:
+                label = f'No. Models = {len(statsdf)}'
+
+        statsdf.hist(ax=ax, bins=len(statsdf), density=True,
+                     cumulative=True, histtype='step',
+                     orientation='horizontal', label=label)
+
+        if legend:
+            ax.legend(loc=4)
+
+        return ax
+
 
 class Maps:
     """Map Class for PastaStore.
