@@ -845,12 +845,12 @@ class PastaStore:
             raise ValueError(
                 "Provide valid libname: 'models', 'stresses' or 'oseries'")
 
-        if type(s) == str:
+        if isinstance(s, str):
             if case_sensitive:
                 matches = [n for n in lib_names if s in n]
             else:
                 matches = [n for n in lib_names if s.lower() in n.lower()]
-        if type(s) == list:
+        if isinstance(s, list):
             m = np.array([])
             for sub in s:
                 if case_sensitive:

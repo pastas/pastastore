@@ -727,7 +727,7 @@ class Maps:
                 kinds of stresses to plot, defaults to None, which selects
                 all kinds.
             model_names: list, optional
-                list of model names to plot, substrings of model names 
+                list of model names to plot, substrings of model names
                 are also accepted, defaults to None, which selects all
                 models.
             color_lines: bool, optional
