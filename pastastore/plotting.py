@@ -342,14 +342,14 @@ class Plots:
             uses all models in the store
         extend: bool, optional
             force extend the stats Series with a dummy value to move the
-            horizontal line outside figure bounds. If True the results 
+            horizontal line outside figure bounds. If True the results
             are skewed a bit, especially if number of models is low.
         ax: matplotlib.Axes, optional
             axes to plot histogram, by default None which creates an Axes
         figsize: tuple, optional
             figure size, by default (6,6)
         label: str, optional
-            label for the legend, by default None, which shows the number 
+            label for the legend, by default None, which shows the number
             of models
         legend: bool, optional
             show legend, by default True
