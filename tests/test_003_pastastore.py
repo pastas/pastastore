@@ -232,6 +232,11 @@ def test_save_and_load_model(request, pstore):
             print( val1, val2, val3, val4)
             raise e
 
+    try:
+        print(ml.fit_report())
+    except ValueError as e:
+        raise e
+
     evp_ml = ml.stats.evp()
     pstore.add_model(ml, overwrite=True)
     ml2 = pstore.get_models(ml.name)
