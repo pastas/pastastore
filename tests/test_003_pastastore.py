@@ -229,6 +229,7 @@ def test_save_and_load_model(request, pstore):
                 f"{val4:>{wspace+len_val4}}\n"
                 )
         except ValueError as e:
+            print(basic)
             print( val1, val2, val3, val4)
             raise e
 
