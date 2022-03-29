@@ -224,12 +224,12 @@ def test_save_and_load_model(request, pstore):
     wspace = width - (8 + 23 + 9 + len_val4)
     for (val1, val2), (val3, val4) in zip(model.items(), fit.items()):
         try:
-            basic += (
+            basic = (
                 f"{val1:<8}{val2:<23}{val3:<9}"
                 f"{val4:>{wspace+len_val4}}\n"
                 )
-        except ValueError as e:
             print(basic)
+        except ValueError as e:
             print( val1, val2, val3, val4)
             raise e
 
