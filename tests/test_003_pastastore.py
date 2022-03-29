@@ -194,7 +194,44 @@ def test_save_and_load_model(request, pstore):
     sm = ps.StressModel(pstore.get_stresses('well1'), ps.Gamma,
                         name='well1', settings="well")
     ml.add_stressmodel(sm)
-    ml.solve(tmin='1993-1-1')
+    ml.solve(tmin='1993-1-1', report=False)
+
+    model = {
+        "nfev": ml.fit.nfev,
+        "nobs": ml.observations().index.size,
+        "noise": str(ml.settings["noise"]),
+        "tmin": str(ml.settings["tmin"]),
+        "tmax": str(ml.settings["tmax"]),
+        "freq": ml.settings["freq"],
+        "warmup": str(ml.settings["warmup"]),
+        "solver": ml.settings["solver"]
+    }
+
+    fit = {
+        "EVP": f"{ml.stats.evp():.2f}",
+        "R2": f"{ml.stats.rsq():.2f}",
+        "RMSE": f"{ml.stats.rmse():.2f}",
+        "AIC": f"{ml.stats.aic():.2f}",
+        "BIC": f"{ml.stats.bic():.2f}",
+        "Obj": f"{ml.fit.obj_func:.2f}",
+        "___": "",
+        "Interp.": "Yes" if ml.interpolate_simulation else "No",
+    }
+
+    width = 50
+    basic = ""
+    len_val4 = max([len(v) for v in fit.values()])
+    wspace = width - (8 + 23 + 9 + len_val4)
+    for (val1, val2), (val3, val4) in zip(model.items(), fit.items()):
+        try:
+            basic += (
+                f"{val1:<8}{val2:<23}{val3:<9}"
+                f"{val4:>{wspace+len_val4}}\n"
+                )
+        except ValueError as e:
+            print( val1, val2, val3, val4)
+            raise e
+
     evp_ml = ml.stats.evp()
     pstore.add_model(ml, overwrite=True)
     ml2 = pstore.get_models(ml.name)
@@ -227,14 +264,11 @@ def test_update_ts_settings(request, pstore):
     ml2 = pstore.get_models(ml.name, update_ts_settings=True)
 
     try:
-        # print(f"oseries: tmax = {ml2.oseries.settings['tmax']}", o.index[-1])
-        # print(f"RechargeModel: prec tmax = {ml2.stressmodels['recharge'].prec.settings['tmax']}", tmax)
-        # print(f"RechargeModel: evap tmax = {ml2.stressmodels['recharge'].evap.settings['tmax']}", tmax)
-        # print(f"StressModel: prec tmax = {ml2.stressmodels['prec'].stress[0].settings['tmax']}", p2.index[-1])
         assert ml2.oseries.settings["tmax"] == o.index[-1]
         assert ml2.stressmodels["recharge"].prec.settings["tmax"] == tmax
         assert ml2.stressmodels["recharge"].evap.settings["tmax"] == tmax
-        assert ml2.stressmodels["prec"].stress[0].settings["tmax"] == p2.index[-1]
+        assert ml2.stressmodels["prec"].stress[0].settings["tmax"] == \
+            p2.index[-1]
     except AssertionError:
         pstore.del_models("ml_oseries2")
         pstore.set_check_model_series_values(True)
@@ -281,3 +315,55 @@ def test_to_from_zip(pstore):
 def test_delete_db(pstore):
     pst.util.delete_pastastore(pstore)
     return
+
+if __name__ == "__main__":
+    from conftest import initialize_project
+    class request:
+        param = "dict"
+    conn = pst.DictConnector("test")
+    pstore = initialize_project(conn)
+    # test_save_and_load_model(request, pstore)
+
+    ml = pstore.create_model("oseries3")
+    sm = ps.StressModel(pstore.get_stresses('well1'), ps.Gamma,
+                        name='well1', settings="well")
+    ml.add_stressmodel(sm)
+    ml.solve(tmin='1993-1-1')
+    evp_ml = ml.stats.evp()
+    pstore.add_model(ml, overwrite=True)
+    ml2 = pstore.get_models(ml.name)
+    evp_ml2 = ml2.stats.evp()
+    assert allclose(evp_ml, evp_ml2)
+    assert pst.util.compare_models(ml, ml2)
+
+    model = {
+        "nfev": ml.fit.nfev,
+        "nobs": ml.observations().index.size,
+        "noise": str(ml.settings["noise"]),
+        "tmin": str(ml.settings["tmin"]),
+        "tmax": str(ml.settings["tmax"]),
+        "freq": ml.settings["freq"],
+        "warmup": str(ml.settings["warmup"]),
+        "solver": ml.settings["solver"]
+    }
+
+    fit = {
+        "EVP": f"{ml.stats.evp():.2f}",
+        "R2": f"{ml.stats.rsq():.2f}",
+        "RMSE": f"{ml.stats.rmse():.2f}",
+        "AIC": f"{ml.stats.aic():.2f}",
+        "BIC": f"{ml.stats.bic():.2f}",
+        "Obj": f"{ml.fit.obj_func:.2f}",
+        "___": "",
+        "Interp.": "Yes" if ml.interpolate_simulation else "No",
+    }
+
+    width = 50
+    basic = ""
+    len_val4 = max([len(v) for v in fit.values()])
+    wspace = width - (8 + 23 + 9 + len_val4)
+    for (val1, val2), (val3, val4) in zip(model.items(), fit.items()):
+        basic += (
+            f"{val1:<8}{val2:<23}{val3:<9}"
+            f"{val4:>{wspace+len_val4}}\n"
+            )   
