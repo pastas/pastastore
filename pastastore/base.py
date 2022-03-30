@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 import pastas as ps
+from numpy import isin
 from pastas.io.pas import PastasEncoder
 from tqdm import tqdm
 
@@ -28,11 +29,11 @@ class BaseConnector(ABC):
     _default_library_names = ["oseries", "stresses", "models"]
 
     # whether to check model timeseries contents against stored copies
-    check_model_series_values = False
+    check_model_series_values = True
 
     def __repr__(self):
         """Representation string of the object."""
-        return (f"<{type(self).__name__} object> '{self.name}': "
+        return (f"<{type(self).__name__}> '{self.name}': "
                 f"{self.n_oseries} oseries, "
                 f"{self.n_stresses} stresses, "
                 f"{self.n_models} models")
@@ -251,11 +252,35 @@ class BaseConnector(ABC):
         self._add_series(libname, update, name, metadata=update_meta,
                          overwrite=True)
 
+    def _upsert_series(self, libname: str,
+                       series: FrameorSeriesUnion,
+                       name: str,
+                       metadata: Optional[dict] = None) -> None:
+        """Update or insert series depending on whether it exists in store.
+
+        Parameters
+        ----------
+        libname : str
+            name of library
+        series : FrameorSeriesUnion
+            timeseries to update/insert
+        name : str
+            name of the timeseries
+        metadata : Optional[dict], optional
+            metadata dictionary, by default None
+        """
+        if libname not in ["oseries", "stresses"]:
+            raise ValueError("Library must be 'oseries' or 'stresses'!")
+        if name in getattr(self, f"{libname}_names"):
+            self._update_series(libname, series, name, metadata=metadata)
+        else:
+            self._add_series(libname, series, name, metadata=metadata)
+
     def update_metadata(self, libname: str, name: str, metadata: dict) -> None:
         """Update metadata.
 
         Note: also retrieves and stores timeseries as updating only metadata
-        is not really supported.
+        is not supported for some Connectors.
 
         Parameters
         ----------
@@ -380,7 +405,8 @@ class BaseConnector(ABC):
         else:
             raise ItemInLibraryException(f"Model with name '{name}' "
                                          "already in 'models' library!")
-        self._clear_cache("models")
+        self._clear_cache("_modelnames_cache")
+        self.oseries_models._add_model(mldict["oseries"]["name"], name)
 
     @staticmethod
     def _parse_series_input(series: Union[FrameorSeriesUnion, ps.TimeSeries],
@@ -429,6 +455,23 @@ class BaseConnector(ABC):
         series, metadata = self._parse_series_input(series, metadata)
         self._update_series("oseries", series, name, metadata=metadata)
 
+    def upsert_oseries(self, series: Union[FrameorSeriesUnion, ps.TimeSeries],
+                       name: str, metadata: Optional[dict] = None) -> None:
+        """Update or insert oseries values depending on whether it exists.
+
+        Parameters
+        ----------
+        series : Union[FrameorSeriesUnion, ps.TimeSeries]
+            timeseries to update/insert
+        name : str
+            name of the oseries
+        metadata : Optional[dict], optional
+            optionally provide metadata, which will update
+            the stored metadata dictionary if it exists, by default None
+        """
+        series, metadata = self._parse_series_input(series, metadata)
+        self._upsert_series("oseries", series, name, metadata=metadata)
+
     def update_stress(self, series: Union[FrameorSeriesUnion, ps.TimeSeries],
                       name: str, metadata: Optional[dict] = None) -> None:
         """Update stresses values.
@@ -449,6 +492,27 @@ class BaseConnector(ABC):
         series, metadata = self._parse_series_input(series, metadata)
         self._update_series("stresses", series, name, metadata=metadata)
 
+    def upsert_stress(self, series: Union[FrameorSeriesUnion, ps.TimeSeries],
+                      name: str, kind: str,
+                      metadata: Optional[dict] = None) -> None:
+        """Update or insert stress values depending on whether it exists.
+
+        Parameters
+        ----------
+        series : Union[FrameorSeriesUnion, ps.TimeSeries]
+            timeseries to update/insert
+        name : str
+            name of the stress
+        metadata : Optional[dict], optional
+            optionally provide metadata, which will update
+            the stored metadata dictionary if it exists, by default None
+        """
+        series, metadata = self._parse_series_input(series, metadata)
+        if metadata is None:
+            metadata = {}
+        metadata["kind"] = kind
+        self._upsert_series("stresses", series, name, metadata=metadata)
+
     def del_models(self, names: Union[list, str]) -> None:
         """Delete model(s) from the database.
 
@@ -458,8 +522,11 @@ class BaseConnector(ABC):
             name(s) of the model to delete
         """
         for n in self._parse_names(names, libname="models"):
+            mldict = self.get_models(n, return_dict=True)
+            oname = mldict["oseries"]["name"]
             self._del_item("models", n)
-        self._clear_cache("models")
+            self.oseries_models._del_model(oname, n)
+        self._clear_cache("_modelnames_cache")
 
     def del_oseries(self, names: Union[list, str]):
         """Delete oseries from the database.
@@ -708,12 +775,94 @@ class BaseConnector(ABC):
         for name in (tqdm(names, desc=f"Deleting items from {libname}")
                      if progressbar else names):
             self._del_item(libname, name)
+        self._clear_cache(libname)
         print(f"Emptied library {libname} in {self.name}: "
               f"{self.__class__}")
+
+    def _iter_series(self, libname: str, names: Optional[List[str]] = None):
+        """Internal method iterate over timeseries in library.
+
+        Parameters
+        ----------
+        libname : str
+            name of library (e.g. 'oseries' or 'stresses')
+        names : Optional[List[str]], optional
+            list of names, by default None, which defaults to
+            all stored series
+
+
+        Yields
+        -------
+        pandas.Series or pandas.DataFrame
+            timeseries contained in library
+        """
+        names = self._parse_names(names, libname)
+        for nam in names:
+            yield self._get_series(libname, nam, progressbar=False)
+
+    def iter_oseries(self, names: Optional[List[str]] = None):
+        """Iterate over oseries in library.
+
+        Parameters
+        ----------
+        names : Optional[List[str]], optional
+            list of oseries names, by default None, which defaults to
+            all stored series
+
+
+        Yields
+        -------
+        pandas.Series or pandas.DataFrame
+            oseries contained in library
+        """
+        yield from self._iter_series("oseries", names=names)
+
+    def iter_stresses(self, names: Optional[List[str]] = None):
+        """Iterate over stresses in library.
+
+        Parameters
+        ----------
+        names : Optional[List[str]], optional
+            list of stresses names, by default None, which defaults to
+            all stored series
+
+
+        Yields
+        -------
+        pandas.Series or pandas.DataFrame
+            stresses contained in library
+        """
+        yield from self._iter_series("stresses", names=names)
+
+    def iter_models(self, modelnames: Optional[List[str]] = None,
+                    return_dict: bool = False):
+        """Iterate over models in library.
+
+        Parameters
+        ----------
+        modelnames : Optional[List[str]], optional
+            list of models to iterate over, by default None which uses
+            all models
+        return_dict : bool, optional
+            if True, return model as dictionary, by default False,
+            which returns a pastas.Model.
+
+        Yields
+        -------
+        pastas.Model or dict
+            timeseries model
+        """
+
+        modelnames = self._parse_names(modelnames, "models")
+        for mlnam in modelnames:
+            yield self.get_models(mlnam, return_dict=return_dict,
+                                  progressbar=False)
 
     @ staticmethod
     def _clear_cache(libname: str) -> None:
         """Clear cached property."""
+        if libname == "models":
+            libname = "_modelnames_cache"
         getattr(BaseConnector, libname).fget.cache_clear()
 
     @ property  # type: ignore
@@ -730,7 +879,7 @@ class BaseConnector(ABC):
 
     @ property  # type: ignore
     @ functools.lru_cache()
-    def models(self):
+    def _modelnames_cache(self):
         """List of model names."""
         return self.model_names
 
@@ -748,7 +897,11 @@ class BaseConnector(ABC):
 
 
 class ConnectorUtil:
-    """Mix-in class for general Connector helper functions."""
+    """Mix-in class for general Connector helper functions.
+
+    Only for internal methods, and not methods that are related to CRUD
+    operations on database.
+    """
 
     def _parse_names(self, names: Optional[Union[list, str]] = None,
                      libname: Optional[str] = "oseries") -> list:
@@ -848,7 +1001,7 @@ class ConnectorUtil:
                 mdict["oseries"]["settings"]["tmax"] = \
                     mdict['oseries']['series'].index[-1]
 
-        # StressModel, StressModel2, WellModel
+        # StressModel, WellModel
         for ts in mdict["stressmodels"].values():
             if "stress" in ts.keys():
                 for stress in ts["stress"]:
@@ -863,7 +1016,7 @@ class ConnectorUtil:
                                 stress["settings"]["tmax"] = \
                                     stress['series'].index[-1]
 
-            # RechargeModel
+            # RechargeModel, TarsoModel
             if ("prec" in ts.keys()) and ("evap" in ts.keys()):
                 for stress in [ts["prec"], ts["evap"]]:
                     if 'series' not in stress:
@@ -943,28 +1096,34 @@ class ConnectorUtil:
 
     @staticmethod
     def _check_model_series_names_for_store(ml):
+        prec_evap_model = ["RechargeModel", "TarsoModel"]
         if isinstance(ml, ps.Model):
+            # non RechargeModel nor Tarsomodel stressmodels
             series_names = [istress.series.name
                             for sm in ml.stressmodels.values()
-                            if sm._name != "RechargeModel"
+                            if sm._name not in prec_evap_model
                             for istress in sm.stress]
-            if "RechargeModel" in [i._name for i in ml.stressmodels.values()]:
+            # RechargeModel, TarsoModel
+            if isin(prec_evap_model,
+                    [i._name for i in ml.stressmodels.values()]
+                    ).any():
                 series_names += [istress.series.name
                                  for sm in ml.stressmodels.values()
-                                 if sm._name == "RechargeModel"
+                                 if sm._name in prec_evap_model
                                  for istress in sm.stress]
         elif isinstance(ml, dict):
-            # non RechargeModel stressmodels
+            # non RechargeModel nor Tarsomodel stressmodels
             series_names = [istress["name"] for sm in
                             ml["stressmodels"].values()
-                            if sm["stressmodel"] != "RechargeModel"
+                            if sm["stressmodel"] not in prec_evap_model
                             for istress in sm["stress"]]
-            # RechargeModel
-            if "RechargeModel" in [i["stressmodel"] for i in
-                                   ml["stressmodels"].values()]:
+            # RechargeModel, TarsoModel
+            if isin(prec_evap_model,
+                    [i["stressmodel"] for i in ml["stressmodels"].values()]
+                    ).any():
                 series_names += [istress["name"] for sm in
                                  ml["stressmodels"].values()
-                                 if sm["stressmodel"] == "RechargeModel"
+                                 if sm["stressmodel"] in prec_evap_model
                                  for istress in [sm["prec"], sm["evap"]]]
         else:
             raise TypeError("Expected pastas.Model or dict!")
@@ -992,9 +1151,9 @@ class ConnectorUtil:
                    "is not contained in store.")
             raise LookupError(msg)
         # expensive check
-        if self.check_model_series_values:
-            if ml.oseries.series_original.ne(
-                    self.get_oseries(name).squeeze()).any().all():
+        if self.check_model_series_values and isinstance(ml, ps.Model):
+            s_org = self.get_oseries(name).squeeze().dropna()
+            if not ml.oseries.series_original.dropna().equals(s_org):
                 raise ValueError(
                     f"Cannot add model because model oseries '{name}'"
                     " is different from stored oseries!")
@@ -1008,9 +1167,10 @@ class ConnectorUtil:
         ml : Union[ps.Model, dict]
             pastas Model
         """
+        prec_evap_model = ["RechargeModel", "TarsoModel"]
         if isinstance(ml, ps.Model):
             for sm in ml.stressmodels.values():
-                if sm._name == "RechargeModel":
+                if sm._name in prec_evap_model:
                     stresses = [sm.prec, sm.evap]
                 else:
                     stresses = sm.stress
@@ -1020,15 +1180,14 @@ class ConnectorUtil:
                                "is not contained in store.")
                         raise LookupError(msg)
                     if self.check_model_series_values:
-                        if s.series_original.ne(
-                            self.get_stresses(
-                                s.name).squeeze()).any().all():
+                        s_org = self.get_stresses(s.name).squeeze()
+                        if not s.series_original.equals(s_org):
                             raise ValueError(
                                 f"Cannot add model because model stress "
                                 f"'{s.name}' is different from stored stress!")
         elif isinstance(ml, dict):
             for sm in ml["stressmodels"].values():
-                if sm["stressmodel"] == "RechargeModel":
+                if sm["stressmodel"] in prec_evap_model:
                     stresses = [sm["prec"], sm["evap"]]
                 else:
                     stresses = sm["stress"]
@@ -1037,14 +1196,6 @@ class ConnectorUtil:
                         msg = (f"Cannot add model because stress '{s['name']}' "
                                "is not contained in store.")
                         raise LookupError(msg)
-                    if self.check_model_series_values:
-                        if s.series_original.ne(
-                                self.get_stresses(
-                                    s["name"]).squeeze()).any().all():
-                            raise ValueError(
-                                "Cannot add model because model stress "
-                                f"'{s['name']}' is different from stored "
-                                "stress!")
         else:
             raise TypeError("Expected pastas.Model or dict!")
 
@@ -1207,3 +1358,162 @@ class ConnectorUtil:
         with open(fjson, "r") as f:
             meta = json.load(f)
         return meta
+
+
+class ModelAccessor:
+    """Object for managing access to stored models.
+
+    Provides dict-like access to models (i.e. PastaStore.models["model1"]),
+    or allows adding models to the PastaStore using dict-like assignment
+    (i.e. PastaStore.models["model1"] = ml), and it can serve as an iterator
+    (i.e. [ml for ml in pstore.models]).
+    """
+
+    def __init__(self, conn):
+        """Initialize model accessor.
+
+        Parameters
+        ----------
+        conn : pastastore.*Connector type
+            connector
+        """
+        self.conn = conn
+
+    def __repr__(self):
+        """Representation of the object is a list of modelnames."""
+        return self.conn._modelnames_cache.__repr__()
+
+    def __getitem__(self, name: str):
+        """Get model from store with model name as key.
+
+        Parameters
+        ----------
+        name : str
+            name of the model
+        """
+        return self.conn.get_models(name)
+
+    def __setitem__(self, name: str, ml: ps.Model):
+        """Set item.
+
+        Parameters
+        ----------
+        name : str
+            name of the model
+        ml : pastas.Model or dict
+            model to add to the pastastore
+        """
+        ml.name = name
+        self.conn.add_model(ml, overwrite=True)
+
+    def __iter__(self):
+        """Iterate over models.
+
+        Yields
+        -------
+        ml : pastas.Model
+            model
+        """
+        yield from self.conn.iter_models()
+
+
+class OseriesModelsAccessor:
+    """Object for getting list of model names per oseries.
+
+    Provides dict-like access for obtaining models for a certain
+    location/oseries (i.e. PastaStore.oseries_models["oseries1"]). On
+    initialization of a Connector this dictionary is built by running
+    through all models and storing a list of model names per oseries
+    name.
+    """
+
+    def __init__(self, conn):
+        """Initialize oseries models accessor.
+
+        Parameters
+        ----------
+        conn : pastastore.*Connector
+            pastastore Connector object
+        """
+        self.conn = conn
+        self.oseries_models_dict = {}
+        self._build_dict()
+
+    def __repr__(self):
+        """String represenation.
+
+        Returns
+        -------
+        str
+            string representation of oseries_models dictionary.
+        """
+        return self.oseries_models_dict.__repr__()
+
+    def __getitem__(self, name: str):
+        """Get list of model names with oseries name as key.
+
+        Parameters
+        ----------
+        name : str
+            name of oseries
+
+        Returns
+        -------
+        list
+            list of model names (str)
+        """
+        return self.oseries_models_dict[name]
+
+    def __setitem__(self, oseries_name: str, model_name: str):
+        """Add model name to oseries_models dictionary.
+
+        Parameters
+        ----------
+        oseries_name : str
+            name of oseries
+        model_name : str
+            name of model
+        """
+        self._add_model(oseries_name, model_name)
+
+    def _build_dict(self):
+        """Build dictionary with list of model names per oseries."""
+        if self.conn.n_models > 0:
+            for mlnam in tqdm(self.conn._modelnames_cache,
+                              desc="Build oseries_model dictionary"):
+                ml = self.conn.get_models(mlnam, return_dict=True)
+                onam = ml["oseries"]["name"]
+                if onam in self.oseries_models_dict:
+                    self.oseries_models_dict[onam].append(mlnam)
+                else:
+                    self.oseries_models_dict[onam] = [mlnam]
+
+    def _add_model(self, oseries_name: str, model_name: str):
+        """Add model name to list for oseries.
+
+        Parameters
+        ----------
+        oseries_name : str
+            name of oseries
+        model_name : str
+            name of models
+        """
+        if oseries_name in self.oseries_models_dict:
+            if model_name not in self.oseries_models_dict[oseries_name]:
+                self.oseries_models_dict[oseries_name].append(model_name)
+        else:
+            self.oseries_models_dict[oseries_name] = [model_name]
+
+    def _del_model(self, oseries_name: str, model_name: str):
+        """Delete model name from list for oseries.
+
+        Parameters
+        ----------
+        oseries_name : str
+            name of oseries
+        model_name : str
+            name of model
+        """
+        self.oseries_models_dict[oseries_name].remove(model_name)
+        if len(self.oseries_models_dict[oseries_name]) == 0:
+            del self.oseries_models_dict[oseries_name]

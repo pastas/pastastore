@@ -8,7 +8,8 @@ from typing import Dict, Optional, Union
 import pandas as pd
 from pastas.io.pas import PastasEncoder, pastas_hook
 
-from .base import BaseConnector, ConnectorUtil
+from .base import (BaseConnector, ConnectorUtil, ModelAccessor,
+                   OseriesModelsAccessor)
 from .util import _custom_warning
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
@@ -45,6 +46,8 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         self.libs: dict = {}
         self.arc = arctic.Arctic(connstr)
         self._initialize()
+        self.models = ModelAccessor(self)
+        self.oseries_models = OseriesModelsAccessor(self)
 
     def _initialize(self) -> None:
         """Internal method to initalize the libraries."""
@@ -210,6 +213,8 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         self.store = pystore.store(self.name)
         self.libs: dict = {}
         self._initialize()
+        self.models = ModelAccessor(self)
+        self.oseries_models = OseriesModelsAccessor(self)
 
     def _initialize(self) -> None:
         """Internal method to initalize the libraries (stores)."""
@@ -360,7 +365,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         list
             list of oseries in library
         """
-        return self._get_library("oseries").list_items()
+        return list(self._get_library("oseries").list_items())
 
     @property
     def stresses_names(self):
@@ -371,7 +376,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         list
             list of stresses in library
         """
-        return self._get_library("stresses").list_items()
+        return list(self._get_library("stresses").list_items())
 
     @property
     def model_names(self):
@@ -382,7 +387,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         list
             list of models in library
         """
-        return self._get_library("models").list_items()
+        return list(self._get_library("models").list_items())
 
 
 class DictConnector(BaseConnector, ConnectorUtil):
@@ -402,6 +407,8 @@ class DictConnector(BaseConnector, ConnectorUtil):
         # create empty dictionaries for series and models
         for val in self._default_library_names:
             setattr(self, "lib_" + val, {})
+        self.models = ModelAccessor(self)
+        self.oseries_models = OseriesModelsAccessor(self)
 
     def _get_library(self, libname: str):
         """Get reference to dictionary holding data.
@@ -534,7 +541,10 @@ class PasConnector(BaseConnector, ConnectorUtil):
         """
         self.name = name
         self.path = os.path.abspath(path)
+        self.relpath = os.path.relpath(path)
         self._initialize()
+        self.models = ModelAccessor(self)
+        self.oseries_models = OseriesModelsAccessor(self)
 
     def _initialize(self) -> None:
         """Internal method to initialize the libraries."""

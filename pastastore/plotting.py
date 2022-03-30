@@ -14,12 +14,15 @@ follows::
     ax = pstore.maps.oseries()
     pstore.maps.add_background_map(ax)  # for adding a background map
 """
-import matplotlib as mpl
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pastas as ps
 from matplotlib import patheffects
+from matplotlib.collections import LineCollection
+from matplotlib.colors import BoundaryNorm, LogNorm
+from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
@@ -176,7 +179,7 @@ class Plots:
                           ignore=('second', 'minute', '14 days'),
                           normtype='log', cmap='viridis_r',
                           set_yticks=False, figsize=(10, 8),
-                          progressbar=True, **kwargs):
+                          progressbar=True, dropna=True, **kwargs):
         """Plot the data-availability for multiple timeseries in pastastore.
 
         Parameters
@@ -202,7 +205,9 @@ class Plots:
         figsize : tuple, optional
             The size of the new figure in inches (h,v)
         progressbar : bool
-            show progressbar
+            Show progressbar
+        dropna : bool
+            Do not show NaNs as available data
         kwargs : dict, optional
             Extra arguments are passed to matplotlib.pyplot.subplots()
 
@@ -226,14 +231,15 @@ class Plots:
         ax = self._data_availability(series, names=names, intervals=intervals,
                                      ignore=ignore, normtype=normtype,
                                      cmap=cmap, set_yticks=set_yticks,
-                                     figsize=figsize, **kwargs)
+                                     figsize=figsize, dropna=dropna, **kwargs)
         return ax
 
     @staticmethod
     def _data_availability(series, names=None, intervals=None,
                            ignore=('second', 'minute', '14 days'),
                            normtype='log', cmap='viridis_r',
-                           set_yticks=False, figsize=(10, 8), **kwargs):
+                           set_yticks=False, figsize=(10, 8),
+                           dropna=True, **kwargs):
         """Plot the data-availability for a list of timeseries.
 
         Parameters
@@ -259,7 +265,9 @@ class Plots:
         figsize : tuple, optional
             The size of the new figure in inches (h,v)
         progressbar : bool
-            show progressbar
+            Show progressbar
+        dropna : bool
+            Do not show NaNs as available data
         kwargs : dict, optional
             Extra arguments are passed to matplotlib.pyplot.subplots()
 
@@ -289,15 +297,16 @@ class Plots:
         bounds = bounds.astype(float) * (10**9)
         labels = intervals.keys()
         if normtype == 'log':
-            norm = mpl.colors.LogNorm(vmin=bounds[0], vmax=bounds[-1])
+            norm = LogNorm(vmin=bounds[0], vmax=bounds[-1])
         else:
-            norm = mpl.colors.BoundaryNorm(
-                boundaries=bounds, ncolors=256)
+            norm = BoundaryNorm(boundaries=bounds, ncolors=256)
         cmap = plt.cm.get_cmap(cmap, 256)
         cmap.set_over((1., 1., 1.))
 
         for i, s in enumerate(series):
             if not s.empty:
+                if dropna:
+                    s = s.dropna()
                 pc = ax.pcolormesh(s.index, [i, i + 1],
                                    [np.diff(s.index).astype(float)],
                                    norm=norm, cmap=cmap,
@@ -317,6 +326,88 @@ class Plots:
             ax.set_ylabel('Timeseries (-)')
         ax.grid()
         f.tight_layout(pad=0.0)
+        return ax
+
+    def cumulative_hist(self, statistic='rsq', modelnames=None,
+                        extend=False, ax=None, figsize=(6, 6),
+                        label=None, legend=True):
+        """Plot a cumulative step histogram for a model statistic.
+
+        Parameters
+        ----------
+        statistic: str
+            name of the statistic, e.g. "evp" or "rmse", by default "rsq"
+        modelnames: list of str, optional
+            modelnames to plot statistic for, by default None, which
+            uses all models in the store
+        extend: bool, optional
+            force extend the stats Series with a dummy value to move the
+            horizontal line outside figure bounds. If True the results
+            are skewed a bit, especially if number of models is low.
+        ax: matplotlib.Axes, optional
+            axes to plot histogram, by default None which creates an Axes
+        figsize: tuple, optional
+            figure size, by default (6,6)
+        label: str, optional
+            label for the legend, by default None, which shows the number
+            of models
+        legend: bool, optional
+            show legend, by default True
+
+        Returns
+        -------
+        ax : matplotlib Axes
+            The axes in which the cumulative histogram is plotted
+        """
+
+        statsdf = self.pstore.get_statistics([statistic],
+                                             modelnames=modelnames,
+                                             progressbar=False)
+
+        if ax is None:
+            _, ax = plt.subplots(1, 1, figsize=figsize)
+            ax.set_xticks(np.linspace(0, 1, 11))
+            ax.set_xlim(0, 1)
+            ax.set_ylabel(statistic)
+            ax.set_xlabel('Density')
+            ax.set_title('Cumulative Step Histogram')
+        if statistic == 'evp':
+            ax.set_yticks(np.linspace(0, 100, 11))
+            if extend:
+                statsdf = statsdf.append(
+                    pd.Series(100, index=['dummy']))
+                ax.set_ylim(0, 100)
+            else:
+                ax.set_ylim(0, statsdf.max())
+        elif statistic in ('rsq', 'nse', 'kge_2012'):
+            ax.set_yticks(np.linspace(0, 1, 11))
+            if extend:
+                statsdf = statsdf.append(
+                    pd.Series(1, index=['dummy']))
+                ax.set_ylim(0, 1)
+            else:
+                ax.set_ylim(0, statsdf.max())
+        elif statistic in ('aic', 'bic'):
+            ax.set_ylim(statsdf.min(), statsdf.max())
+        else:
+            if extend:
+                statsdf = statsdf.append(
+                    pd.Series(0, index=['dummy']))
+            ax.set_ylim(0, statsdf.max())
+
+        if label is None:
+            if extend:
+                label = f'No. Models = {len(statsdf)-1}'
+            else:
+                label = f'No. Models = {len(statsdf)}'
+
+        statsdf.hist(ax=ax, bins=len(statsdf), density=True,
+                     cumulative=True, histtype='step',
+                     orientation='horizontal', label=label)
+
+        if legend:
+            ax.legend(loc=4)
+
         return ax
 
 
@@ -556,7 +647,7 @@ class Maps:
             if "cmap" not in kwargs:
                 kwargs["cmap"] = "viridis"
         else:
-            c = None
+            c = kwargs.pop("c", None)
 
         sc = ax.scatter(df[x], df[y], marker=marker, s=s, c=c, **kwargs)
         # add colorbar
@@ -705,6 +796,93 @@ class Maps:
                 txt.set_path_effects(stroke)
 
         fig.tight_layout()
+
+        return ax
+
+    def stresslinks(self, kinds=None, model_names=None, color_lines=False,
+                    alpha=0.4, figsize=(10, 8), legend=True, labels=False):
+        """Create a map linking models with their stresses.
+
+        Parameters
+        ----------
+            kinds: list, optional
+                kinds of stresses to plot, defaults to None, which selects
+                all kinds.
+            model_names: list, optional
+                list of model names to plot, substrings of model names
+                are also accepted, defaults to None, which selects all
+                models.
+            color_lines: bool, optional
+                if True, connecting lines have the same colors as the stresses,
+                defaults to False, which uses a black line.
+            alpha: float, optional
+                alpha value for the connecting lines, defaults to 0.4.
+            figsize : tuple, optional
+                figure size, by default (10, 8)
+            legend: bool, optional
+                create a legend for all unique kinds, defaults to True.
+            labels: bool, optional
+                add labels for stresses, defaults to False.
+        Returns
+        -------
+        ax: axes object
+            axis handle of the resulting figure
+
+        See also
+        --------
+        self.add_background_map
+        """
+        if model_names:
+            m_idx = self.pstore.search(libname='models', s=model_names)
+        else:
+            m_idx = self.pstore.model_names
+        struct = self.pstore.get_model_timeseries_names(
+            progressbar=False).loc[m_idx]
+
+        oseries = self.pstore.oseries
+        stresses = self.pstore.stresses
+        skind = stresses.kind.unique()
+        if kinds is None:
+            kinds = skind
+
+        _, ax = plt.subplots(figsize=figsize)
+        segments = []
+        segment_colors = []
+        ax.scatter(oseries.loc[struct['oseries'], 'x'],
+                   oseries.loc[struct['oseries'], 'y'], color='C0')
+        for m in struct.index:
+            os = oseries.loc[struct.loc[m, 'oseries']]
+            mstresses = struct.loc[m].drop('oseries').dropna().index
+            st = stresses.loc[mstresses]
+            for s in mstresses:
+                if np.isin(st.loc[s, 'kind'], kinds):
+                    c, = np.where(skind == st.loc[s, 'kind'])
+                    if color_lines:
+                        color = f'C{c[0]+1}'
+                    else:
+                        color = 'k'
+                    segments.append([[os['x'], os['y']],
+                                     [st.loc[s, 'x'], st.loc[s, 'y']]])
+                    segment_colors.append(color)
+                    if labels:
+                        self.add_labels(st, ax)
+
+        ax.scatter([x[1][0] for x in segments],
+                   [y[1][1] for y in segments],
+                   color=segment_colors)
+        ax.add_collection(LineCollection(segments, colors=segment_colors,
+                                         linewidths=0.5, alpha=alpha))
+
+        if legend:
+            legend_elements = [Line2D([], [], marker='o', color='w',
+                                      markerfacecolor='C0',
+                                      label='oseries', markersize=10)]
+            for kind in skind:
+                c, = np.where(skind == kind)
+                legend_elements.append(Line2D([], [], marker='o', color='w',
+                                              markerfacecolor=f'C{c[0]+1}',
+                                              label=kind, markersize=10))
+            ax.legend(handles=legend_elements)
 
         return ax
 

@@ -86,6 +86,10 @@ class PastaStore:
         return self.conn.model_names
 
     @property
+    def _modelnames_cache(self):
+        return self.conn._modelnames_cache
+
+    @property
     def n_oseries(self):
         return self.conn.n_oseries
 
@@ -96,6 +100,10 @@ class PastaStore:
     @property
     def n_models(self):
         return self.conn.n_models
+
+    @property
+    def oseries_models(self):
+        return self.conn.oseries_models
 
     def __repr__(self):
         """Representation string of the object."""
@@ -295,8 +303,12 @@ class PastaStore:
             tmintmax.loc[n, "tmax"] = s.last_valid_index()
         return tmintmax
 
-    def get_parameters(self, parameters=None, modelnames=None,
-                       param_value="optimal", progressbar=False):
+    def get_parameters(self, parameters: Optional[List[str]] = None,
+                       modelnames: Optional[List[str]] = None,
+                       param_value: Optional[str] = "optimal",
+                       progressbar: Optional[bool] = False,
+                       ignore_errors: Optional[bool] = False) \
+            -> FrameorSeriesUnion:
         """Get model parameters. NaN-values are returned when the parameters
         are not present in the model or the model is not optimized.
 
@@ -313,6 +325,9 @@ class PastaStore:
             default "optimal" which retrieves the optimized parameters.
         progressbar : bool, optional
             show progressbar, default is False
+        ignore_errors : bool, optional
+            ignore errors when True, i.e. when non-existent model is
+            encountered in modelnames, by default False
 
         Returns
         -------
@@ -328,8 +343,15 @@ class PastaStore:
         desc = "Get model parameters"
         for mlname in (tqdm(modelnames, desc=desc)
                        if progressbar else modelnames):
-            mldict = self.get_models(mlname, return_dict=True,
-                                     progressbar=False)
+            try:
+                mldict = self.get_models(mlname, return_dict=True,
+                                         progressbar=False)
+            except Exception as e:
+                if ignore_errors:
+                    p.loc[mlname, :] = np.nan
+                    continue
+                else:
+                    raise e
             if parameters is None:
                 pindex = mldict["parameters"].index
             else:
@@ -342,8 +364,11 @@ class PastaStore:
         p = p.squeeze()
         return p.astype(float)
 
-    def get_statistics(self, statistics, modelnames=None, progressbar=False,
-                       **kwargs):
+    def get_statistics(self, statistics: List[str],
+                       modelnames: Optional[List[str]] = None,
+                       progressbar: Optional[bool] = False,
+                       ignore_errors: Optional[bool] = False, **kwargs) \
+            -> FrameorSeriesUnion:
         """Get model statistics.
 
         Parameters
@@ -356,6 +381,9 @@ class PastaStore:
             uses all models in the store
         progressbar : bool, optional
             show progressbar, by default False
+        ignore_errors : bool, optional
+            ignore errors when True, i.e. when trying to calculate statistics
+            for non-existent model in modelnames, default is False
         **kwargs
             any arguments that can be passed to the methods for calculating
             statistics
@@ -368,13 +396,19 @@ class PastaStore:
         modelnames = self.conn._parse_names(modelnames, libname="models")
 
         # create dataframe for results
-        s = pd.DataFrame(index=modelnames, columns=statistics)
+        s = pd.DataFrame(index=modelnames, columns=statistics, data=np.nan)
 
         # loop through model names
         desc = "Get model statistics"
         for mlname in (tqdm(modelnames, desc=desc)
                        if progressbar else modelnames):
-            ml = self.get_models(mlname, progressbar=False)
+            try:
+                ml = self.get_models(mlname, progressbar=False)
+            except Exception as e:
+                if ignore_errors:
+                    continue
+                else:
+                    raise e
             for stat in statistics:
                 value = ml.stats.__getattribute__(stat)(**kwargs)
                 s.loc[mlname, stat] = value
@@ -689,7 +723,7 @@ class PastaStore:
     def export_model_series_to_csv(self,
                                    names: Optional[Union[list, str]] = None,
                                    exportdir: str = ".",
-                                   exportmeta: bool = True):
+                                   exportmeta: bool = True):  # pragma: no cover
         """Export model timeseries to csv files.
 
         Parameters
@@ -783,17 +817,18 @@ class PastaStore:
             storename = conn.name
         return cls(storename, conn)
 
-    def search(self, libname: str, s: str, case_sensitive=False):
+    def search(self, libname: str, s: Optional[Union[list, str]] = None,
+               case_sensitive: bool = True):
         """Search for names of timeseries or models starting with s.
 
         Parameters
         ----------
         libname : str
             name of the library to search in
-        s : str
-            find names starting with this string or part of string
+        s : str, lst
+            find names with part of this string or strings in list
         case_sensitive : bool, optional
-            whether search should be case sensitive, by default False
+            whether search should be case sensitive, by default True
 
         Returns
         -------
@@ -801,19 +836,80 @@ class PastaStore:
             list of names that match search result
         """
 
-        df = getattr(self, libname)
-
         if libname == "models":
-            if case_sensitive:
-                matches = [mlnam for mlnam in df if
-                           mlnam.lower().startswith(s.lower())]
-            else:
-                matches = [mlnam for mlnam in df if mlnam.startswith(s)]
+            lib_names = getattr(self, 'model_names')
+        elif libname == "stresses":
+            lib_names = getattr(self, 'stresses_names')
+        elif libname == "oseries":
+            lib_names = getattr(self, 'oseries_names')
         else:
+            raise ValueError(
+                "Provide valid libname: 'models', 'stresses' or 'oseries'")
+
+        if isinstance(s, str):
             if case_sensitive:
-                mask = df.index.str.startswith(s)
+                matches = [n for n in lib_names if s in n]
             else:
-                mask = df.index.str.lower().str.startswith(s.lower())
-            matches = df.index[mask].tolist()
+                matches = [n for n in lib_names if s.lower() in n.lower()]
+        if isinstance(s, list):
+            m = np.array([])
+            for sub in s:
+                if case_sensitive:
+                    m = np.append(m, [n for n in lib_names if sub in n])
+                else:
+                    m = np.append(
+                        m, [n for n in lib_names if sub.lower() in n.lower()])
+            matches = list(np.unique(m))
 
         return matches
+
+    def get_model_timeseries_names(
+            self,
+            modelnames: Optional[Union[list, str]] = None,
+            dropna: bool = True,
+            progressbar: bool = True) -> FrameorSeriesUnion:
+        """Get timeseries names contained in model.
+
+        Parameters
+        ----------
+        modelnames : Optional[Union[list, str]], optional
+            list or name of models to get timeseries names for,
+            by default None which will use all modelnames
+        dropna : bool, optional
+            drop stresses from table if stress is not included in any
+            model, by default True
+        progressbar : bool, optional
+            show progressbar, by default True
+
+        Returns
+        -------
+        structure : pandas.DataFrame
+            returns DataFrame with oseries name per model, and a flag
+            indicating whether a stress is contained within a timeseries
+            model.
+        """
+
+        model_names = self.conn._parse_names(modelnames, libname="models")
+        structure = pd.DataFrame(index=model_names,
+                                 columns=["oseries"] + self.stresses_names)
+
+        for mlnam in (tqdm(model_names, desc="Get model timeseries names")
+                      if progressbar else self.model_names):
+            iml = self.get_models(mlnam, return_dict=True)
+
+            # oseries
+            structure.loc[mlnam, "oseries"] = iml["oseries"]["name"]
+
+            for sm in iml["stressmodels"].values():
+                if sm["stressmodel"] == "RechargeModel":
+                    pnam = sm["prec"]["name"]
+                    enam = sm["evap"]["name"]
+                    structure.loc[mlnam, pnam] = 1
+                    structure.loc[mlnam, enam] = 1
+                else:
+                    for s in sm["stress"]:
+                        structure.loc[mlnam, s["name"]] = 1
+        if dropna:
+            return structure.dropna(how="all", axis=1)
+        else:
+            return structure
