@@ -364,7 +364,7 @@ class Plots:
                                              modelnames=modelnames,
                                              progressbar=False)
 
-        if ax == None:
+        if ax is None:
             _, ax = plt.subplots(1, 1, figsize=figsize)
             ax.set_xticks(np.linspace(0, 1, 11))
             ax.set_xlim(0, 1)
@@ -395,7 +395,7 @@ class Plots:
                     pd.Series(0, index=['dummy']))
             ax.set_ylim(0, statsdf.max())
 
-        if label == None:
+        if label is None:
             if extend:
                 label = f'No. Models = {len(statsdf)-1}'
             else:
@@ -842,7 +842,7 @@ class Maps:
         oseries = self.pstore.oseries
         stresses = self.pstore.stresses
         skind = stresses.kind.unique()
-        if kinds == None:
+        if kinds is None:
             kinds = skind
 
         _, ax = plt.subplots(figsize=figsize)
@@ -867,8 +867,9 @@ class Maps:
                     if labels:
                         self.add_labels(st, ax)
 
-        ax.scatter([x[1][0] for x in segments], [y[1][1]
-                                                 for y in segments], color=segment_colors)
+        ax.scatter([x[1][0] for x in segments],
+                   [y[1][1] for y in segments],
+                   color=segment_colors)
         ax.add_collection(LineCollection(segments, colors=segment_colors,
                                          linewidths=0.5, alpha=alpha))
 

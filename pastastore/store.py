@@ -817,7 +817,8 @@ class PastaStore:
             storename = conn.name
         return cls(storename, conn)
 
-    def search(self, libname: str, s: Optional[Union[list, str]] = None, case_sensitive=True):
+    def search(self, libname: str, s: Optional[Union[list, str]] = None,
+               case_sensitive: bool = True):
         """Search for names of timeseries or models starting with s.
 
         Parameters
