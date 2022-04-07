@@ -179,8 +179,7 @@ def test_iter_models(request, pstore):
 @pytest.mark.dependency()
 def test_solve_models_and_get_stats(request, pstore):
     depends(request, [f"test_create_models[{pstore.type}]"])
-    mls = pstore.solve_models(["oseries1", "oseries2"],
-                              ignore_solve_errors=False,
+    mls = pstore.solve_models(ignore_solve_errors=False,
                               progressbar=False,
                               store_result=True)
     stats = pstore.get_statistics(["evp", "aic"], progressbar=False)
