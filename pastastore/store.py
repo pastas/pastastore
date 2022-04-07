@@ -612,7 +612,7 @@ class PastaStore:
             arguments are passed to the solve method.
         """
         if mls is None:
-            mls = self.conn.models
+            mls = self.conn.model_names
         elif isinstance(mls, ps.Model):
             mls = [mls.name]
 
