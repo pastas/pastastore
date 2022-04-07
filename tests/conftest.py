@@ -97,3 +97,11 @@ def pstore(request):
     pstore = initialize_project(connector)
     pstore.type = request.param  # added here for defining test dependencies
     yield pstore
+
+
+def delete_arctic_test_db():
+    connstr = "mongodb://localhost:27017/"
+    name = "test_project"
+    connector = pst.ArcticConnector(name, connstr)
+    pst.util.delete_arctic_connector(connector)
+    print("ArcticConnector 'test_project' deleted.")
