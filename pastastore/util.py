@@ -239,7 +239,7 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
         df.loc["name:", f"model {i}"] = ml.name
 
         for k in ml.settings.keys():
-            df.loc[f"- settings: {k}"] = ml.settings.get(k)
+            df.loc[f"- settings: {k}", f"model {i}"] = ml.settings.get(k)
 
         if i == 0:
             oso = ml.oseries.series_original
@@ -283,7 +283,8 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
             for ts in stresses:
                 df.loc[f"- timeseries: '{ts.name}'"] = ts.name
                 for tsk in ts.settings.keys():
-                    df.loc[f"  - {ts.name} settings: {tsk}"] = ts.settings[tsk]
+                    df.loc[f"  - {ts.name} settings: {tsk}", f"model {i}"] = \
+                        ts.settings[tsk]
 
                 if i == 0:
                     so1.append(ts.series_original.copy())
