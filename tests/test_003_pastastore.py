@@ -272,8 +272,3 @@ def test_to_from_zip(pstore):
     finally:
         os.remove(zipname)
     return store
-
-
-def test_delete_db(pstore):
-    pst.util.delete_pastastore(pstore)
-    return

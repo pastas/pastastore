@@ -70,8 +70,3 @@ def test_map_model(request, pstore):
     ax = pstore.maps.model("oseries1")
     plt.close(ax.figure)
     return
-
-
-def test_delete_db(pstore):
-    pst.util.delete_pastastore(pstore)
-    return
