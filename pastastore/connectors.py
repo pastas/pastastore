@@ -8,8 +8,7 @@ from typing import Dict, Optional, Union
 import pandas as pd
 from pastas.io.pas import PastasEncoder, pastas_hook
 
-from .base import (BaseConnector, ConnectorUtil, ModelAccessor,
-                   OseriesModelsAccessor)
+from .base import (BaseConnector, ConnectorUtil, ModelAccessor)
 from .util import _custom_warning
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
@@ -47,7 +46,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         self.arc = arctic.Arctic(connstr)
         self._initialize()
         self.models = ModelAccessor(self)
-        self.oseries_models = OseriesModelsAccessor(self)
+        self._update_all_oseries_model_links()
 
     def _initialize(self) -> None:
         """Internal method to initalize the libraries."""
@@ -214,7 +213,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         self.libs: dict = {}
         self._initialize()
         self.models = ModelAccessor(self)
-        self.oseries_models = OseriesModelsAccessor(self)
+        self._update_all_oseries_model_links()
 
     def _initialize(self) -> None:
         """Internal method to initalize the libraries (stores)."""
@@ -408,7 +407,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         for val in self._default_library_names:
             setattr(self, "lib_" + val, {})
         self.models = ModelAccessor(self)
-        self.oseries_models = OseriesModelsAccessor(self)
+        self._update_all_oseries_model_links()
 
     def _get_library(self, libname: str):
         """Get reference to dictionary holding data.
@@ -544,7 +543,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         self.relpath = os.path.relpath(path)
         self._initialize()
         self.models = ModelAccessor(self)
-        self.oseries_models = OseriesModelsAccessor(self)
+        self._update_all_oseries_model_links()
 
     def _initialize(self) -> None:
         """Internal method to initialize the libraries."""
