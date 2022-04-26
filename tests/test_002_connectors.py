@@ -47,7 +47,7 @@ def test_add_get_series_wnans(request, conn):
         o2 = o2.squeeze()
     try:
         assert isinstance(o2, pd.Series)
-        assert o1.equals(o2).all()
+        assert o1.equals(o2)
     finally:
         conn.del_oseries("test_series_nans")
     return
