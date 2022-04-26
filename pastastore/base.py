@@ -944,6 +944,7 @@ class BaseConnector(ABC):
                 links[onam] = [mlnam]
         return links
 
+    @staticmethod
     def _clear_cache(libname: str) -> None:
         """Clear cached property."""
         if libname == "models":
