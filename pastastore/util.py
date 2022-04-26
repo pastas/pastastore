@@ -349,7 +349,7 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
     if detailed_comparison:
         return df
     else:
-        return df["comparison"].all()
+        return df["comparison"].iloc[1:].all()  # ignore name difference
 
 
 def copy_database(conn1, conn2, libraries: Optional[List[str]] = None,
