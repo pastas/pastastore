@@ -858,27 +858,27 @@ class BaseConnector(ABC):
             yield self.get_models(mlnam, return_dict=return_dict,
                                   progressbar=False)
 
-    @ staticmethod
+    @staticmethod
     def _clear_cache(libname: str) -> None:
         """Clear cached property."""
         if libname == "models":
             libname = "_modelnames_cache"
         getattr(BaseConnector, libname).fget.cache_clear()
 
-    @ property  # type: ignore
-    @ functools.lru_cache()
+    @property  # type: ignore
+    @functools.lru_cache()
     def oseries(self):
         """Dataframe with overview of oseries."""
         return self.get_metadata("oseries", self.oseries_names)
 
-    @ property  # type: ignore
-    @ functools.lru_cache()
+    @property  # type: ignore
+    @functools.lru_cache()
     def stresses(self):
         """Dataframe with overview of stresses."""
         return self.get_metadata("stresses", self.stresses_names)
 
-    @ property  # type: ignore
-    @ functools.lru_cache()
+    @property  # type: ignore
+    @functools.lru_cache()
     def _modelnames_cache(self):
         """List of model names."""
         return self.model_names
@@ -887,11 +887,11 @@ class BaseConnector(ABC):
     def n_oseries(self):
         return len(self.oseries_names)
 
-    @ property
+    @property
     def n_stresses(self):
         return len(self.stresses_names)
 
-    @ property
+    @property
     def n_models(self):
         return len(self.model_names)
 
@@ -936,7 +936,7 @@ class ConnectorUtil:
         else:
             raise NotImplementedError(f"Cannot parse 'names': {names}")
 
-    @ staticmethod
+    @staticmethod
     def _meta_list_to_frame(metalist: list, names: list):
         """Convert list of metadata dictionaries to DataFrame.
 
@@ -958,8 +958,6 @@ class ConnectorUtil:
             if len({"x", "y"}.difference(meta.columns)) == 0:
                 meta["x"] = meta["x"].astype(float)
                 meta["y"] = meta["y"].astype(float)
-                # meta = gpd.GeoDataFrame(meta, geometry=[Point(
-                #     (s["x"], s["y"])) for i, s in meta.iterrows()])
         elif len(metalist) == 1:
             meta = pd.DataFrame(metalist)
         elif len(metalist) == 0:
