@@ -406,7 +406,8 @@ class BaseConnector(ABC):
             raise ItemInLibraryException(f"Model with name '{name}' "
                                          "already in 'models' library!")
         self._clear_cache("_modelnames_cache")
-        self.oseries_models._add_model(mldict["oseries"]["name"], name)
+        self._add_oseries_model_link(mldict["oseries"]["name"], name)
+        self._clear_cache("oseries")
 
     @staticmethod
     def _parse_series_input(series: Union[FrameorSeriesUnion, ps.TimeSeries],
@@ -525,8 +526,9 @@ class BaseConnector(ABC):
             mldict = self.get_models(n, return_dict=True)
             oname = mldict["oseries"]["name"]
             self._del_item("models", n)
-            self.oseries_models._del_model(oname, n)
+            self._del_oseries_model_link(oname, n)
         self._clear_cache("_modelnames_cache")
+        self._clear_cache("oseries")
 
     def del_oseries(self, names: Union[list, str]):
         """Delete oseries from the database.
@@ -858,7 +860,90 @@ class BaseConnector(ABC):
             yield self.get_models(mlnam, return_dict=return_dict,
                                   progressbar=False)
 
-    @ staticmethod
+    def _add_oseries_model_link(self, onam: str, mlnam: Union[List[str], str]):
+        """Add model name to oseries metadata dictionary.
+
+        Parameters
+        ----------
+        onam : str
+            name of oseries
+        mlnam : Union[List[str], str]
+            name of model
+        """
+        ometa = self.get_metadata("oseries", onam, as_frame=False)
+        if "linked_models" in ometa:
+            if mlnam not in ometa["linked_models"]:
+                ometa['linked_models'].append(mlnam)
+        else:
+            if isinstance(mlnam, list):
+                ometa["linked_models"] = mlnam
+            else:
+                ometa["linked_models"] = [mlnam]
+        self.update_metadata("oseries", onam, ometa)
+
+    def _del_oseries_model_link(self, onam: str, mlnam: str):
+        """Delete model name from oseries metadata dictionary.
+
+        Parameters
+        ----------
+        onam : str
+            name of oseries
+        mlnam : str
+            name of model
+        """
+        o, ometa = self.get_oseries(onam, return_metadata=True)
+        ometa["linked_models"].remove(mlnam)
+        # remove entirely if empty list
+        if len(ometa["linked_models"]) == 0:
+            ometa.pop("linked_models")
+        # have to overwrite entire series as overwriting only metadata is not
+        # supported, and updating cannot delete keys
+        self.add_oseries(o, onam, metadata=ometa, overwrite=True)
+
+    def _update_all_oseries_model_links(self):
+        """Add all model names to oseries metadata dictionaries.
+
+        Used for old PastaStore versions, where relationship between
+        oseries and models was stored differently.
+        """
+        # get single model to check if model link is stored, if, so
+        # assume all model_links are present.
+        update = True
+        if self.n_models > 0:
+            mldict = self.get_models(self.model_names[0], return_dict=True)
+            onam = mldict["oseries"]["name"]
+            if "linked_models" in self.get_metadata("oseries", onam,
+                                                    as_frame=False):
+                update = False
+        else:
+            update = False
+
+        if update:
+            links = self._get_all_oseries_model_links()
+            for onam, mllinks in tqdm(links.items(),
+                                      desc="Get models per oseries",
+                                      total=len(links)):
+                self._add_oseries_model_link(onam, mllinks)
+
+    def _get_all_oseries_model_links(self):
+        """Get all model names per oseries in dictionary.
+
+        Returns
+        -------
+        links : dict
+            dictionary with oseries names as keys and lists of model names as
+            values
+        """
+        links = {}
+        for mldict in self.iter_models(return_dict=True):
+            onam = mldict["oseries"]["name"]
+            mlnam = mldict["name"]
+            if onam in links:
+                links[onam].append(mlnam)
+            else:
+                links[onam] = [mlnam]
+        return links
+
     def _clear_cache(libname: str) -> None:
         """Clear cached property."""
         if libname == "models":
@@ -883,7 +968,14 @@ class BaseConnector(ABC):
         """List of model names."""
         return self.model_names
 
-    @ property
+    @property
+    def oseries_models(self):
+        """Dictionary with list of models per oseries."""
+        if "linked_models" in self.oseries.columns:
+            return self.oseries["linked_models"].dropna().to_dict()
+        else:
+            return {}
+
     def n_oseries(self):
         return len(self.oseries_names)
 
@@ -1415,105 +1507,3 @@ class ModelAccessor:
             model
         """
         yield from self.conn.iter_models()
-
-
-class OseriesModelsAccessor:
-    """Object for getting list of model names per oseries.
-
-    Provides dict-like access for obtaining models for a certain
-    location/oseries (i.e. PastaStore.oseries_models["oseries1"]). On
-    initialization of a Connector this dictionary is built by running
-    through all models and storing a list of model names per oseries
-    name.
-    """
-
-    def __init__(self, conn):
-        """Initialize oseries models accessor.
-
-        Parameters
-        ----------
-        conn : pastastore.*Connector
-            pastastore Connector object
-        """
-        self.conn = conn
-        self.oseries_models_dict = {}
-        self._build_dict()
-
-    def __repr__(self):
-        """String represenation.
-
-        Returns
-        -------
-        str
-            string representation of oseries_models dictionary.
-        """
-        return self.oseries_models_dict.__repr__()
-
-    def __getitem__(self, name: str):
-        """Get list of model names with oseries name as key.
-
-        Parameters
-        ----------
-        name : str
-            name of oseries
-
-        Returns
-        -------
-        list
-            list of model names (str)
-        """
-        return self.oseries_models_dict[name]
-
-    def __setitem__(self, oseries_name: str, model_name: str):
-        """Add model name to oseries_models dictionary.
-
-        Parameters
-        ----------
-        oseries_name : str
-            name of oseries
-        model_name : str
-            name of model
-        """
-        self._add_model(oseries_name, model_name)
-
-    def _build_dict(self):
-        """Build dictionary with list of model names per oseries."""
-        if self.conn.n_models > 0:
-            for mlnam in tqdm(self.conn._modelnames_cache,
-                              desc="Build oseries_model dictionary"):
-                ml = self.conn.get_models(mlnam, return_dict=True)
-                onam = ml["oseries"]["name"]
-                if onam in self.oseries_models_dict:
-                    self.oseries_models_dict[onam].append(mlnam)
-                else:
-                    self.oseries_models_dict[onam] = [mlnam]
-
-    def _add_model(self, oseries_name: str, model_name: str):
-        """Add model name to list for oseries.
-
-        Parameters
-        ----------
-        oseries_name : str
-            name of oseries
-        model_name : str
-            name of models
-        """
-        if oseries_name in self.oseries_models_dict:
-            if model_name not in self.oseries_models_dict[oseries_name]:
-                self.oseries_models_dict[oseries_name].append(model_name)
-        else:
-            self.oseries_models_dict[oseries_name] = [model_name]
-
-    def _del_model(self, oseries_name: str, model_name: str):
-        """Delete model name from list for oseries.
-
-        Parameters
-        ----------
-        oseries_name : str
-            name of oseries
-        model_name : str
-            name of model
-        """
-        self.oseries_models_dict[oseries_name].remove(model_name)
-        if len(self.oseries_models_dict[oseries_name]) == 0:
-            del self.oseries_models_dict[oseries_name]
