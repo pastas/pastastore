@@ -4,3 +4,4 @@ tqdm>=4.36
 pastas>=0.13.0
 contextily
 pyproj
+adjustText
