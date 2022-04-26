@@ -1,0 +1,581 @@
+import logging
+import os
+from copy import deepcopy
+from typing import Dict, List, Optional, Union
+
+import numpy as np
+import pandas as pd
+import pastas as ps
+import yaml
+
+ps.logger.setLevel("ERROR")
+
+logging.basicConfig(level="INFO")
+logger = logging.getLogger(__name__)
+
+
+def _convert_dict_dtypes_for_yaml(d: Dict):
+    """Internal method to convert dictionary values for storing in YAML format.
+
+    Parameters
+    ----------
+    d : dict
+        dictionary to parse iteratively
+    """
+    for k, v in d.items():
+        if isinstance(v, dict):
+            _convert_dict_dtypes_for_yaml(v)
+        elif isinstance(v, pd.Timestamp):
+            d[k] = v.strftime("%Y-%m-%d %H:%M:%S")
+        elif isinstance(v, pd.Timedelta):
+            d[k] = v.to_timedelta64().__str__()
+        elif isinstance(v, np.int64):
+            d[k] = int(v)
+        elif isinstance(v, pd.DataFrame):
+            d[k] = v.reset_index().to_dict(orient="records")
+
+
+class PastastoreYAML:
+    """Class for reading/writing Pastas models in YAML format.
+
+    This class provides a more human-readable form of Pastas models in
+    comparison to Pastas default .pas (JSON) files. The goal is to provide
+    users with a simple mini-language to quickly build/test different model
+    structures. A PastaStore is required as input, which contains existing
+    models or timeseries required to build new models. This
+    class also introduces some shortcuts to simplify building models.
+    Shortcuts include the option to pass 'nearest' as the name of a stress,
+    which will automatically select the closest stress of a particular type.
+    Other shortcuts include certain default options when certain information
+    is not listed in the YAML file, that will work well in many cases.
+
+    Usage
+    -----
+    Instantiate the PastastoreYAML class::
+
+        pyaml = PastastoreYAML(pstore)
+
+    Export a Pastas model to a YAML file::
+
+        pyaml.export_model_to_yaml(ml)
+
+    Load a Pastas model from a YAML file::
+
+        models = pyaml.load_yaml("my_first_model.yaml")
+
+    Example YAML file using 'nearest'::
+
+      my_first_model:  # this is the name of the model
+        oseries: "oseries1"  # name of oseries stored in PastaStore
+        stressmodels:
+            recharge:  # recognized as RechargeModel by name
+              prec: "nearest"  # use nearest stress with kind="prec"
+              evap: "EV24_DEELEN"  # specific station
+            river:
+              stress: "nearest riv"  # nearest stress with kind="riv"
+            wells:
+              stress: "nearest 3"  # nearest 3 stresses with kind="well"
+              stressmodel: WellModel  # provide StressModel type
+    """
+
+    def __init__(self, pstore):
+        """Constructor for PastasstoreYAML class.
+
+        Parameters
+        ----------
+        pstore : pastastore.PastaStore
+            PastaStore object containing models to be exported as YAML files
+            or containing timeseries that are referenced in YAML files.
+        """
+        self.pstore = pstore
+
+    def _parse_rechargemodel_dict(self, d: Dict,
+                                  onam: Optional[str] = None) -> Dict:
+        """Internal method to parse RechargeModel dictionary.
+
+        Note: supports 'nearest' as input to 'prec' and 'evap',
+        which will automatically select nearest stress with kind="prec" or
+        "evap". Requires "x" and "y" locations to be present in both oseries
+        and stresses metadata.
+
+        Parameters
+        ----------
+        d : dict
+            dictionary containing RechargeModel information
+        onam : str, optional
+            name of oseries used when 'nearest' is provided as prec or evap,
+            by default None
+
+        Returns
+        -------
+        d : dict
+            dictionary that can be read by ps.io.base.load(),
+            containing stresses obtained from PastaStore, and setting
+            defaults if they were not already provided.
+        """
+        # precipitation
+        prec_val = d.get("prec", "nearest")
+        if isinstance(prec_val, dict):
+            pnam = prec_val["name"]
+            prec = self.pstore.get_stresses(pnam)
+            prec = ps.TimeSeries(prec, **prec_val)
+        elif prec_val.startswith("nearest"):
+            if onam is None:
+                raise ValueError("Provide oseries name when using nearest!")
+            if len(prec_val.split()) > 1:
+                kind = prec_val.split()[-1]
+            else:
+                kind = "prec"
+            pnam = self.pstore.get_nearest_stresses(
+                onam, kind=kind).iloc[0, 0]
+            logger.info(
+                f"  | using nearest timeseries with kind='{kind}': '{pnam}'")
+            prec, pmeta = self.pstore.get_stresses(pnam, return_metadata=True)
+            prec = ps.TimeSeries(prec, pnam, settings="prec", metadata=pmeta)
+        elif isinstance(prec_val, str):
+            pnam = d["prec"]
+            prec, pmeta = self.pstore.get_stresses(pnam, return_metadata=True)
+            prec = ps.TimeSeries(prec, pnam, settings="prec", metadata=pmeta)
+        else:
+            raise NotImplementedError(
+                f"Could not parse prec value: '{prec_val}'")
+        d["prec"] = prec.to_dict()
+
+        # evaporation
+        evap_val = d.get("evap", "nearest")
+        if isinstance(evap_val, dict):
+            enam = evap_val["name"]
+            evap = self.pstore.get_stresses(enam)
+            evap = ps.TimeSeries(evap, **evap_val)
+        elif evap_val.startswith("nearest"):
+            if onam is None:
+                raise ValueError("Provide oseries name when using nearest!")
+            if len(evap_val.split()) > 1:
+                kind = evap_val.split()[-1]
+            else:
+                kind = "evap"
+            enam = self.pstore.get_nearest_stresses(
+                onam, kind=kind).iloc[0, 0]
+            logger.info(
+                f"  | using nearest timeseries with kind='{kind}': '{enam}'")
+            evap, emeta = self.pstore.get_stresses(enam, return_metadata=True)
+            evap = ps.TimeSeries(evap, enam, metadata=emeta, settings="evap")
+        elif isinstance(evap_val, str):
+            enam = d["evap"]
+            evap, emeta = self.pstore.get_stresses(enam, return_metadata=True)
+            evap = ps.TimeSeries(evap, enam, metadata=emeta, settings="evap")
+        else:
+            raise NotImplementedError(
+                f"Could not parse evap value: '{evap_val}'")
+        d["evap"] = evap.to_dict()
+
+        # recharge type (i.e. Linear, FlexModel, etc.)
+        if "recharge" not in d:
+            logger.info("  | no 'recharge' type provided, using 'Linear'")
+
+        # rfunc
+        if "rfunc" not in d:
+            logger.info("  | no 'rfunc' provided, using 'Exponential'")
+
+        # stressmodel
+        if "stressmodel" not in d:
+            d["stressmodel"] = "RechargeModel"
+
+        return d
+
+    def _parse_stressmodel_dict(self, d: Dict,
+                                onam: Optional[str] = None) -> Dict:
+        """Internal method to parse StressModel dictionary.
+
+        Note: supports 'nearest' or 'nearest <kind>' as input to 'stress',
+        which will automatically select nearest stress with kind=<kind>.
+        Requires "x" and "y" locations to be present in both oseries and
+        stresses metadata.
+
+        Parameters
+        ----------
+        d : dict
+            dictionary containing WellModel information
+        onam : str, optional
+            name of oseries used when 'nearest <kind>' is provided as stress,
+            by default None
+
+        Returns
+        -------
+        d : dict
+            dictionary that can be read by ps.io.base.load(),
+            containing stresses obtained from PastaStore, and setting
+            defaults if they were not already provided.
+        """
+
+        # get stress
+        snam = d.pop("stress")
+
+        # if str, either name of single series or 'nearest <kind>'
+        if snam.startswith("nearest"):
+            if len(snam.split()) > 1:
+                kind = snam.split()[-1]
+            else:
+                kind = None
+            logger.info(f"  | using nearest stress with kind='{kind}'")
+            if kind == "oseries":
+                snam = self.pstore.get_nearest_oseries(onam).iloc[0, 0]
+            else:
+                snam = self.pstore.get_nearest_stresses(
+                    onam, kind=kind).iloc[0, 0]
+
+        s, smeta = self.pstore.get_stresses(snam, return_metadata=True)
+        s = ps.TimeSeries(s, snam, settings=d.pop("settings", None),
+                          metadata=smeta)
+        d["stress"] = [s.to_dict()]
+
+        # use stress name if not provided
+        if "name" not in d:
+            d["name"] = snam
+
+        # rfunc
+        if "rfunc" not in d:
+            logger.info("  | no 'rfunc' provided, using 'Gamma'")
+            d["rfunc"] = "Gamma"
+
+        return d
+
+    def _parse_wellmodel_dict(self, d: Dict,
+                              onam: Optional[str] = None) -> Dict:
+        """Internal method to parse WellModel dictionary.
+
+        Note: supports 'nearest' or 'nearest <number> <kind>' as input to
+        'stress', which will automatically select nearest or <number> of
+        nearest stress(es) with kind=<kind>. Requires "x" and "y" locations to
+        be present in both oseries and stresses metadata.
+
+        Parameters
+        ----------
+        d : dict
+            dictionary containing WellModel information
+        onam : str, optional
+            name of oseries used when 'nearest' is provided as stress,
+            by default None
+
+        Returns
+        -------
+        d : dict
+            dictionary that can be read by ps.io.base.load(),
+            containing stresses obtained from PastaStore, and setting
+            defaults if they were not already provided.
+        """
+
+        # parse stress
+        snames = d.pop("stress")
+
+        # if str, either name of single series or 'nearest <n> <kind>'
+        if isinstance(snames, str):
+            if snames.startswith("nearest"):
+                if len(snames.split()) == 3:
+                    n = int(snames.split()[1])
+                    kind = snames.split()[2]
+                elif len(snames.split()) == 2:
+                    try:
+                        n = int(snames.split()[1])
+                    except ValueError:
+                        raise ValueError(
+                            f"Could not parse: '{snames}'! "
+                            "When using option 'nearest' for WellModel,  "
+                            "use 'nearest <n>' or 'nearest <n> <kind>'!")
+                    kind = "well"
+                elif len(snames.split()) == 1:
+                    n = 1
+                    kind = "well"
+                snames = self.pstore.get_nearest_stresses(
+                    onam, kind=kind, n=n).iloc[0].values
+                logger.info(
+                    f"  | using {n} nearest stress(es) with kind='{kind}': "
+                    f"{snames}")
+            else:
+                snames = [snames]
+
+        # get timeseries
+        slist = []
+        for snam in snames:
+            s, smeta = self.pstore.get_stresses(snam, return_metadata=True)
+            slist.append(
+                ps.TimeSeries(s, snam, settings="well",
+                              metadata=smeta).to_dict()
+            )
+        d["stress"] = slist
+
+        # get distances
+        if "distances" not in d:
+            d["distances"] = self.pstore.get_distances(
+                oseries=onam, stresses=snames).values.squeeze()
+
+        # use default name if not provided
+        if "name" not in d:
+            d["name"] = "wells"
+
+        # rfunc
+        if "rfunc" not in d:
+            logger.info("  | no 'rfunc' provided, using 'HantushWellModel'")
+            d["rfunc"] = "HantushWellModel"
+
+        if "up" not in d:
+            logger.info("  | no 'up' provided, set to 'False', "
+                        "(i.e. pumping rate is positive for extraction).")
+            d["up"] = False
+
+        return d
+
+    def load(self, fyaml: str) -> List[ps.Model]:
+        """Load Pastas YAML file.
+
+        Note: currently supports RechargeModel, StressModel and WellModel.
+
+        Parameters
+        ----------
+        fyaml : str
+            path to file
+
+        Returns
+        -------
+        models : list
+            list containing pastas model(s)
+
+        Raises
+        ------
+        ValueError
+            if insufficient information is provided to construct pastas model
+        NotImplementedError
+            if unsupported stressmodel is encountered
+        """
+
+        with open(fyaml, "r") as f:
+            yml = yaml.load(f, Loader=yaml.CFullLoader)
+
+        models = []
+
+        for mlnam in yml.keys():
+
+            mlyml = yml[mlnam]
+
+            # get oseries + metadata
+            if isinstance(mlyml["oseries"], dict):
+                onam = str(mlyml["oseries"]["name"])
+                settings = mlyml["oseries"].pop("settings", "oseries")
+                _ = mlyml.pop("oseries")
+            else:
+                onam = str(mlyml.pop("oseries"))
+                settings = "oseries"
+
+            logger.info(f"Building model '{mlnam}' for oseries '{onam}'")
+            o, ometa = self.pstore.get_oseries(
+                onam, return_metadata=True)
+
+            # create model to obtain default model settings
+            o_ts = ps.TimeSeries(o, metadata=ometa, settings=settings)
+            ml = ps.Model(o_ts, name=mlnam, metadata=ometa)
+            mldict = ml.to_dict(series=True)
+
+            # update with stored model settings
+            if "settings" in mlyml:
+                mldict["settings"].update(mlyml["settings"])
+
+            # stressmodels
+            for smnam, smyml in mlyml["stressmodels"].items():
+
+                # set name if not provided
+                if smyml is not None:
+                    name = smyml.get("name", smnam)
+                else:
+                    name = smnam
+                logger.info(f"| parsing stressmodel: '{name}'")
+
+                # check whether smtyp is defined
+                if smyml is not None:
+                    if "stressmodel" in smyml:
+                        smtyp = True
+                    else:
+                        smtyp = False
+                else:
+                    smtyp = False
+
+                # check if RechargeModel based on name if smtyp not defined
+                if (smnam.lower() in ["rch", "rech", "recharge",
+                                      "rechargemodel"]) and not smtyp:
+                    logger.info(
+                        "| assuming RechargeModel based on stressmodel name.")
+                    # check if stressmodel dictionary is empty, create (nearly
+                    # empty) dict so defaults are used
+                    if smyml is None:
+                        mlyml["stressmodels"][smnam] = {"name": "recharge"}
+                        smyml = mlyml["stressmodels"][smnam]
+                    if "name" not in smyml:
+                        smyml["name"] = smnam
+                    smtyp = smyml.get("stressmodel", "RechargeModel")
+                else:
+                    # if no info is provided, raise error,
+                    # cannot make any assumptions for non-RechargeModels
+                    if smyml is None:
+                        raise ValueError("Insufficient information "
+                                         f"for stressmodel '{name}'!")
+                    # get stressmodel type, with default StressModel
+                    if "stressmodel" in smyml:
+                        smtyp = smyml["stressmodel"]
+                    else:
+                        logger.info(
+                            "| no 'stressmodel' type provided, using 'StressModel'")
+                        smtyp = "StressModel"
+
+                # parse dictionary based on smtyp
+                if smtyp == "RechargeModel":
+                    # parse RechargeModel
+                    sm = self._parse_rechargemodel_dict(smyml, onam=onam)
+                elif smtyp == "StressModel":
+                    # parse StressModel
+                    sm = self._parse_stressmodel_dict(smyml, onam=onam)
+                elif smtyp == "WellModel":
+                    # parse WellModel
+                    sm = self._parse_wellmodel_dict(smyml, onam=onam)
+                else:
+                    raise NotImplementedError("pastas yaml interface does "
+                                              f"not (yet) support '{smtyp}'!")
+
+                # add to list
+                smyml.update(sm)
+
+            # update model dict w/ default settings with loaded data
+            mldict.update(mlyml)
+
+            # add name to dictionary if not already present
+            if "name" not in mldict:
+                mldict["name"] = mlnam
+
+            # convert warmup and time_offset to panads.Timedelta
+            if "warmup" in mldict["settings"]:
+                mldict["settings"]["warmup"] = pd.Timedelta(
+                    mldict["settings"]["warmup"])
+            if "time_offset" in mldict["settings"]:
+                mldict["settings"]["time_offset"] = pd.Timedelta(
+                    mldict["settings"]["time_offset"])
+
+            # load model
+            ml = ps.io.base._load_model(mldict)
+            models.append(ml)
+
+        return models
+
+    def export_stored_models_per_oseries(
+            self,
+            oseries: Optional[Union[List[str], str]] = None,
+            outdir: Optional[str] = "."):
+        """Export store models grouped per oseries (location) to YAML file(s).
+
+        Note: The oseries names are used as file names.
+
+        Parameters
+        ----------
+        oseries : list of str, optional
+            list of oseries (location) names, by default None, which uses
+            all stored oseries for which there are models.
+        outdir : str, optional
+            path to output directory, by default "." (current directory)
+        """
+
+        onames = self.pstore.conn._parse_names(oseries, "oseries")
+
+        for onam in onames:
+            try:
+                onam = int(onam)
+            except ValueError:
+                pass
+            # check if any models exist for oseries
+            if onam not in self.pstore.oseries_models:
+                continue
+
+            model_list = self.pstore.get_models(
+                self.pstore.oseries_models[onam],
+                return_dict=True,
+                squeeze=False)
+
+            model_dicts = {}
+            for d in model_list:
+                _convert_dict_dtypes_for_yaml(d)
+                name = d.pop("name")
+                model_dicts[name] = d
+
+            with open(os.path.join(outdir, f"{onam}.yaml"), "w") as f:
+                yaml.dump(model_dicts, f, Dumper=yaml.CDumper)
+
+    def export_models(
+            self,
+            models: Optional[Union[List[ps.Model], List[Dict]]] = None,
+            modelnames: Optional[Union[List[str], str]] = None,
+            outdir: Optional[str] = ".",
+            split: Optional[bool] = True,
+            filename: Optional[str] = "pastas_models.yaml"):
+        """Export (stored) models to yaml file(s).
+
+        Parameters
+        ----------
+        models : list of ps.Model or dict, optional
+            pastas Models to write to yaml file(s), if not provided,
+            uses modelnames to collect stored models to export.
+        modelnames : list of str, optional
+            list of model names to export, by default None, which uses
+            all stored models.
+        outdir : str, optional
+            path to output directory, by default "." (current directory)
+        split : bool, optional
+            if True, split into separate yaml files, otherwise store all
+            in the same file. The model names are used as file names.
+        filename : str, optional
+            filename for YAML file, only used if `split=False`
+        """
+        if models is None:
+            modelnames = self.pstore.conn._parse_names(modelnames, "models")
+            model_list = self.pstore.get_models(modelnames,
+                                                return_dict=True,
+                                                squeeze=False)
+        else:
+            model_list = [iml.to_dict() if isinstance(iml, ps.Model)
+                          else iml for iml in models]
+
+        # each model in separate file
+        if split:
+            for ml in model_list:
+                self.export_model(ml, outdir=outdir)
+        # all models in same file
+        else:
+            model_dicts = {}
+            for d in model_list:
+                _convert_dict_dtypes_for_yaml(d)
+                name = d.pop("name")
+                model_dicts[name] = d
+
+            with open(os.path.join(outdir, filename), "w") as f:
+                yaml.dump(model_dicts, f, Dumper=yaml.CDumper)
+
+    @staticmethod
+    def export_model(ml: Union[ps.Model, dict], outdir: Optional[str] = "."):
+        """Write single pastas model to YAML file.
+
+        Parameters
+        ----------
+        ml : ps.Model or dict
+            pastas model instance or dictionary representing a pastas model
+        outdir : str, optional
+            path to output directory, by default "." (current directory)
+        """
+        if isinstance(ml, dict):
+            name = ml["name"]
+        else:
+            name = ml.name
+        with open(os.path.join(outdir, f"{name}.yaml"), "w") as f:
+            if isinstance(ml, ps.Model):
+                mldict = deepcopy(ml.to_dict(series=False))
+            elif isinstance(ml, dict):
+                mldict = ml
+            else:
+                raise TypeError("Only accepts dictionary or pastas.Model!")
+            mlname = mldict.pop("name")
+            _convert_dict_dtypes_for_yaml(mldict)
+            yaml.dump({mlname: mldict}, f, Dumper=yaml.CDumper)
