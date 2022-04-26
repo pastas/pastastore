@@ -86,12 +86,12 @@ def test_write_load_compare_yaml(request, pstore):
     return
 
 
-@ pytest.mark.dependency()
-def test_write_yaml_per_oseries(request, pstore):
-    depends(request, [f"test_load_yaml_rechargemodel[{pstore.type}]",
-                      f"test_load_yaml_stressmodel[{pstore.type}]",
-                      f"test_load_yaml_wellmodel[{pstore.type}]"])
-    pstore.yaml.export_stored_models_per_oseries()
-    os.remove("oseries1.yaml")
-    os.remove("oseries2.yaml")
-    return
+# @ pytest.mark.dependency()
+# def test_write_yaml_per_oseries(request, pstore):
+#     depends(request, [f"test_load_yaml_rechargemodel[{pstore.type}]",
+#                       f"test_load_yaml_stressmodel[{pstore.type}]",
+#                       f"test_load_yaml_wellmodel[{pstore.type}]"])
+#     pstore.yaml.export_stored_models_per_oseries()
+#     os.remove("oseries1.yaml")
+#     os.remove("oseries2.yaml")
+#     return
