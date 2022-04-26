@@ -94,26 +94,26 @@ def test_model_accessor(request, pstore):
     return
 
 
-@pytest.mark.dependency()
-def test_oseries_model_accessor(request, pstore):
-    depends(request, [f"test_store_model[{pstore.type}]"])
-    # repr
-    pstore.oseries_models.__repr__()
-    # get model names
-    ml = pstore.models["oseries1"]
-    ml_list1 = pstore.oseries_models["oseries1"]
-    assert len(ml_list1) == 1
+# @pytest.mark.dependency()
+# def test_oseries_model_accessor(request, pstore):
+#     depends(request, [f"test_store_model[{pstore.type}]"])
+#     # repr
+#     pstore.oseries_models.__repr__()
+#     # get model names
+#     ml = pstore.models["oseries1"]
+#     ml_list1 = pstore.oseries_models["oseries1"]
+#     assert len(ml_list1) == 1
 
-    # add model
-    pstore.models["oseries1_2"] = ml
-    ml_list2 = pstore.oseries_models["oseries1"]
-    assert len(ml_list2) == 2
+#     # add model
+#     pstore.models["oseries1_2"] = ml
+#     ml_list2 = pstore.oseries_models["oseries1"]
+#     assert len(ml_list2) == 2
 
-    # delete model
-    pstore.del_models("oseries1_2")
-    ml_list3 = pstore.oseries_models["oseries1"]
-    assert len(ml_list3) == 1
-    return
+#     # delete model
+#     pstore.del_models("oseries1_2")
+#     ml_list3 = pstore.oseries_models["oseries1"]
+#     assert len(ml_list3) == 1
+#     return
 
 
 @pytest.mark.dependency()
@@ -185,6 +185,20 @@ def test_solve_models_and_get_stats(request, pstore):
     stats = pstore.get_statistics(["evp", "aic"], progressbar=False)
     assert stats.index.size == 2
     return mls, stats
+
+
+@pytest.mark.dependency()
+def test_oseries_model_links(request, pstore):
+    depends(request, [f"test_create_models[{pstore.type}]"])
+    assert pstore.oseries.loc["oseries1", "linked_models"] == ["oseries1"]
+    assert pstore.oseries.loc["oseries2", "linked_models"] == ["oseries2"]
+
+    ml = pstore.models["oseries1"]
+    pstore.del_models(ml.name)
+    print(pstore.oseries.loc["oseries1", "linked_models"])
+    assert np.isnan(pstore.oseries.loc["oseries1", "linked_models"])
+    pstore.add_model(ml)
+    return
 
 
 @pytest.mark.dependency()
