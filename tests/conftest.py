@@ -4,7 +4,7 @@ import pystore
 import pytest
 
 params = ["arctic", "pystore", "dict", "pas"]
-# params = ["dict"]
+# params = ["pas"]
 
 
 def initialize_project(conn):
@@ -97,6 +97,7 @@ def pstore(request):
     pstore = initialize_project(connector)
     pstore.type = request.param  # added here for defining test dependencies
     yield pstore
+    pst.util.delete_pastastore(pstore)
 
 
 def delete_arctic_test_db():

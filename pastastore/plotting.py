@@ -101,7 +101,7 @@ class Plots:
                 iax = axes
             else:
                 iax = ax
-            iax.plot(ts.index, ts, label=n, **kwargs)
+            iax.plot(ts.index, ts.squeeze(), label=n, **kwargs)
             if split:
                 iax.legend(loc='best', fontsize="x-small")
 

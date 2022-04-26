@@ -275,6 +275,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         else:
             s = item
             is_series = False
+        
         # store info about input series to ensure same type is returned
         if metadata is None:
             metadata = {"_is_series": is_series}
@@ -547,7 +548,6 @@ class PasConnector(BaseConnector, ConnectorUtil):
 
     def _initialize(self) -> None:
         """Internal method to initialize the libraries."""
-        # set empty dictionaries for series
         for val in self._default_library_names:
             libdir = os.path.join(self.path, val)
             if not os.path.exists(libdir):
