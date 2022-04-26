@@ -798,7 +798,7 @@ class PastaStore:
         with ZipFile(fname, "r") as archive:
             namelist = [fi for fi in archive.namelist()
                         if not fi.endswith("_meta.json")]
-            for f in tqdm(namelist, desc="Reading zip"):
+            for f in (tqdm(namelist, desc="Reading zip") if progressbar else namelist):
                 libname, fjson = os.path.split(f)
                 if libname in ["stresses", "oseries"]:
                     s = pd.read_json(archive.open(f),
