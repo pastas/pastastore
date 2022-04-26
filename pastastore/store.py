@@ -173,7 +173,7 @@ class PastaStore:
             # remove self
             others.remove(series)
             series = pd.Series(others[:n], name=series)
-            data = data.append(series)
+            data = pd.concat([data, series], axis=0)
         return data
 
     def get_distances(self, oseries: Optional[Union[list, str]] = None,
@@ -264,10 +264,10 @@ class PastaStore:
         data = pd.DataFrame(columns=np.arange(n))
 
         for series in distances.index:
-            series = pd.Series(
-                distances.loc[series].dropna().sort_values().index[:n],
-                name=series)
-            data = data.append(series)
+            series = pd.DataFrame([
+                distances.loc[series].dropna().sort_values().index[:n]]
+            )
+            data = pd.concat([data, series], axis=0)
         return data
 
     def get_tmin_tmax(self, libname, names=None, progressbar=False):
