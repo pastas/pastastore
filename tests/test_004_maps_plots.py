@@ -47,6 +47,11 @@ def test_map_stresses(pstore):
     return
 
 
+def test_map_adjustText(pstore):
+    ax = pstore.maps.stresses(kind="prec", adjust=True)
+    plt.close(ax.figure)
+    return
+
 def test_map_stresslinks(pstore):
     ml = pstore.create_model("oseries1", modelname="ml1")
     pstore.add_model(ml)
