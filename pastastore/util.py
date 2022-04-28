@@ -83,7 +83,7 @@ def delete_arctic_connector(conn=None,
 
     arc = arctic.Arctic(connstr)
 
-    print(f"Deleting ArcticConnector database: '{name}' ...")
+    print(f"Deleting ArcticConnector database: '{name}' ... ", end="")
     # get library names
     if libraries is None:
         libs = []
@@ -97,12 +97,14 @@ def delete_arctic_connector(conn=None,
 
     for lib in libs:
         arc.delete_library(lib)
-        print(f" - deleted: {lib}")
-    print("... Done!")
+        if libraries is not None:
+            print()
+            print(f" - deleted: {lib}")
+    print("Done!")
 
 
 def delete_dict_connector(conn, libraries: Optional[List[str]] = None) -> None:
-    print(f"Deleting DictConnector: '{conn.name}' ...", end="")
+    print(f"Deleting DictConnector: '{conn.name}' ... ", end="")
     if libraries is None:
         del conn
         print(" Done!")
@@ -111,12 +113,12 @@ def delete_dict_connector(conn, libraries: Optional[List[str]] = None) -> None:
             print()
             delattr(conn, f"lib_{conn.libname[lib]}")
             print(f" - deleted: {lib}")
-    print("... Done!")
+    print("Done!")
 
 
 def delete_pas_connector(conn, libraries: Optional[List[str]] = None) -> None:
     import shutil
-    print(f"Deleting PasConnector database: '{conn.name}' ...", end="")
+    print(f"Deleting PasConnector database: '{conn.name}' ... ", end="")
     if libraries is None:
         shutil.rmtree(conn.path)
         print(" Done!")
@@ -125,7 +127,7 @@ def delete_pas_connector(conn, libraries: Optional[List[str]] = None) -> None:
             print()
             shutil.rmtree(os.path.join(conn.path, lib))
             print(f" - deleted: {lib}")
-        print("... Done!")
+        print("Done!")
 
 
 def delete_pastastore(pstore, libraries: Optional[List[str]] = None) -> None:
