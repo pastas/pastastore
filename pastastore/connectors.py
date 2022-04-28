@@ -266,22 +266,25 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         # (maybe has an easy fix, but converting w to_frame for now)
         if isinstance(item, pd.Series):
             s = item.to_frame(name=name)
-            is_series = True
+            is_type = "series"
         elif isinstance(item, dict):
             s = pd.DataFrame()  # empty DataFrame as placeholder
             jsondict = json.loads(json.dumps(
                 item, cls=PastasEncoder, indent=4))
             metadata = jsondict  # model dict is stored in metadata
-            is_series = False
-        else:
+            is_type = "series"
+        elif isinstance(item, list):
+            s = pd.Series(item).to_frame(name="modelnames")
+            is_type = "list"
+        elif isinstance(item, pd.DataFrame):
             s = item
-            is_series = False
-        
-        # store info about input series to ensure same type is returned
+            is_type = "dataframe"
+
+        # store info about input type to ensure same type is returned
         if metadata is None:
-            metadata = {"_is_series": is_series}
+            metadata = {"_is_type": is_type}
         else:
-            metadata["_is_series"] = is_series
+            metadata["_is_type"] = is_type
 
         lib = self._get_library(libname)
         lib.write(name, s, metadata=metadata, overwrite=overwrite)
@@ -312,11 +315,12 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             # read series and convert to pandas
             item = lib.item(name)
             s = item.to_pandas()
-            # remove _is_series key and return pd.Series
-            # if user passed in Series
-            is_series = item.metadata.pop("_is_series")
-            if is_series:
+            # remove _is_type key and return correct type
+            is_type = item.metadata.pop("_is_type")
+            if is_type == "series":
                 s = s.squeeze()
+            elif is_type == "list":
+                s = s["modelnames"].tolist()
         return s
 
     def _del_item(self, libname: str, name: str) -> None:
@@ -353,8 +357,8 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         imeta = read_metadata(lib._item_path(name))
         if "name" not in imeta.keys():
             imeta["name"] = name
-        if "_is_series" in imeta.keys():
-            imeta.pop("_is_series")
+        if "_is_type" in imeta.keys():
+            imeta.pop("_is_type")
         return imeta
 
     @property
