@@ -42,15 +42,10 @@ def test_map_oseries_w_bgmap(pstore):
 
 
 def test_map_stresses(pstore):
-    ax = pstore.maps.stresses(kind="prec")
-    plt.close(ax.figure)
-    return
-
-
-def test_map_adjustText(pstore):
     ax = pstore.maps.stresses(kind="prec", adjust=True)
     plt.close(ax.figure)
     return
+
 
 def test_map_stresslinks(pstore):
     ml = pstore.create_model("oseries1", modelname="ml1")
