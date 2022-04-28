@@ -384,6 +384,7 @@ class Plots:
             if extend:
                 statsdf = statsdf.append(
                     pd.Series(1, index=['dummy']))
+                statsdf[statsdf < 0] = 0
                 ax.set_ylim(0, 1)
             else:
                 ax.set_ylim(0, statsdf.max())
@@ -434,7 +435,7 @@ class Maps:
         """
         self.pstore = pstore
 
-    def stresses(self, kind=None, labels=True, figsize=(10, 8), **kwargs):
+    def stresses(self, kind=None, labels=True, adjust=False, figsize=(10, 8), **kwargs):
         """Plot stresses locations on map.
 
         Parameters
@@ -444,6 +445,8 @@ class Maps:
             which plots all stresses.
         labels: bool, optional
             label models, by default True
+        adjust: bool, optional
+            automated smart label placement using adjustText, by default False
         figsize: tuple, optional
             figure size, by default(10, 8)
 
@@ -468,17 +471,19 @@ class Maps:
         ax = self._plotmap_dataframe(stresses.loc[mask0], figsize=figsize,
                                      **kwargs)
         if labels:
-            self.add_labels(stresses, ax)
+            self.add_labels(stresses, ax, adjust=adjust)
 
         return ax
 
-    def oseries(self, labels=True, figsize=(10, 8), **kwargs):
+    def oseries(self, labels=True, adjust=False, figsize=(10, 8), **kwargs):
         """Plot oseries locations on map.
 
         Parameters
         ----------
         labels: bool, optional
             label models, by default True
+        adjust: bool, optional
+            automated smart label placement using adjustText, by default False
         figsize: tuple, optional
             figure size, by default(10, 8)
 
@@ -496,17 +501,19 @@ class Maps:
         ax = self._plotmap_dataframe(oseries.loc[mask0], figsize=figsize,
                                      **kwargs)
         if labels:
-            self.add_labels(oseries, ax)
+            self.add_labels(oseries, ax, adjust=adjust)
 
         return ax
 
-    def models(self, labels=True, figsize=(10, 8), **kwargs):
+    def models(self, labels=True, adjust=False, figsize=(10, 8), **kwargs):
         """Plot model locations on map.
 
         Parameters
         ----------
         labels: bool, optional
             label models, by default True
+        adjust: bool, optional
+            automated smart label placement using adjustText, by default False
         figsize: tuple, optional
             figure size, by default(10, 8)
 
@@ -531,12 +538,12 @@ class Maps:
         ax = self._plotmap_dataframe(models.loc[mask0], figsize=figsize,
                                      **kwargs)
         if labels:
-            self.add_labels(models, ax)
+            self.add_labels(models, ax, adjust=adjust)
 
         return ax
 
-    def modelstat(self, statistic, label=True, cmap="viridis", norm=None,
-                  vmin=None, vmax=None, figsize=(10, 8), **kwargs):
+    def modelstat(self, statistic, label=True, adjust=False, cmap="viridis", 
+                  norm=None, vmin=None, vmax=None, figsize=(10, 8), **kwargs):
         """Plot model statistic on map.
 
         Parameters
@@ -545,6 +552,8 @@ class Maps:
             name of the statistic, e.g. "evp" or "aic"
         label: bool, optional
             label points, by default True
+        adjust: bool, optional
+            automated smart label placement using adjustText, by default False
         cmap: str or colormap, optional
             (name of) the colormap, by default "viridis"
         norm: norm, optional
@@ -590,7 +599,7 @@ class Maps:
                                      **scatter_kwargs)
         if label:
             df.set_index("index", inplace=True)
-            self.add_labels(df, ax)
+            self.add_labels(df, ax, adjust=adjust)
         return ax
 
     @staticmethod
@@ -800,7 +809,8 @@ class Maps:
         return ax
 
     def stresslinks(self, kinds=None, model_names=None, color_lines=False,
-                    alpha=0.4, figsize=(10, 8), legend=True, labels=False):
+                    alpha=0.4, figsize=(10, 8), legend=True, labels=False,
+                    adjust=False):
         """Create a map linking models with their stresses.
 
         Parameters
@@ -822,7 +832,9 @@ class Maps:
             legend: bool, optional
                 create a legend for all unique kinds, defaults to True.
             labels: bool, optional
-                add labels for stresses, defaults to False.
+                add labels for stresses and oseries, defaults to False.
+            adjust: bool, optional
+                automated smart label placement using adjustText, by default False
         Returns
         -------
         ax: axes object
@@ -865,7 +877,8 @@ class Maps:
                                      [st.loc[s, 'x'], st.loc[s, 'y']]])
                     segment_colors.append(color)
                     if labels:
-                        self.add_labels(st, ax)
+                        self.add_labels(os, ax, adjust=adjust)
+                        self.add_labels(st, ax, adjust=adjust)
 
         ax.scatter([x[1][0] for x in segments],
                    [y[1][1] for y in segments],
@@ -938,7 +951,7 @@ class Maps:
                         **kwargs)
 
     @staticmethod
-    def add_labels(df, ax, **kwargs):
+    def add_labels(df, ax, adjust=False, **kwargs):
         """Add labels to points on plot.
 
         Uses dataframe index to label points.
@@ -949,21 +962,34 @@ class Maps:
             DataFrame containing x, y - data. Index is used as label
         ax: matplotlib.Axes
             axes object to label points on
+        adjust: bool
+            automated smart label placement using adjustText
         **kwargs:
             keyword arguments to ax.annotate
         """
-
         stroke = [patheffects.withStroke(linewidth=3, foreground="w")]
 
-        fontsize = kwargs.pop("fontsize", 10)
-        textcoords = kwargs.pop("textcoords", "offset points")
-        xytext = kwargs.pop("xytext", (10, 10))
+        if adjust:
+            from adjustText import adjust_text
 
-        for name, row in df.iterrows():
-            namestr = str(name)
-            txt = ax.annotate(text=namestr,
-                              xy=(row["x"], row["y"]),
-                              fontsize=fontsize,
-                              textcoords=textcoords,
-                              xytext=xytext)
-            txt.set_path_effects(stroke)
+            texts = []
+            for name, row in df.iterrows():
+                texts.append(ax.text(row['x'], row['y'], name,
+                                     **{"path_effects": stroke}))
+
+            adjust_text(texts, force_text=0.05, **{'arrowprops':
+                        {'arrowstyle': '-', 'color': 'k', 'alpha': 0.5}})
+
+        else:
+            fontsize = kwargs.pop("fontsize", 10)
+            textcoords = kwargs.pop("textcoords", "offset points")
+            xytext = kwargs.pop("xytext", (10, 10))
+
+            for name, row in df.iterrows():
+                namestr = str(name)
+                ax.annotate(text=namestr,
+                            xy=(row["x"], row["y"]),
+                            fontsize=fontsize,
+                            textcoords=textcoords,
+                            xytext=xytext,
+                            **{"path_effects": stroke})

@@ -42,7 +42,7 @@ def test_map_oseries_w_bgmap(pstore):
 
 
 def test_map_stresses(pstore):
-    ax = pstore.maps.stresses(kind="prec")
+    ax = pstore.maps.stresses(kind="prec", adjust=True)
     plt.close(ax.figure)
     return
 
