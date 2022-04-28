@@ -8,8 +8,7 @@ from typing import Dict, Optional, Union
 import pandas as pd
 from pastas.io.pas import PastasEncoder, pastas_hook
 
-from .base import (BaseConnector, ConnectorUtil, ModelAccessor,
-                   OseriesModelsAccessor)
+from .base import (BaseConnector, ConnectorUtil, ModelAccessor)
 from .util import _custom_warning
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
@@ -47,7 +46,9 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         self.arc = arctic.Arctic(connstr)
         self._initialize()
         self.models = ModelAccessor(self)
-        self.oseries_models = OseriesModelsAccessor(self)
+        # for older versions of PastaStore, if oseries_models library is empty
+        # populate oseries - models database
+        self._update_all_oseries_model_links()
 
     def _initialize(self) -> None:
         """Internal method to initalize the libraries."""
@@ -186,6 +187,11 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         """
         return self._get_library("models").list_symbols()
 
+    @property
+    def oseries_with_models(self):
+        """List of oseries with models."""
+        return self._get_library("oseries_models").list_symbols()
+
 
 class PystoreConnector(BaseConnector, ConnectorUtil):
 
@@ -214,7 +220,9 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         self.libs: dict = {}
         self._initialize()
         self.models = ModelAccessor(self)
-        self.oseries_models = OseriesModelsAccessor(self)
+        # for older versions of PastaStore, if oseries_models library is empty
+        # populate oseries - models database
+        self._update_all_oseries_model_links()
 
     def _initialize(self) -> None:
         """Internal method to initalize the libraries (stores)."""
@@ -394,6 +402,11 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         """
         return list(self._get_library("models").list_items())
 
+    @property
+    def oseries_with_models(self):
+        """List of oseries with models."""
+        return list(self._get_library("oseries_models").list_items())
+
 
 class DictConnector(BaseConnector, ConnectorUtil):
 
@@ -413,7 +426,9 @@ class DictConnector(BaseConnector, ConnectorUtil):
         for val in self._default_library_names:
             setattr(self, "lib_" + val, {})
         self.models = ModelAccessor(self)
-        self.oseries_models = OseriesModelsAccessor(self)
+        # for older versions of PastaStore, if oseries_models library is empty
+        # populate oseries - models database
+        self._update_all_oseries_model_links()
 
     def _get_library(self, libname: str):
         """Get reference to dictionary holding data.
@@ -449,7 +464,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
             dictionary containing metadata, by default None
         """
         lib = self._get_library(libname)
-        if libname == "models":
+        if libname in ["models", "oseries_models"]:
             lib[name] = item
         else:
             lib[name] = (metadata, item)
@@ -471,7 +486,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
             timeseries or model dictionary
         """
         lib = self._get_library(libname)
-        if libname == "models":
+        if libname in ["models", "oseries_models"]:
             item = deepcopy(lib[name])
         else:
             item = deepcopy(lib[name][1])
@@ -527,6 +542,12 @@ class DictConnector(BaseConnector, ConnectorUtil):
         lib = self._get_library("models")
         return list(lib.keys())
 
+    @property
+    def oseries_with_models(self):
+        """List of oseries with models."""
+        lib = self._get_library("oseries_models")
+        return list(lib.keys())
+
 
 class PasConnector(BaseConnector, ConnectorUtil):
 
@@ -549,7 +570,9 @@ class PasConnector(BaseConnector, ConnectorUtil):
         self.relpath = os.path.relpath(path)
         self._initialize()
         self.models = ModelAccessor(self)
-        self.oseries_models = OseriesModelsAccessor(self)
+        # for older versions of PastaStore, if oseries_models library is empty
+        # populate oseries - models database
+        self._update_all_oseries_model_links()
 
     def _initialize(self) -> None:
         """Internal method to initialize the libraries."""
@@ -559,8 +582,8 @@ class PasConnector(BaseConnector, ConnectorUtil):
                 print(f"PasConnector: library {val} created in {libdir}")
                 os.makedirs(libdir)
             else:
-                print(f"PasConnector: library {val} already exists. "
-                      f"Linking to existing directory: {libdir}")
+                print(f"PasConnector: library '{val}' already exists. "
+                      f"Linking to existing directory: '{libdir}'")
             setattr(self, f"lib_{val}", os.path.join(self.path, val))
 
     def _get_library(self, libname: str):
@@ -617,6 +640,12 @@ class PasConnector(BaseConnector, ConnectorUtil):
             fmodel = os.path.join(lib, f"{name}.pas")
             with open(fmodel, "w") as fm:
                 fm.write(jsondict)
+        # oseries_models list
+        elif isinstance(item, list):
+            jsondict = json.dumps(item)
+            fname = os.path.join(lib, f"{name}.pas")
+            with open(fname, "w") as fm:
+                fm.write(jsondict)
 
     def _get_item(self, libname: str, name: str) \
             -> Union[FrameorSeriesUnion, Dict]:
@@ -643,6 +672,10 @@ class PasConnector(BaseConnector, ConnectorUtil):
         if libname == "models":
             with open(fjson, "r") as ml_json:
                 item = json.load(ml_json, object_hook=pastas_hook)
+        # list of models per oseries
+        elif libname == "oseries_models":
+            with open(fjson, "r") as f:
+                item = json.load(f)
         # timeseries
         else:
             item = self._series_from_json(fjson)
@@ -709,4 +742,10 @@ class PasConnector(BaseConnector, ConnectorUtil):
     def model_names(self):
         """List of model names."""
         lib = self._get_library("models")
+        return [i[:-4] for i in os.listdir(lib) if i.endswith('.pas')]
+
+    @property
+    def oseries_with_models(self):
+        """List of oseries with models."""
+        lib = self._get_library("oseries_models")
         return [i[:-4] for i in os.listdir(lib) if i.endswith('.pas')]
