@@ -976,12 +976,11 @@ class Maps:
             for name, row in df.iterrows():
                 texts.append(ax.text(row['x'], row['y'], str(name),
                                      **{'path_effects': stroke}))
+
             adjust_text(texts, force_text=0.05, arrowprops=dict(
                 arrowstyle='-', color='k', alpha=0.5))
 
         else:
-            stroke = [patheffects.withStroke(linewidth=3, foreground="w")]
-
             fontsize = kwargs.pop("fontsize", 10)
             textcoords = kwargs.pop("textcoords", "offset points")
             xytext = kwargs.pop("xytext", (10, 10))
