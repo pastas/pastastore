@@ -11,6 +11,7 @@ from tqdm import tqdm
 
 from .plotting import Maps, Plots
 from .util import _custom_warning
+from .yaml_interface import PastastoreYAML
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning
@@ -49,9 +50,10 @@ class PastaStore:
         self.conn = connector
         self._register_connector_methods()
 
-        # register map and plot classes
+        # register map, plot and yaml classes
         self.maps = Maps(self)
         self.plots = Plots(self)
+        self.yaml = PastastoreYAML(self)
 
     def _register_connector_methods(self):
         """Internal method for registering connector methods."""
