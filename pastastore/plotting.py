@@ -24,7 +24,6 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import BoundaryNorm, LogNorm
 from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from adjustText import adjust_text
 
 
 class Plots:
@@ -971,6 +970,8 @@ class Maps:
         stroke = [patheffects.withStroke(linewidth=3, foreground="w")]
 
         if adjust:
+            from adjustText import adjust_text
+
             texts = []
             for name, row in df.iterrows():
                 texts.append(ax.text(row['x'], row['y'], str(name),
