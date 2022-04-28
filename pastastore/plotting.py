@@ -974,11 +974,11 @@ class Maps:
 
             texts = []
             for name, row in df.iterrows():
-                texts.append(ax.text(row['x'], row['y'], str(name),
-                                     **{'path_effects': stroke}))
+                texts.append(ax.text(row['x'], row['y'], name,
+                                     **{"path_effects": stroke}))
 
-            adjust_text(texts, force_text=0.05, arrowprops=dict(
-                arrowstyle='-', color='k', alpha=0.5))
+            adjust_text(texts, force_text=0.05, **{'arrowprops':
+                        {'arrowstyle': '-', 'color': 'k', 'alpha': 0.5}})
 
         else:
             fontsize = kwargs.pop("fontsize", 10)
