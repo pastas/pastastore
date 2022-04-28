@@ -866,9 +866,9 @@ class BaseConnector(ABC):
         Parameters
         ----------
         onam : str
-            name of oserise
+            name of oseries
         mlnames : Union[str, List[str]]
-            name or list of names of models for a oseries with name
+            model name or list of model names for an oseries with name
             onam.
         """
         # get stored list of model names
