@@ -105,6 +105,10 @@ class PastaStore:
     def oseries_models(self):
         return self.conn.oseries_models
 
+    @property
+    def oseries_with_models(self):
+        return self.conn.oseries_with_models
+
     def __repr__(self):
         """Representation string of the object."""
         return f"<PastaStore> {self.name}: \n - " + self.conn.__str__()
