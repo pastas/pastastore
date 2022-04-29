@@ -1035,6 +1035,8 @@ class ConnectorUtil:
                 return getattr(self, "stresses_names")
             elif libname == "models":
                 return getattr(self, "model_names")
+            elif libname == "oseries_models":
+                return getattr(self, "oseries_with_models")
             else:
                 raise ValueError(f"No library '{libname}'!")
         else:
