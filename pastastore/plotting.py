@@ -435,7 +435,8 @@ class Maps:
         """
         self.pstore = pstore
 
-    def stresses(self, kind=None, labels=True, adjust=False, figsize=(10, 8), **kwargs):
+    def stresses(self, kind=None, labels=True, adjust=False, figsize=(10, 8),
+                 **kwargs):
         """Plot stresses locations on map.
 
         Parameters
@@ -542,7 +543,7 @@ class Maps:
 
         return ax
 
-    def modelstat(self, statistic, label=True, adjust=False, cmap="viridis", 
+    def modelstat(self, statistic, label=True, adjust=False, cmap="viridis",
                   norm=None, vmin=None, vmax=None, figsize=(10, 8), **kwargs):
         """Plot model statistic on map.
 
@@ -834,7 +835,8 @@ class Maps:
             labels: bool, optional
                 add labels for stresses and oseries, defaults to False.
             adjust: bool, optional
-                automated smart label placement using adjustText, by default False
+                automated smart label placement using adjustText, by
+                default False
         Returns
         -------
         ax: axes object

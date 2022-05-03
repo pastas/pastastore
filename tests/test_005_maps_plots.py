@@ -4,10 +4,6 @@ import matplotlib.pyplot as plt
 import pytest
 from pytest_dependency import depends
 
-with warnings.catch_warnings():
-    warnings.simplefilter(action="ignore", category=FutureWarning)
-    import pastastore as pst
-
 # %% plots
 
 

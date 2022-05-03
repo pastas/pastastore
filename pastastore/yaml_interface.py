@@ -422,7 +422,8 @@ class PastastoreYAML:
                         smtyp = smyml["stressmodel"]
                     else:
                         logger.info(
-                            "| no 'stressmodel' type provided, using 'StressModel'")
+                            "| no 'stressmodel' type provided, "
+                            "using 'StressModel'")
                         smtyp = "StressModel"
 
                 # parse dictionary based on smtyp
