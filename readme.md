@@ -40,19 +40,20 @@ fast read/write operations, while also compressing the stored data.
 Install the module by typing `pip install pastastore`.
 
 For installing in development mode, clone the repository and install by
-typing `pip install -e .` from the module root directory. 
+typing `pip install -e .` from the module root directory.
 
-Pastastore has some optional dependencies which can be usefull if one want to 
-use all functionalities of this package. The current optional dependencies
-are adjustText, pyproj and contextily. There are external dependencies when 
-using the `pystore` or `arctic` connectors as well. To install these
+For a full install, including an optional dependency for plotting and labeling data 
+on maps, use: `pip install pastastore[full]` or `pip install .[full]`.
+
+For plotting backgroundmaps, the `contextily` and 'pyproj' packages are required. 
+On MacOS or Linux, these package can be installed with `pip install pastastore[full,contextily]` or 
+`pip install .[full,contextily]`. On Windows users are asked to install `contextily`
+themselves, as it depends on `rasterio` which often cannot be installed with `pip`.
+
+There are external dependencies when 
+using the `pystore` or `arctic` connectors. To install these
 dependencies read (see [Connector Dependencies section](#dependencies))! 
-since these are _not_ automatically installed. The adjustText, pyproj and 
-contextily package can be automatically installed using `pip install 
-pastastore[full]` or `pip install -e .[full]` when using Windows. MacOS or 
-Linux users can use `pastastore[full,contextily]` to install contextily 
-(and importantly rasterio) as well. Windows users are asked to install 
-rasterio and contextily seperately.
+since these are _not_ automatically installed.
 
 
 ## Usage
