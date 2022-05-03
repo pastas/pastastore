@@ -5,3 +5,4 @@ pastas>=0.13.0
 contextily
 pyproj
 adjustText
+dask[dataframe]<=2022.4.1
