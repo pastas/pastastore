@@ -5,4 +5,7 @@ pastas>=0.13.0
 contextily
 pyproj
 adjustText
+fsspec>=0.3.3
+python-snappy
 dask[dataframe]<=2022.4.1
+pystore
