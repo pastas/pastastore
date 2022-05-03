@@ -40,11 +40,20 @@ fast read/write operations, while also compressing the stored data.
 Install the module by typing `pip install pastastore`.
 
 For installing in development mode, clone the repository and install by
-typing `pip install -e .` from the module root directory.
+typing `pip install -e .` from the module root directory. 
 
-Please note that there are external dependencies when using connectors based on 
-`pystore` or `arctic`. These dependencies are _not_ automatically installed 
-(see [Dependencies section](#dependencies))!
+Pastastore has some optional dependencies which can be usefull if one want to 
+explore the full potential of this package. The current optional dependencies
+are adjustText, pyproj and contextily. There are external dependencies when 
+using connectors based on `pystore` or `arctic` as well. To install these
+dependencies we refer to the (see [Dependencies section](#connector dependencies))! 
+since these are _not_ automatically installed. The adjustText, pyproj and 
+contextily package can be automatically installed using `pip install 
+pastastore[full]` or `pip install -e .[full]` when using Windows. MacOS or 
+Linux users can use `pastastore[full,contextily]` to install contextily 
+(and rasterio) as well. Windows users are asked to install rasterio and 
+contextily seperately.
+
 
 ## Usage
 
@@ -130,7 +139,7 @@ is equivalent to:
 series = store.get_oseries("my_oseries")
 ```
 
-## Dependencies
+## Connector Dependencies
 
 This module has several dependencies (depending on which connector is used):
 
