@@ -45,7 +45,7 @@ typing `pip install -e .` from the module root directory.
 For a full install, including an optional dependency for plotting and labeling data 
 on maps, use: `pip install pastastore[full]` or `pip install .[full]`.
 
-For plotting backgroundmaps, the `contextily` and 'pyproj' packages are required. 
+For plotting backgroundmaps, the `contextily` and `pyproj` packages are required. 
 On MacOS or Linux, these package can be installed with `pip install pastastore[full,contextily]` or 
 `pip install .[full,contextily]`. On Windows users are asked to install `contextily`
 themselves, as it depends on `rasterio` which often cannot be installed with `pip`.
