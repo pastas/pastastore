@@ -43,16 +43,16 @@ For installing in development mode, clone the repository and install by
 typing `pip install -e .` from the module root directory. 
 
 Pastastore has some optional dependencies which can be usefull if one want to 
-explore the full potential of this package. The current optional dependencies
+use all functionalities of this package. The current optional dependencies
 are adjustText, pyproj and contextily. There are external dependencies when 
-using connectors based on `pystore` or `arctic` as well. To install these
-dependencies we refer to the (see [Dependencies section](#connector dependencies))! 
+using the `pystore` or `arctic` connectors as well. To install these
+dependencies read (see [Connector Dependencies section](#dependencies))! 
 since these are _not_ automatically installed. The adjustText, pyproj and 
 contextily package can be automatically installed using `pip install 
 pastastore[full]` or `pip install -e .[full]` when using Windows. MacOS or 
 Linux users can use `pastastore[full,contextily]` to install contextily 
-(and rasterio) as well. Windows users are asked to install rasterio and 
-contextily seperately.
+(and importantly rasterio) as well. Windows users are asked to install 
+rasterio and contextily seperately.
 
 
 ## Usage
