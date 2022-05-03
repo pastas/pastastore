@@ -37,9 +37,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install flake8 pytest
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install python-snappy
           pip install fsspec>=0.3.3
-          pip install dask[dataframe]<=2022.4.1 --upgrade
+          pip install dask[dataframe]==2022.4.1 --upgrade
+          pip install python-snappy
           pip install pystore
           pip install git+https://github.com/manahl/arctic.git
           pip install pandas==1.1.5
