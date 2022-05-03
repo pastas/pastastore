@@ -33,4 +33,6 @@ setup(
                       "pastas>=0.13"],
     packages=find_packages(exclude=[]),
     include_package_data=True,
+    extras_require={'full': ['adjustText','pyproj'],
+                    'contextily': ['contextily']}
 )
