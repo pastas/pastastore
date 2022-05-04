@@ -30,7 +30,10 @@ setup(
     ],
     platforms='Windows, MacOS, *nix',
     install_requires=["tqdm>=4.36",
-                      "pastas>=0.13"],
+                      "pastas>=0.13",
+                      "pyyaml"],
     packages=find_packages(exclude=[]),
     include_package_data=True,
+    extras_require={'adjusttext': ['adjustText'],
+                    'full': ['contextily','pyproj','adjustText']}
 )

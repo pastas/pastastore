@@ -537,7 +537,7 @@ class PastastoreYAML:
                                                 return_dict=True,
                                                 squeeze=False)
         else:
-            model_list = [iml.to_dict() if isinstance(iml, ps.Model)
+            model_list = [iml.to_dict(series=False) if isinstance(iml, ps.Model)
                           else iml for iml in models]
 
         # each model in separate file
