@@ -42,17 +42,16 @@ Install the module by typing `pip install pastastore`.
 For installing in development mode, clone the repository and install by
 typing `pip install -e .` from the module root directory.
 
-For a full install, including an optional dependency for plotting and labeling data 
-on maps, use: `pip install pastastore[full]` or `pip install .[full]`.
-
 For plotting backgroundmaps, the `contextily` and `pyproj` packages are required. 
-On MacOS or Linux, these package can be installed with `pip install pastastore[full,contextily]` or 
-`pip install .[full,contextily]`. On Windows users are asked to install `contextily`
-themselves, as it depends on `rasterio` which often cannot be installed with `pip`.
+For a full install, including an optional dependency for plotting and labeling data 
+on maps, use: `pip install pastastore[full]` or `pip install .[full]` when on MacOS
+or Linux. Windows users are asked to install `rasterio` themselves since it often 
+cannot be installed using `pip`. `rasterio` is a dependency of `contextily`. 
+Windows can install `pastastore` with the optional labeling package adjustText 
+using `pip install pastastore[adjusttext]` or `.[adjusttext]`
 
-There are external dependencies when 
-using the `pystore` or `arctic` connectors. To install these
-dependencies read (see [Connector Dependencies section](#dependencies))! 
+There are external dependencies when using the `pystore` or `arctic` connectors. 
+To install these dependencies read (see [Connector Dependencies section](#dependencies))! 
 since these are _not_ automatically installed.
 
 
