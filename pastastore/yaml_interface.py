@@ -47,7 +47,7 @@ def replace_ts_with_name(d, nearest=False):
     d : dict
         pastas model dictionary
     nearest : bool, optional
-        replace timeseries with "nearest" option. Warning, this does not 
+        replace timeseries with "nearest" option. Warning, this does not
         check whether the timeseries are actually the nearest ones!
     """
     for k, v in d.items():
