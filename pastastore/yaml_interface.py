@@ -25,6 +25,10 @@ def _convert_dict_dtypes_for_yaml(d: Dict):
     for k, v in d.items():
         if isinstance(v, dict):
             _convert_dict_dtypes_for_yaml(v)
+        elif isinstance(v, list) and k == "stress":
+            for iv in v:
+                if isinstance(iv, dict):
+                    _convert_dict_dtypes_for_yaml(iv)
         elif isinstance(v, pd.Timestamp):
             d[k] = v.strftime("%Y-%m-%d %H:%M:%S")
         elif isinstance(v, pd.Timedelta):
@@ -33,6 +37,75 @@ def _convert_dict_dtypes_for_yaml(d: Dict):
             d[k] = int(v)
         elif isinstance(v, pd.DataFrame):
             d[k] = v.reset_index().to_dict(orient="records")
+
+
+def replace_ts_with_name(d, nearest=False):
+    """Replace timeseries dict with its name in pastas model dict.
+
+    Parameters
+    ----------
+    d : dict
+        pastas model dictionary
+    nearest : bool, optional
+        replace timeseries with "nearest" option. Warning, this does not
+        check whether the timeseries are actually the nearest ones!
+    """
+    for k, v in d.items():
+        if k in ["oseries", "prec", "evap", "stress"]:
+            if isinstance(v, dict):
+                if nearest and k != "oseries":
+                    if k == "stress":
+                        d[k] = "nearest <kind>"
+                    else:
+                        d[k] = f"nearest {k}"
+                else:
+                    d[k] = v["name"]
+            elif isinstance(v, list):
+                if nearest:
+                    d[k] = f"nearest {len(v)} well"
+                else:
+                    d[k] = [iv["name"] for iv in v]
+        elif isinstance(v, dict):
+            replace_ts_with_name(v, nearest=nearest)
+
+
+def reduce_to_minimal_dict(d, keys=None):
+    """Reduce pastas model dictionary to a minimal form.
+
+    This minimal form strives to keep the minimal information that still
+    allows a model to be constructed. Users are warned, reducing a model
+    dictionary with this function can lead to a different model than
+    the original!
+
+    Parameters
+    ----------
+    d : dict
+        pastas model in dictionary form
+    keys : list, optional
+        list of keys to keep, by default None, which defaults to:
+        ["name", "oseries", "settings", "tmin", "tmax", "noise",
+        "stressmodels", "rfunc", "stress", "prec", "evap", "stressmodel"]
+    """
+
+    if keys is None:
+        keys = ["name",
+                "oseries",
+                "settings", "tmin", "tmax", "noise",
+                "stressmodels",
+                "rfunc", "stress", "prec", "evap", "stressmodel"]
+
+    # also keep stressmodels by adding names to keys list
+    if "stressmodels" in d:
+        keys += list(d["stressmodels"].keys())
+
+    iter_d = d.copy()  # copy dictionary to use as iterator
+
+    # delete keys if not in keys list or if value is None
+    for k, v in iter_d.items():
+        if (k not in keys) or (v is None):
+            del d[k]
+        elif isinstance(v, dict):
+            reduce_to_minimal_dict(v, keys=keys)
 
 
 class PastastoreYAML:
@@ -437,8 +510,9 @@ class PastastoreYAML:
                     # parse WellModel
                     sm = self._parse_wellmodel_dict(smyml, onam=onam)
                 else:
-                    raise NotImplementedError("pastas yaml interface does "
-                                              f"not (yet) support '{smtyp}'!")
+                    raise NotImplementedError(
+                        "PastaStore.yaml interface does "
+                        f"not (yet) support '{smtyp}'!")
 
                 # add to list
                 smyml.update(sm)
@@ -467,7 +541,9 @@ class PastastoreYAML:
     def export_stored_models_per_oseries(
             self,
             oseries: Optional[Union[List[str], str]] = None,
-            outdir: Optional[str] = "."):
+            outdir: Optional[str] = ".",
+            minimal_yaml: Optional[bool] = False,
+            use_nearest: Optional[bool] = False):
         """Export store models grouped per oseries (location) to YAML file(s).
 
         Note: The oseries names are used as file names.
@@ -479,6 +555,16 @@ class PastastoreYAML:
             all stored oseries for which there are models.
         outdir : str, optional
             path to output directory, by default "." (current directory)
+        minimal_yaml : bool, optional
+            reduce yaml file to include the minimum amount of information
+            that will still construct a model. Users are warned, using this
+            option does not guarantee the same model will be constructed
+            as the one that was exported! Default is False.
+        use_nearest : bool, optional
+            if True, replaces timeseries with "nearest <kind>", filling in
+            kind where possible. Warning! This does not check whether
+            the timeseries are actually the nearest ones! Only used
+            when minimal_yaml=True. Default is False.
         """
 
         onames = self.pstore.conn._parse_names(oseries, "oseries")
@@ -499,6 +585,9 @@ class PastastoreYAML:
 
             model_dicts = {}
             for d in model_list:
+                if minimal_yaml:
+                    replace_ts_with_name(d, nearest=use_nearest)
+                    reduce_to_minimal_dict(d)
                 _convert_dict_dtypes_for_yaml(d)
                 name = d.pop("name")
                 model_dicts[name] = d
@@ -511,6 +600,8 @@ class PastastoreYAML:
             models: Optional[Union[List[ps.Model], List[Dict]]] = None,
             modelnames: Optional[Union[List[str], str]] = None,
             outdir: Optional[str] = ".",
+            minimal_yaml: Optional[bool] = False,
+            use_nearest: Optional[bool] = False,
             split: Optional[bool] = True,
             filename: Optional[str] = "pastas_models.yaml"):
         """Export (stored) models to yaml file(s).
@@ -525,6 +616,16 @@ class PastastoreYAML:
             all stored models.
         outdir : str, optional
             path to output directory, by default "." (current directory)
+        minimal_yaml : bool, optional
+            reduce yaml file to include the minimum amount of information
+            that will still construct a model. Users are warned, using this
+            option does not guarantee the same model will be constructed
+            as the one that was exported! Default is False.
+        use_nearest : bool, optional
+            if True, replaces timeseries with "nearest <kind>", filling in
+            kind where possible. Warning! This does not check whether
+            the timeseries are actually the nearest ones! Only used
+            when minimal_yaml=True. Default is False.
         split : bool, optional
             if True, split into separate yaml files, otherwise store all
             in the same file. The model names are used as file names.
@@ -537,17 +638,21 @@ class PastastoreYAML:
                                                 return_dict=True,
                                                 squeeze=False)
         else:
-            model_list = [iml.to_dict(series=False) if isinstance(iml, ps.Model)
+            model_list = [iml.to_dict(series=False)
+                          if isinstance(iml, ps.Model)
                           else iml for iml in models]
 
         # each model in separate file
         if split:
             for ml in model_list:
-                self.export_model(ml, outdir=outdir)
+                self.export_model(ml, outdir=outdir, minimal_yaml=minimal_yaml)
         # all models in same file
         else:
             model_dicts = {}
             for d in model_list:
+                if minimal_yaml:
+                    replace_ts_with_name(d, nearest=use_nearest)
+                    reduce_to_minimal_dict(d)
                 _convert_dict_dtypes_for_yaml(d)
                 name = d.pop("name")
                 model_dicts[name] = d
@@ -556,7 +661,10 @@ class PastastoreYAML:
                 yaml.dump(model_dicts, f, Dumper=yaml.CDumper)
 
     @staticmethod
-    def export_model(ml: Union[ps.Model, dict], outdir: Optional[str] = "."):
+    def export_model(ml: Union[ps.Model, dict],
+                     outdir: Optional[str] = ".",
+                     minimal_yaml: Optional[bool] = False,
+                     use_nearest: Optional[bool] = False):
         """Write single pastas model to YAML file.
 
         Parameters
@@ -565,6 +673,16 @@ class PastastoreYAML:
             pastas model instance or dictionary representing a pastas model
         outdir : str, optional
             path to output directory, by default "." (current directory)
+        minimal_yaml : bool, optional
+            reduce yaml file to include the minimum amount of information
+            that will still construct a model. Users are warned, using this
+            option does not guarantee the same model will be constructed
+            as the one that was exported! Default is False.
+        use_nearest : bool, optional
+            if True, replaces timeseries with "nearest <kind>", filling in
+            kind where possible. Warning! This does not check whether
+            the timeseries are actually the nearest ones! Only used
+            when minimal_yaml=True. Default is False.
         """
         if isinstance(ml, dict):
             name = ml["name"]
@@ -578,5 +696,8 @@ class PastastoreYAML:
             else:
                 raise TypeError("Only accepts dictionary or pastas.Model!")
             mlname = mldict.pop("name")
+            if minimal_yaml:
+                replace_ts_with_name(mldict, nearest=use_nearest)
+                reduce_to_minimal_dict(mldict)
             _convert_dict_dtypes_for_yaml(mldict)
             yaml.dump({mlname: mldict}, f, Dumper=yaml.CDumper)
