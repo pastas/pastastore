@@ -856,6 +856,7 @@ class Maps:
         oseries = self.pstore.oseries
         stresses = self.pstore.stresses
         skind = stresses.kind.unique()
+        stused = np.array([])
         if kinds is None:
             kinds = skind
 
@@ -878,9 +879,12 @@ class Maps:
                     segments.append([[os['x'], os['y']],
                                      [st.loc[s, 'x'], st.loc[s, 'y']]])
                     segment_colors.append(color)
-                    if labels:
-                        self.add_labels(os, ax, adjust=adjust)
-                        self.add_labels(st, ax, adjust=adjust)
+
+                    stused = np.append(stused, s)
+
+        if labels:                
+            self.add_labels(oseries.loc[struct['oseries'].unique()], ax, adjust=adjust)
+            self.add_labels(stresses.loc[np.unique(stused)], ax, adjust=adjust)
 
         ax.scatter([x[1][0] for x in segments],
                    [y[1][1] for y in segments],
