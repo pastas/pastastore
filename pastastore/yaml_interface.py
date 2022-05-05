@@ -284,6 +284,9 @@ class PastastoreYAML:
         # get stress
         snam = d.pop("stress")
 
+        # if list, obtain first and only entry
+        if isinstance(snam, list):
+            snam = snam[0]
         # if str, either name of single series or 'nearest <kind>'
         if snam.startswith("nearest"):
             if len(snam.split()) > 1:
