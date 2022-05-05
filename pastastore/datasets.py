@@ -4,7 +4,7 @@ import pandas as pd
 import pastas as ps
 
 import pastastore as pst
-
+from pastastore.base import BaseConnector
 
 def example_pastastore(conn="DictConnector"):
     """Example dataset loaded into PastaStore.
@@ -29,7 +29,7 @@ def example_pastastore(conn="DictConnector"):
                                 "Clone repository from GitHub.")
 
     # initialize default connector if conn is str
-    if not isinstance(conn, pst.base.BaseConnector):
+    if not isinstance(conn, BaseConnector):
         conn = _default_connector(conn)
 
     # initialize PastaStore
