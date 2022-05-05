@@ -396,6 +396,8 @@ class BaseConnector(ABC):
         if not isinstance(name, str):
             name = str(name)
         if name not in self.model_names or overwrite:
+            # check if stressmodels supported
+            self._check_stressmodels_supported(ml)
             # check if oseries and stresses exist in store
             self._check_model_series_names_for_store(ml)
             self._check_oseries_in_store(ml)
@@ -1197,6 +1199,29 @@ class ConnectorUtil:
         if isinstance(series, pd.DataFrame):
             series.columns = [name]
         return series
+
+    @staticmethod
+    def _check_stressmodels_supported(ml):
+        supported_stressmodels = [
+            "StressModel",
+            "StressModel2",
+            "RechargeModel",
+            "WellModel",
+            "TarsoModel",
+            "Constant",
+            "LinearTrend",
+            "StepModel",
+        ]
+        if isinstance(ml, ps.Model):
+            smtyps = [sm._name for sm in ml.stressmodels.values()]
+        elif isinstance(ml, dict):
+            smtyps = [sm["stressmodel"] for sm in ml["stressmodels"].values()]
+        check = isin(smtyps, supported_stressmodels)
+        if not all(check):
+            unsupported = set(smtyps) - set(supported_stressmodels)
+            raise NotImplementedError(
+                "PastaStore does not support storing models with the "
+                f"following stressmodels: {unsupported}")
 
     @staticmethod
     def _check_model_series_names_for_store(ml):
