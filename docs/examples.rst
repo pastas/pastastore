@@ -1,13 +1,13 @@
 ========
 Examples
 ========
-This page provides some short examples and an example application in a
-Jupyter Notebook. The following snippets show typical usage.
+This page provides some short examples and example applications in 
+Jupyter Notebooks. The following snippets show typical usage.
 
 The general idea is to first define the connector object. This object manages
 the communication between the user and the data store. The the next step is to
 pass that connector to the `PastaStore` to access all of the useful methods
-for creating and solving timeseries models.
+for building timeseries models.
 
 In-memory
 ---------
@@ -19,7 +19,7 @@ is stored in-memory (in dictionaries)::
    import pastastore as pst
 
    # define dict connector
-   conn = pst.DictConnect("my_connector")
+   conn = pst.DictConnect("my_db")
 
    # create project for managing Pastas data and models
    store = pst.PastaStore("my_project", conn)
@@ -36,7 +36,7 @@ that writes data to disk as no external dependencies are required::
 
    # define pas connector
    path = "./data/pas"
-   conn = pst.PasConnector("my_connector", path)
+   conn = pst.PasConnector("my_db", path)
 
    # create project for managing Pastas data and models
    store = pst.PastaStore("my_project", conn)
@@ -53,7 +53,7 @@ this to work::
 
    # define arctic connector
    connstr = "mongodb://localhost:27017/"
-   conn = pst.ArcticConnector("my_connector", connstr)
+   conn = pst.ArcticConnector("my_db", connstr)
 
    # create project for managing Pastas data and models
    store = pst.PastasProject("my_project", conn)
@@ -68,7 +68,7 @@ connection string to a database::
 
    # define pystore connector
    path = "./data/pystore"
-   conn = pst.PystoreConnector("my_connector", path)
+   conn = pst.PystoreConnector("my_db", path)
 
    # create project for managing Pastas data and models
    store = pst.PastasProject("my_project", conn)
@@ -82,7 +82,7 @@ determining which timeseries are closest to one another. The database
 read/write/delete methods can be accessed directly from the `PastaStore` 
 object::
 
-   # create a timeseries
+   # create a new timeseries
    series = pd.Series(index=pd.date_range("2019", "2020", freq="D"), data=1.0)
    
    # add an observation timeseries
