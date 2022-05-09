@@ -242,10 +242,6 @@ class PastastoreYAML:
                 f"Could not parse evap value: '{evap_val}'")
         d["evap"] = evap.to_dict()
 
-        # recharge type (i.e. Linear, FlexModel, etc.)
-        if "recharge" not in d:
-            logger.info("  | no 'recharge' type provided, using 'Linear'")
-
         # rfunc
         if "rfunc" not in d:
             logger.info("  | no 'rfunc' provided, using 'Exponential'")
@@ -253,6 +249,26 @@ class PastastoreYAML:
         # stressmodel
         if "stressmodel" not in d:
             d["stressmodel"] = "RechargeModel"
+
+        # recharge type (i.e. Linear, FlexModel, etc.)
+        if ("recharge" not in d) and (d["stressmodel"] == "RechargeModel"):
+            logger.info("  | no 'recharge' type provided, using 'Linear'")
+
+        # tarsomodel logic
+        if d["stressmodel"] == "TarsoModel":
+            dmin = d.get("dmin", None)
+            dmax = d.get("dmin", None)
+            oseries = d.get("oseries", None)
+            if ((dmin is None) or (dmax is None)) and (oseries is None):
+                logger.info("  | no 'dmin/dmax' or 'oseries' provided,"
+                            f" filling in 'oseries': '{onam}'")
+                d["oseries"] = onam
+
+        if "oseries" in d:
+            onam = d["oseries"]
+            if isinstance(onam, str):
+                o = self.pstore.get_oseries(onam)
+                d["oseries"] = o
 
         return d
 
@@ -503,7 +519,7 @@ class PastastoreYAML:
                         smtyp = "StressModel"
 
                 # parse dictionary based on smtyp
-                if smtyp == "RechargeModel":
+                if smtyp in ["RechargeModel", "TarsoModel"]:
                     # parse RechargeModel
                     sm = self._parse_rechargemodel_dict(smyml, onam=onam)
                 elif smtyp == "StressModel":
