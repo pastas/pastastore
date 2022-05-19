@@ -331,9 +331,9 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
     # compare
     df["comparison"] = df.iloc[:, 0] == df.iloc[:, 1]
 
-    # allclose for params
+    # isclose for params
     param_mask = df.index.str.startswith("param: ")
-    df.loc[param_mask, "comparison"] = np.allclose(
+    df.loc[param_mask, "comparison"] = np.isclose(
         df.loc[param_mask, "model 0"].astype(float).values,
         df.loc[param_mask, "model 1"].astype(float).values)
 
@@ -344,8 +344,8 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
     # for stats comparison must be almost_equal
     if stats:
         stats_idx = [f"stats: {s}" for s in stats]
-        b = np.allclose(df.loc[stats_idx, "model 0"].astype(float).values,
-                        df.loc[stats_idx, "model 1"].astype(float).values)
+        b = np.isclose(df.loc[stats_idx, "model 0"].astype(float).values,
+                       df.loc[stats_idx, "model 1"].astype(float).values)
         df.loc[stats_idx, "comparison"] = b
 
     if detailed_comparison:
