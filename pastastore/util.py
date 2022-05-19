@@ -321,7 +321,7 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
             df.loc[f"param: {p} (init)", f"model {i}"] = \
                 ml.parameters.loc[p, "initial"]
             df.loc[f"param: {p} (opt)", f"model {i}"] = \
-                ml.parameters.loc[p, "initial"]
+                ml.parameters.loc[p, "optimal"]
 
         if stats:
             stats_df = ml.stats.summary(stats=stats)
