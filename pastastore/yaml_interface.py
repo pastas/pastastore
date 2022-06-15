@@ -522,6 +522,10 @@ class PastastoreYAML:
                 if smtyp in ["RechargeModel", "TarsoModel"]:
                     # parse RechargeModel
                     sm = self._parse_rechargemodel_dict(smyml, onam=onam)
+
+                    # turn off constant for TarsoModel
+                    if smtyp == "TarsoModel":
+                        mldict["constant"] = False
                 elif smtyp == "StressModel":
                     # parse StressModel
                     sm = self._parse_stressmodel_dict(smyml, onam=onam)
