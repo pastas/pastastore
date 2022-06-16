@@ -623,7 +623,9 @@ class PastaStore:
             mls = [mls.name]
 
         desc = "Solving models"
-        for ml in (tqdm(mls, desc=desc) if progressbar else mls):
+        for ml_name in (tqdm(mls, desc=desc) if progressbar else mls):
+            ml = self.conn.get_models(ml_name)
+
             m_kwargs = {}
             for key, value in kwargs.items():
                 if isinstance(value, pd.Series):
