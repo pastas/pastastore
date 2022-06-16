@@ -629,7 +629,7 @@ class PastaStore:
             m_kwargs = {}
             for key, value in kwargs.items():
                 if isinstance(value, pd.Series):
-                    m_kwargs[key] = value.loc[ml.name]
+                    m_kwargs[key] = value.loc[ml_name]
                 else:
                     m_kwargs[key] = value
             # Convert timestamps
