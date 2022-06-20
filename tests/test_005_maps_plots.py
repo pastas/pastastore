@@ -1,5 +1,3 @@
-import warnings
-
 import matplotlib.pyplot as plt
 import pytest
 from pytest_dependency import depends
