@@ -76,6 +76,13 @@ Maps
    :private-members:
 
 
+Yaml
+----
+
+.. automodule:: pastastore.yaml_interface
+   :members:
+
+
 Util
 ----
 

@@ -4,7 +4,7 @@ import pystore
 import pytest
 
 params = ["arctic", "pystore", "dict", "pas"]
-# params = ["dict"]
+# params = ["pas"]
 
 
 def initialize_project(conn):
@@ -97,3 +97,12 @@ def pstore(request):
     pstore = initialize_project(connector)
     pstore.type = request.param  # added here for defining test dependencies
     yield pstore
+    pst.util.delete_pastastore(pstore)
+
+
+def delete_arctic_test_db():
+    connstr = "mongodb://localhost:27017/"
+    name = "test_project"
+    connector = pst.ArcticConnector(name, connstr)
+    pst.util.delete_arctic_connector(connector)
+    print("ArcticConnector 'test_project' deleted.")

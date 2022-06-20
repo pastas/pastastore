@@ -47,7 +47,7 @@ def test_add_get_series_wnans(request, conn):
         o2 = o2.squeeze()
     try:
         assert isinstance(o2, pd.Series)
-        assert o1.equals(o2).all()
+        assert o1.equals(o2)
     finally:
         conn.del_oseries("test_series_nans")
     return
@@ -61,7 +61,8 @@ def test_add_get_dataframe(request, conn):
     o2 = conn.get_oseries("test_df")
     try:
         assert isinstance(o2, pd.DataFrame)
-        assert (o1 == o2).all().all()
+        # little hack as PasConnector has dtype int after load...
+        assert o1.equals(o2.astype(float))
     finally:
         conn.del_oseries("test_df")
     return

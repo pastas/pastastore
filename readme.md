@@ -42,9 +42,18 @@ Install the module by typing `pip install pastastore`.
 For installing in development mode, clone the repository and install by
 typing `pip install -e .` from the module root directory.
 
-Please note that there are external dependencies when using connectors based on 
-`pystore` or `arctic`. These dependencies are _not_ automatically installed 
-(see [Dependencies section](#dependencies))!
+For plotting backgroundmaps, the `contextily` and `pyproj` packages are required. 
+For a full install, including an optional dependency for plotting and labeling data 
+on maps, use: `pip install pastastore[full]` or `pip install .[full]` when on MacOS
+or Linux. Windows users are asked to install `rasterio` themselves since it often 
+cannot be installed using `pip`. `rasterio` is a dependency of `contextily`. 
+Windows can install `pastastore` with the optional labeling package adjustText 
+using `pip install pastastore[adjusttext]` or `.[adjusttext]`
+
+There are external dependencies when using the `pystore` or `arctic` connectors. 
+To install these dependencies read (see [Connector Dependencies section](#dependencies))! 
+since these are _not_ automatically installed.
+
 
 ## Usage
 
@@ -130,7 +139,7 @@ is equivalent to:
 series = store.get_oseries("my_oseries")
 ```
 
-## Dependencies
+## Connector Dependencies
 
 This module has several dependencies (depending on which connector is used):
 

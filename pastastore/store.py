@@ -11,6 +11,7 @@ from tqdm import tqdm
 
 from .plotting import Maps, Plots
 from .util import _custom_warning
+from .yaml_interface import PastastoreYAML
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning
@@ -49,9 +50,10 @@ class PastaStore:
         self.conn = connector
         self._register_connector_methods()
 
-        # register map and plot classes
+        # register map, plot and yaml classes
         self.maps = Maps(self)
         self.plots = Plots(self)
+        self.yaml = PastastoreYAML(self)
 
     def _register_connector_methods(self):
         """Internal method for registering connector methods."""
@@ -104,6 +106,10 @@ class PastaStore:
     @property
     def oseries_models(self):
         return self.conn.oseries_models
+
+    @property
+    def oseries_with_models(self):
+        return self.conn.oseries_with_models
 
     def __repr__(self):
         """Representation string of the object."""
@@ -173,7 +179,7 @@ class PastaStore:
             # remove self
             others.remove(series)
             series = pd.Series(others[:n], name=series)
-            data = data.append(series)
+            data = pd.concat([data, series], axis=0)
         return data
 
     def get_distances(self, oseries: Optional[Union[list, str]] = None,
@@ -264,10 +270,10 @@ class PastaStore:
         data = pd.DataFrame(columns=np.arange(n))
 
         for series in distances.index:
-            series = pd.Series(
-                distances.loc[series].dropna().sort_values().index[:n],
-                name=series)
-            data = data.append(series)
+            series = pd.DataFrame([
+                distances.loc[series].dropna().sort_values().index[:n]]
+            )
+            data = pd.concat([data, series], axis=0)
         return data
 
     def get_tmin_tmax(self, libname, names=None, progressbar=False):
@@ -612,7 +618,7 @@ class PastaStore:
             arguments are passed to the solve method.
         """
         if mls is None:
-            mls = self.conn.models
+            mls = self.conn.model_names
         elif isinstance(mls, ps.Model):
             mls = [mls.name]
 
@@ -798,7 +804,8 @@ class PastaStore:
         with ZipFile(fname, "r") as archive:
             namelist = [fi for fi in archive.namelist()
                         if not fi.endswith("_meta.json")]
-            for f in tqdm(namelist, desc="Reading zip"):
+            for f in (tqdm(namelist, desc="Reading zip") if progressbar
+                      else namelist):
                 libname, fjson = os.path.split(f)
                 if libname in ["stresses", "oseries"]:
                     s = pd.read_json(archive.open(f),

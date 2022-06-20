@@ -83,7 +83,7 @@ def delete_arctic_connector(conn=None,
 
     arc = arctic.Arctic(connstr)
 
-    print(f"Deleting ArcticConnector database: '{name}' ...")
+    print(f"Deleting ArcticConnector database: '{name}' ... ", end="")
     # get library names
     if libraries is None:
         libs = []
@@ -97,12 +97,14 @@ def delete_arctic_connector(conn=None,
 
     for lib in libs:
         arc.delete_library(lib)
-        print(f" - deleted: {lib}")
-    print("... Done!")
+        if libraries is not None:
+            print()
+            print(f" - deleted: {lib}")
+    print("Done!")
 
 
 def delete_dict_connector(conn, libraries: Optional[List[str]] = None) -> None:
-    print(f"Deleting DictConnector: '{conn.name}' ...", end="")
+    print(f"Deleting DictConnector: '{conn.name}' ... ", end="")
     if libraries is None:
         del conn
         print(" Done!")
@@ -111,12 +113,12 @@ def delete_dict_connector(conn, libraries: Optional[List[str]] = None) -> None:
             print()
             delattr(conn, f"lib_{conn.libname[lib]}")
             print(f" - deleted: {lib}")
-    print("... Done!")
+    print("Done!")
 
 
 def delete_pas_connector(conn, libraries: Optional[List[str]] = None) -> None:
     import shutil
-    print(f"Deleting PasConnector database: '{conn.name}' ...", end="")
+    print(f"Deleting PasConnector database: '{conn.name}' ... ", end="")
     if libraries is None:
         shutil.rmtree(conn.path)
         print(" Done!")
@@ -125,7 +127,7 @@ def delete_pas_connector(conn, libraries: Optional[List[str]] = None) -> None:
             print()
             shutil.rmtree(os.path.join(conn.path, lib))
             print(f" - deleted: {lib}")
-        print("... Done!")
+        print("Done!")
 
 
 def delete_pastastore(pstore, libraries: Optional[List[str]] = None) -> None:
@@ -239,7 +241,7 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
         df.loc["name:", f"model {i}"] = ml.name
 
         for k in ml.settings.keys():
-            df.loc[f"- settings: {k}"] = ml.settings.get(k)
+            df.loc[f"- settings: {k}", f"model {i}"] = ml.settings.get(k)
 
         if i == 0:
             oso = ml.oseries.series_original
@@ -250,20 +252,20 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
             df.loc["oseries: series_series", f"model {i}"] = True
         elif i == 1:
             try:
-                compare_oso = (oso == ml.oseries.series_original).all()
+                compare_oso = oso.equals(ml.oseries.series_original)
             except ValueError:
                 # series are not identical in length or index does not match
                 compare_oso = False
             try:
-                compare_osv = (osv == ml.oseries.series_original).all()
+                compare_osv = osv.equals(ml.oseries.series_validated)
             except ValueError:
                 # series are not identical in length or index does not match
                 compare_osv = False
             try:
-                compare_oss = (oss == ml.oseries.series_original).all()
+                compare_oss = oss.equals(ml.oseries.series)
             except ValueError:
                 # series are not identical in length or index does not match
-                compare_oso = False
+                compare_oss = False
 
             df.loc["oseries: series_original", f"model {i}"] = compare_oso
             df.loc["oseries: series_validated", f"model {i}"] = compare_osv
@@ -283,7 +285,8 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
             for ts in stresses:
                 df.loc[f"- timeseries: '{ts.name}'"] = ts.name
                 for tsk in ts.settings.keys():
-                    df.loc[f"  - {ts.name} settings: {tsk}"] = ts.settings[tsk]
+                    df.loc[f"  - {ts.name} settings: {tsk}", f"model {i}"] = \
+                        ts.settings[tsk]
 
                 if i == 0:
                     so1.append(ts.series_original.copy())
@@ -297,17 +300,15 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                     # ValueError if series cannot be compared,
                     # set result to False
                     try:
-                        compare_so1 = (
-                            so1[counter] == ts.series_original).all()
+                        compare_so1 = so1[counter].equals(ts.series_original)
                     except ValueError:
                         compare_so1 = False
                     try:
-                        compare_sv1 = (
-                            sv1[counter] == ts.series_validated).all()
+                        compare_sv1 = sv1[counter].equals(ts.series_validated)
                     except ValueError:
                         compare_sv1 = False
                     try:
-                        compare_ss1 = (ss1[counter] == ts.series).all()
+                        compare_ss1 = ss1[counter].equals(ts.series)
                     except ValueError:
                         compare_ss1 = False
                     df.loc[f"  - {ts.name}: series_original"] = compare_so1
@@ -320,7 +321,7 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
             df.loc[f"param: {p} (init)", f"model {i}"] = \
                 ml.parameters.loc[p, "initial"]
             df.loc[f"param: {p} (opt)", f"model {i}"] = \
-                ml.parameters.loc[p, "initial"]
+                ml.parameters.loc[p, "optimal"]
 
         if stats:
             stats_df = ml.stats.summary(stats=stats)
@@ -330,9 +331,9 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
     # compare
     df["comparison"] = df.iloc[:, 0] == df.iloc[:, 1]
 
-    # allclose for params
+    # isclose for params
     param_mask = df.index.str.startswith("param: ")
-    df.loc[param_mask, "comparison"] = np.allclose(
+    df.loc[param_mask, "comparison"] = np.isclose(
         df.loc[param_mask, "model 0"].astype(float).values,
         df.loc[param_mask, "model 1"].astype(float).values)
 
@@ -343,14 +344,14 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
     # for stats comparison must be almost_equal
     if stats:
         stats_idx = [f"stats: {s}" for s in stats]
-        b = np.allclose(df.loc[stats_idx, "model 0"].astype(float).values,
-                        df.loc[stats_idx, "model 1"].astype(float).values)
+        b = np.isclose(df.loc[stats_idx, "model 0"].astype(float).values,
+                       df.loc[stats_idx, "model 1"].astype(float).values)
         df.loc[stats_idx, "comparison"] = b
 
     if detailed_comparison:
         return df
     else:
-        return df["comparison"].all()
+        return df["comparison"].iloc[1:].all()  # ignore name difference
 
 
 def copy_database(conn1, conn2, libraries: Optional[List[str]] = None,
