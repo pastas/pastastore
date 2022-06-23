@@ -173,12 +173,14 @@ class PastaStore:
 
         data = pd.DataFrame(columns=np.arange(n))
 
-        for series in distances.index:
-            others = distances.loc[series].dropna(
+        for series_name in distances.index:
+            others = distances.loc[series_name].dropna(
             ).sort_values().index.tolist()
             # remove self
-            others.remove(series)
-            series = pd.Series(others[:n], name=series)
+            others.remove(series_name)
+            series = pd.DataFrame(index=[series_name],
+                                  columns=data.columns,
+                                  data=[others[:n]])
             data = pd.concat([data, series], axis=0)
         return data
 

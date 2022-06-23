@@ -882,8 +882,9 @@ class Maps:
 
                     stused = np.append(stused, s)
 
-        if labels:                
-            self.add_labels(oseries.loc[struct['oseries'].unique()], ax, adjust=adjust)
+        if labels:
+            self.add_labels(
+                oseries.loc[struct['oseries'].unique()], ax, adjust=adjust)
             self.add_labels(stresses.loc[np.unique(stused)], ax, adjust=adjust)
 
         ax.scatter([x[1][0] for x in segments],
