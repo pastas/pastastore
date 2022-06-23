@@ -6,6 +6,7 @@ import pastas as ps
 import pastastore as pst
 from pastastore.base import BaseConnector
 
+
 def example_pastastore(conn="DictConnector"):
     """Example dataset loaded into PastaStore.
 

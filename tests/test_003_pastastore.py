@@ -272,3 +272,9 @@ def test_to_from_zip(pstore):
     finally:
         os.remove(zipname)
     return store
+
+
+def test_example_pastastore():
+    from pastastore.datasets import example_pastastore
+    pstore = example_pastastore()
+    return
