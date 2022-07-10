@@ -35,5 +35,5 @@ setup(
     packages=find_packages(exclude=[]),
     include_package_data=True,
     extras_require={'adjusttext': ['adjustText'],
-                    'full': ['contextily','pyproj','adjustText']}
+                    'full': ['contextily', 'pyproj', 'adjustText']}
 )
