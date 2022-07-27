@@ -903,7 +903,7 @@ class PastaStore:
                                  columns=["oseries"] + self.stresses_names)
 
         for mlnam in (tqdm(model_names, desc="Get model timeseries names")
-                      if progressbar else self.model_names):
+                      if progressbar else model_names):
             iml = self.get_models(mlnam, return_dict=True)
 
             # oseries
