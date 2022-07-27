@@ -617,15 +617,15 @@ def frontiers_select(pstore, modelnames):
 
     # Dataframe of models with corresponding oseries
     df = pstore.get_model_timeseries_names(
-        modelnames, progressbar=False).dropna(how='any', axis=1)
+        modelnames, progressbar=False).loc[:, ['oseries']]
     # AIC of models
-    aic = pstore.get_statistics(['aic'], modelnames).to_frame(name='aic')
+    aic = pstore.get_statistics(['aic'], modelnames)
     # Group models per location and obtain the AIC identify model with lowest AIC per location
     mls_per_loc = df.reset_index().groupby(
         'oseries')['index'].apply(list).to_frame('Model Names')
     for idx in mls_per_loc.index:
-        aic_values = aic.loc[mls_per_loc.loc[idx].iloc[0], 'aic']
+        aic_values = aic.loc[mls_per_loc.loc[idx].iloc[0]]
         mls_per_loc.loc[idx, 'AIC'] = aic_values.values.astype(object)
-        mls_per_loc.loc[idx, 'min_aic'] = aic_values.index[aic_values.argmin()]
+        mls_per_loc.loc[idx, 'Min_AIC'] = aic_values.index[aic_values.argmin()]
 
     return mls_per_loc
