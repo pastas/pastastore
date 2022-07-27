@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
+from pastas.stats.tests import runs_test, stoffer_toloi
 from numpy.lib._iotools import NameValidator
 from tqdm import tqdm
 
@@ -399,3 +400,232 @@ def copy_database(conn1, conn2, libraries: Optional[List[str]] = None,
                 conn2.add_model(mldict, overwrite=overwrite)
         else:
             raise ValueError(f"Library name '{lib}' not recognized!")
+
+
+def frontiers_checks(pstore, check1=True, check1_threshold=0.7,
+                     check2=True, check2_stat="runs", check2_pvalue=0.05,
+                     check3=True, check3_cutoff=0.95, check4=True,
+                     check5=False, path=None):
+    """Check models in a Pastastore to see if they pass the reliability
+    criteria as proposed by Brakenhoff et al. 2022 [bra_2022]_.
+
+    Parameters
+    ----------
+    pstore : pastastore object
+    check1 : bool, optional
+        Check if model fit is above a threshold of the coefficient
+        of determination $R^2$ , by default True
+    check1_threshold : float, optional
+        Threshold of the $R^2$ fit statistic, by default 0.7
+    check2 : bool, optional
+        Check if the noise of the model has autocorrelation with
+        statistical test, by default True
+    check2_stat : str, optional
+        Statistical test for autocorrelation. Available options are Run's
+        test "runs", Stoffer-Toloi "stoffer" or "both", by default "runs"
+    check2_pvalue : float, optional
+        p-value for the statistical test to define the confindence
+        interval, by default 0.05
+    check3 : bool, optional
+        Check if the length of the response time is within the
+        calibration period, by default True
+    check3_cutoff : float, optional
+        The cutoff of the response time, by default 0.95
+    check4 : bool, optional
+        Check if the uncertainty of the gain, by default True
+    check5 : bool, optional
+        Check if parameters hit parameter bounds, by default False
+    path : string, optional
+        Path to write csv to with overview of checks for every
+        model, by default None
+
+    Returns
+    -------
+    list
+        List of models that pass ALL the reliability checks
+
+
+    References
+    ----------
+    .. [bra_2022] Brakenhoff, D.A., Vonk M.A., Collenteur, R.A.,
+    van Baar, M., Bakker, M.: Application of Time Series Analysis
+    to Estimate Drawdown From Multiple Well Fields.
+    Front. Earth Sci., 14 June 2022 doi:10.3389/feart.2022.907609
+    """
+    check_passed_models = []
+
+    for ml in tqdm(pstore.models, total=pstore.n_models, desc="Checking Model Diagnostics"):
+
+        checks = pd.DataFrame(
+            columns=["stat", "threshold", "units", "check_passed"])
+
+        # Check 1 - Fit Statistic
+        if check1:
+            rsq = ml.stats.rsq()
+            check_rsq_passed = rsq >= check1_threshold
+            checks.loc['rsq >= threshold',
+                       :] = rsq, check1_threshold, "-", check_rsq_passed
+
+        # Check 2 - Autocorrelation Noise
+        if check2:
+            noise = ml.noise().iloc[1:]
+            if check2_stat == "runs" or check2_stat == 'both':
+                _, p_runs = runs_test(noise)
+                if p_runs > check2_pvalue:  # No autocorrelation
+                    check_runs_acf_passed = True
+                else:  # Significant autocorrelation
+                    check_runs_acf_passed = False
+                checks.loc["ACF: Runs test",
+                           :] = p_runs, check2_pvalue, "-", check_runs_acf_passed
+            if check2_stat == "stoffer" or check2_stat == 'both':
+                _, p_stoffer = stoffer_toloi(
+                    noise, snap_to_equidistant_timestamps=True)
+                if p_stoffer > check2_pvalue:
+                    check_st_acf_passed = True
+                else:
+                    check_st_acf_passed = False
+                checks.loc["ACF: Stoffer-Toloi test", :] = (p_stoffer, check2_pvalue, "-",
+                                                            check_st_acf_passed)
+
+        # Check 3 - Response Time
+        if check3:
+            len_oseries_calib = (
+                ml.settings['tmax'] - ml.settings['tmin']).days
+            for sm_name, sm in ml.stressmodels.items():
+
+                if sm_name.startswith("wells"):
+
+                    p = ml.get_parameters(sm_name)
+                    t = sm.rfunc.get_t(p, dt=1, cutoff=0.999)
+                    step = sm.rfunc.step(p, cutoff=0.999) / sm.rfunc.gain(p)
+                    tmem = np.interp(check3_cutoff, step, t)
+                    check_tmem_passed = tmem < len_oseries_calib / 2
+                    checks.loc[f'calib_period > 2*t_mem_95%: {sm_name} (r=1)', :] = (
+                        tmem, len_oseries_calib, "days", check_tmem_passed)
+
+                    nwells = sm.distances.index.size
+                    for iw in range(nwells):
+                        p = sm.get_parameters(model=ml, istress=iw)
+                        t = sm.rfunc.get_t(p, dt=1, cutoff=0.999)
+                        step = sm.rfunc.step(
+                            p, cutoff=0.999) / sm.rfunc.gain(p)
+                        tmem = np.interp(check3_cutoff, step, t)
+                        check_tmem_passed = tmem < len_oseries_calib / 2
+                        checks.loc[f'calib_period > 2*t_mem_95%: {sm_name}-{iw:02g}', :] = (
+                            tmem, len_oseries_calib, "days", check_tmem_passed)
+                else:
+                    tmem = ml.get_response_tmax(sm_name)
+                    check_tmem_passed = tmem < len_oseries_calib / 2
+                    checks.loc[f'calib_period > 2*t_mem_95%: {sm_name}', :] = (
+                        tmem, len_oseries_calib, "days", check_tmem_passed)
+
+        # Check 4 - Uncertainty Gain
+        if check4:
+            for sm_name, sm in ml.stressmodels.items():
+                if sm_name.startswith("wells"):
+                    p = ml.get_parameters(sm_name)
+                    gain = sm.rfunc.gain(p)
+                    A = ml.parameters.loc[f"{sm_name}_A", "optimal"]
+                    b = ml.parameters.loc[f"{sm_name}_b", "optimal"]
+                    var_A = ml.parameters.loc[f"{sm_name}_A", 'stderr']**2
+                    var_b = ml.parameters.loc[f"{sm_name}_b", 'stderr']**2
+                    cov_Ab = ml.fit.pcov.loc[f"{sm_name}_A", f"{sm_name}_b"]
+                    gain_std = np.sqrt(sm.rfunc.variance_gain(
+                        A, b, var_A, var_b, cov_Ab))
+                    if gain_std is None:
+                        gain_std = np.nan
+                        check_gain_passed = pd.NA
+                    elif np.isnan(gain_std):
+                        check_gain_passed = pd.NA
+                    else:
+                        check_gain_passed = np.abs(gain) > 2 * gain_std
+                    checks.loc[f"gain > 2*std: {sm_name} (r=1)"] = (
+                        gain, 2 * gain_std, "m/(Mm3/yr)", check_gain_passed)
+
+                    for iw in range(sm.distances.index.size):
+                        p = sm.get_parameters(model=ml, istress=iw)
+                        gain = sm.rfunc.gain(p)
+                        gain_std = np.sqrt(
+                            sm.variance_gain(model=ml, istress=iw))
+                        if gain_std is None:
+                            gain_std = np.nan
+                            check_gain_passed = pd.NA
+                        elif np.isnan(gain_std):
+                            check_gain_passed = pd.NA
+                        else:
+                            check_gain_passed = np.abs(gain) > 2 * gain_std
+                        checks.loc[f"gain > 2*std: {sm_name}-{iw:02g}"] = (
+                            gain, 2 * gain_std, "m/(Mm3/yr)", check_gain_passed)
+                else:
+                    gain = ml.parameters.loc[f"{sm_name}_A", "optimal"]
+                    gain_std = ml.parameters.loc[f"{sm_name}_A", "stderr"]
+                    if gain_std is None:
+                        gain_std = np.nan
+                        check_gain_passed = pd.NA
+                    elif np.isnan(gain_std):
+                        check_gain_passed = pd.NA
+                    else:
+                        check_gain_passed = np.abs(gain) > 2 * gain_std
+                    check_gain_passed = np.abs(gain) > 2 * gain_std
+                    checks.loc[f"gain > 2*std: {sm_name}"] = (
+                        gain, 2 * gain_std, "m/(Mm3/yr)", check_gain_passed)
+
+        # Check 5 - Parameter Bounds
+        if check5:
+            upper, lower = ml._check_parameters_bounds()
+            for param in ml.parameters.index:
+                bounds = (ml.parameters.loc[param, "pmin"],
+                          ml.parameters.loc[param, "pmax"])
+                b = ~(upper.loc[param] or lower.loc[param])
+
+                checks.loc[f"Parameter bounds: {param}", :] = (
+                    ml.parameters.loc[param, "optimal"], bounds, "_", b)
+
+        if checks['check_passed'].all():
+            check_passed_models.append(ml.name)
+
+        if path:
+            checks.to_csv(f"{path}/checks_{ml.name}.csv",
+                          na_rep="NaN")
+
+    return check_passed_models
+
+
+def frontiers_select(pstore, modelnames):
+    """Select the best model structure based on the AIC as proposed
+    by Brakenhoff et al. 2022 [bra_2022]_.
+
+    Parameters
+    ----------
+    pstore : pastastore object
+    modelnames : list
+        list of models (that pass reliability criteria)
+
+    Returns
+    -------
+    pandas DataFrame
+        DataFrame with oseries locations, models that pass the check
+        per location, AIC per model and model with the lowest AIC.
+
+    References
+    ----------
+    .. [bra_2022] Brakenhoff, D.A., Vonk M.A., Collenteur, R.A.,
+    van Baar, M., Bakker, M.: Application of Time Series Analysis
+    to Estimate Drawdown From Multiple Well Fields.
+    Front. Earth Sci., 14 June 2022 doi:10.3389/feart.2022.907609
+    """
+
+    # Dataframe of models with corresponding oseries
+    df = pstore.get_model_timeseries_names(
+        modelnames, progressbar=False).dropna(how='any', axis=1)
+    # AIC of models
+    aic = pstore.get_statistics(['aic'], modelnames).to_frame(name='aic')
+    # Group models per location and obtain the AIC identify model with lowest AIC per location
+    mls_per_loc = df.reset_index().groupby(
+        'oseries')['index'].apply(list).to_frame('Model Names')
+    for idx in mls_per_loc.index:
+        aic_values = aic.loc[mls_per_loc.loc[idx].iloc[0], 'aic']
+        mls_per_loc.loc[idx, 'AIC'] = aic_values.values.astype(object)
+        mls_per_loc.loc[idx, 'min_aic'] = aic_values.index[aic_values.argmin()]
+
+    return mls_per_loc
