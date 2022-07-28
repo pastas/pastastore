@@ -466,13 +466,13 @@ def frontiers_checks(pstore, check1_rsq=True, check1_threshold=0.7,
         if check1_rsq:
             rsq = ml.stats.rsq()
             check_rsq_passed = rsq >= check1_threshold
-            checks.loc['rsq >= threshold',
+            checks.loc["rsq >= threshold",
                        :] = rsq, check1_threshold, "-", check_rsq_passed
 
         # Check 2 - Autocorrelation Noise
         if check2_autocor:
             noise = ml.noise().iloc[1:]
-            if check2_stat == "runs" or check2_stat == 'both':
+            if check2_stat == "runs" or check2_stat == "both":
                 _, p_runs = runs_test(noise)
                 if p_runs > check2_pvalue:  # No autocorrelation
                     check_runs_acf_passed = True
@@ -480,7 +480,7 @@ def frontiers_checks(pstore, check1_rsq=True, check1_threshold=0.7,
                     check_runs_acf_passed = False
                 checks.loc["ACF: Runs test",
                            :] = p_runs, check2_pvalue, "-", check_runs_acf_passed
-            if check2_stat == "stoffer" or check2_stat == 'both':
+            if check2_stat == "stoffer" or check2_stat == "both":
                 _, p_stoffer = stoffer_toloi(
                     noise, snap_to_equidistant_timestamps=True)
                 if p_stoffer > check2_pvalue:
@@ -493,7 +493,7 @@ def frontiers_checks(pstore, check1_rsq=True, check1_threshold=0.7,
         # Check 3 - Response Time
         if check3_tmem:
             len_oseries_calib = (
-                ml.settings['tmax'] - ml.settings['tmin']).days
+                ml.settings["tmax"] - ml.settings["tmin"]).days
             for sm_name, sm in ml.stressmodels.items():
 
                 if sm_name.startswith("wells"):
@@ -503,7 +503,7 @@ def frontiers_checks(pstore, check1_rsq=True, check1_threshold=0.7,
                     step = sm.rfunc.step(p, cutoff=0.999) / sm.rfunc.gain(p)
                     tmem = np.interp(check3_cutoff, step, t)
                     check_tmem_passed = tmem < len_oseries_calib / 2
-                    checks.loc[f'calib_period > 2*t_mem_95%: {sm_name} (r=1)', :] = (
+                    checks.loc[f"calib_period > 2*t_mem_95%: {sm_name} (r=1)", :] = (
                         tmem, len_oseries_calib, "days", check_tmem_passed)
 
                     nwells = sm.distances.index.size
@@ -514,12 +514,12 @@ def frontiers_checks(pstore, check1_rsq=True, check1_threshold=0.7,
                             p, cutoff=0.999) / sm.rfunc.gain(p)
                         tmem = np.interp(check3_cutoff, step, t)
                         check_tmem_passed = tmem < len_oseries_calib / 2
-                        checks.loc[f'calib_period > 2*t_mem_95%: {sm_name}-{iw:02g}', :] = (
+                        checks.loc[f"calib_period > 2*t_mem_95%: {sm_name}-{iw:02g}", :] = (
                             tmem, len_oseries_calib, "days", check_tmem_passed)
                 else:
                     tmem = ml.get_response_tmax(sm_name)
                     check_tmem_passed = tmem < len_oseries_calib / 2
-                    checks.loc[f'calib_period > 2*t_mem_95%: {sm_name}', :] = (
+                    checks.loc[f"calib_period > 2*t_mem_95%: {sm_name}", :] = (
                         tmem, len_oseries_calib, "days", check_tmem_passed)
 
         # Check 4 - Uncertainty Gain
@@ -530,8 +530,8 @@ def frontiers_checks(pstore, check1_rsq=True, check1_threshold=0.7,
                     gain = sm.rfunc.gain(p)
                     A = ml.parameters.loc[f"{sm_name}_A", "optimal"]
                     b = ml.parameters.loc[f"{sm_name}_b", "optimal"]
-                    var_A = ml.parameters.loc[f"{sm_name}_A", 'stderr']**2
-                    var_b = ml.parameters.loc[f"{sm_name}_b", 'stderr']**2
+                    var_A = ml.parameters.loc[f"{sm_name}_A", "stderr"]**2
+                    var_b = ml.parameters.loc[f"{sm_name}_b", "stderr"]**2
                     cov_Ab = ml.fit.pcov.loc[f"{sm_name}_A", f"{sm_name}_b"]
                     gain_std = np.sqrt(sm.rfunc.variance_gain(
                         A, b, var_A, var_b, cov_Ab))
@@ -584,8 +584,8 @@ def frontiers_checks(pstore, check1_rsq=True, check1_threshold=0.7,
                 checks.loc[f"Parameter bounds: {param}", :] = (
                     ml.parameters.loc[param, "optimal"], bounds, "_", b)
 
-        df.loc[ml.name, "All_Checks_Passed"] = checks['check_passed'].all()
-        df.loc[ml.name, checks.index] = checks.loc[:, 'check_passed']
+        df.loc[ml.name, "All_Checks_Passed"] = checks["check_passed"].all()
+        df.loc[ml.name, checks.index] = checks.loc[:, "check_passed"]
 
         if csv_dir:
             checks.to_csv(f"{csv_dir}/checks_{ml.name}.csv",
@@ -594,21 +594,24 @@ def frontiers_checks(pstore, check1_rsq=True, check1_threshold=0.7,
     return df
 
 
-def frontiers_select(pstore, modelnames):
-    """Select the best model structure based on the AIC as proposed
-    by Brakenhoff et al. 2022 [bra_2022]_.
+def frontiers_select(pstore, modelnames, full_output=False):
+    """Select the best model structure based on the AIC as
+    proposed by Brakenhoff et al. 2022 [bra_2022]_.
 
     Parameters
     ----------
     pstore : pastastore object
     modelnames : list
         list of models (that pass reliability criteria)
+    full_output : bool, optional
+        if set to True, returns a DataFrame including
+        all models per location and their AIC values
 
     Returns
     -------
     pandas DataFrame
-        DataFrame with oseries locations, models that pass the check
-        per location, AIC per model and model with the lowest AIC.
+        DataFrame with oseries locations and best model
+        per location based on the AIC
 
     References
     ----------
@@ -620,15 +623,22 @@ def frontiers_select(pstore, modelnames):
 
     # Dataframe of models with corresponding oseries
     df = pstore.get_model_timeseries_names(
-        modelnames, progressbar=False).loc[:, ['oseries']]
+        modelnames, progressbar=False).loc[:, ["oseries"]]
     # AIC of models
-    aic = pstore.get_statistics(['aic'], modelnames)
-    # Group models per location and obtain the AIC identify model with lowest AIC per location
-    mls_per_loc = df.reset_index().groupby(
-        'oseries')['index'].apply(list).to_frame('Model Names')
-    for idx in mls_per_loc.index:
-        aic_values = aic.loc[mls_per_loc.loc[idx].iloc[0]]
-        mls_per_loc.loc[idx, 'AIC'] = aic_values.values.astype(object)
-        mls_per_loc.loc[idx, 'Min_AIC'] = aic_values.index[aic_values.argmin()]
+    aic = pstore.get_statistics(["aic"], modelnames)
+    if full_output:
+        # Group models per location and obtain the AIC identify model with lowest AIC per location
+        mls_per_loc = df.reset_index().groupby(
+            "oseries")["index"].apply(list).to_frame("Model Names")
+        for idx in mls_per_loc.index:
+            aic_values = aic.loc[mls_per_loc.loc[idx].iloc[0]]
+            mls_per_loc.loc[idx,
+                            "Min_AIC"] = aic_values.index[aic_values.argmin()]
+            mls_per_loc.loc[idx, "AIC"] = aic_values.values.astype(object)
+            mls_per_loc.loc[idx, "dAIC"] = (
+                aic_values - min(aic_values)).values.astype(object)
+    else:
+        mls_per_loc = df.join(aic.to_frame("Min_AIC")
+                              ).groupby("oseries").idxmin()
 
     return mls_per_loc
