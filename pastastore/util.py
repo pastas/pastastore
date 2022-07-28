@@ -402,10 +402,11 @@ def copy_database(conn1, conn2, libraries: Optional[List[str]] = None,
             raise ValueError(f"Library name '{lib}' not recognized!")
 
 
-def frontiers_checks(pstore, check1=True, check1_threshold=0.7,
-                     check2=True, check2_stat="runs", check2_pvalue=0.05,
-                     check3=True, check3_cutoff=0.95, check4=True,
-                     check5=False, path=None):
+def frontiers_checks(pstore, check1_rsq=True, check1_threshold=0.7,
+                     check2_autocor=True, check2_stat="runs",
+                     check2_pvalue=0.05, check3_tmem=True,
+                     check3_cutoff=0.95, check4_gain=True,
+                     check5_parambounds=False, csv_dir=None):
     """Check models in a Pastastore to see if they pass the reliability
     criteria as proposed by Brakenhoff et al. 2022 [bra_2022]_.
 
@@ -441,8 +442,9 @@ def frontiers_checks(pstore, check1=True, check1_threshold=0.7,
 
     Returns
     -------
-    list
-        List of models that pass ALL the reliability checks
+    pandas DataFrame
+        DataFrame with all models and whether or not they pass
+        the reliability checks.
 
 
     References
@@ -452,7 +454,8 @@ def frontiers_checks(pstore, check1=True, check1_threshold=0.7,
     to Estimate Drawdown From Multiple Well Fields.
     Front. Earth Sci., 14 June 2022 doi:10.3389/feart.2022.907609
     """
-    check_passed_models = []
+
+    df = pd.DataFrame(columns=["All_Checks_Passed"])
 
     for ml in tqdm(pstore.models, total=pstore.n_models, desc="Checking Model Diagnostics"):
 
@@ -460,14 +463,14 @@ def frontiers_checks(pstore, check1=True, check1_threshold=0.7,
             columns=["stat", "threshold", "units", "check_passed"])
 
         # Check 1 - Fit Statistic
-        if check1:
+        if check1_rsq:
             rsq = ml.stats.rsq()
             check_rsq_passed = rsq >= check1_threshold
             checks.loc['rsq >= threshold',
                        :] = rsq, check1_threshold, "-", check_rsq_passed
 
         # Check 2 - Autocorrelation Noise
-        if check2:
+        if check2_autocor:
             noise = ml.noise().iloc[1:]
             if check2_stat == "runs" or check2_stat == 'both':
                 _, p_runs = runs_test(noise)
@@ -488,7 +491,7 @@ def frontiers_checks(pstore, check1=True, check1_threshold=0.7,
                                                             check_st_acf_passed)
 
         # Check 3 - Response Time
-        if check3:
+        if check3_tmem:
             len_oseries_calib = (
                 ml.settings['tmax'] - ml.settings['tmin']).days
             for sm_name, sm in ml.stressmodels.items():
@@ -520,7 +523,7 @@ def frontiers_checks(pstore, check1=True, check1_threshold=0.7,
                         tmem, len_oseries_calib, "days", check_tmem_passed)
 
         # Check 4 - Uncertainty Gain
-        if check4:
+        if check4_gain:
             for sm_name, sm in ml.stressmodels.items():
                 if sm_name.startswith("wells"):
                     p = ml.get_parameters(sm_name)
@@ -571,7 +574,7 @@ def frontiers_checks(pstore, check1=True, check1_threshold=0.7,
                         gain, 2 * gain_std, "m/(Mm3/yr)", check_gain_passed)
 
         # Check 5 - Parameter Bounds
-        if check5:
+        if check5_parambounds:
             upper, lower = ml._check_parameters_bounds()
             for param in ml.parameters.index:
                 bounds = (ml.parameters.loc[param, "pmin"],
@@ -581,14 +584,14 @@ def frontiers_checks(pstore, check1=True, check1_threshold=0.7,
                 checks.loc[f"Parameter bounds: {param}", :] = (
                     ml.parameters.loc[param, "optimal"], bounds, "_", b)
 
-        if checks['check_passed'].all():
-            check_passed_models.append(ml.name)
+        df.loc[ml.name, "All_Checks_Passed"] = checks['check_passed'].all()
+        df.loc[ml.name, checks.index] = checks.loc[:, 'check_passed']
 
-        if path:
-            checks.to_csv(f"{path}/checks_{ml.name}.csv",
+        if csv_dir:
+            checks.to_csv(f"{csv_dir}/checks_{ml.name}.csv",
                           na_rep="NaN")
 
-    return check_passed_models
+    return df
 
 
 def frontiers_select(pstore, modelnames):
