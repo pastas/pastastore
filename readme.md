@@ -91,7 +91,7 @@ pstore.to_zip("my_db_backup.zip")
 For more elaborate examples, refer to the
 [Notebooks](https://pastastore.readthedocs.io/en/latest/examples.html#example-notebooks).
 
-### Which Connector should I choose?
+### Which Connector should you pick
 
 There are currently four Connectors included in `pastastore`. Each of the
 Connectors are briefly described below.
