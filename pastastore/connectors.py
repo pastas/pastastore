@@ -8,7 +8,7 @@ from typing import Dict, Optional, Union
 import pandas as pd
 from pastas.io.pas import PastasEncoder, pastas_hook
 
-from .base import (BaseConnector, ConnectorUtil, ModelAccessor)
+from .base import BaseConnector, ConnectorUtil, ModelAccessor
 from .util import _custom_warning
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
@@ -33,11 +33,13 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         try:
             import arctic
         except ModuleNotFoundError as e:
-            print("Please install arctic (also requires "
-                  "a MongoDB instance running somewhere, e.g. "
-                  "MongoDB Community: \n"
-                  "https://docs.mongodb.com/manual/administration"
-                  "/install-community/)!")
+            print(
+                "Please install arctic (also requires "
+                "a MongoDB instance running somewhere, e.g. "
+                "MongoDB Community: \n"
+                "https://docs.mongodb.com/manual/administration"
+                "/install-community/)!"
+            )
             raise e
         self.connstr = connstr
         self.name = name
@@ -57,9 +59,11 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
             if self._library_name(libname) not in self.arc.list_libraries():
                 self.arc.initialize_library(self._library_name(libname))
             else:
-                print(f"ArcticConnector: library "
-                      f"'{self._library_name(libname)}'"
-                      " already exists. Linking to existing library.")
+                print(
+                    f"ArcticConnector: library "
+                    f"'{self._library_name(libname)}'"
+                    " already exists. Linking to existing library."
+                )
             self.libs[libname] = self._get_library(libname)
 
     def _library_name(self, libname: str) -> str:
@@ -83,11 +87,14 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         lib = self.arc.get_library(self._library_name(libname))
         return lib
 
-    def _add_item(self, libname: str,
-                  item: Union[FrameorSeriesUnion, Dict],
-                  name: str,
-                  metadata: Optional[Dict] = None,
-                  **_) -> None:
+    def _add_item(
+        self,
+        libname: str,
+        item: Union[FrameorSeriesUnion, Dict],
+        name: str,
+        metadata: Optional[Dict] = None,
+        **_,
+    ) -> None:
         """Internal method to add item to library (timeseries or model).
 
         Parameters
@@ -104,8 +111,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         lib = self._get_library(libname)
         lib.write(name, item, metadata=metadata)
 
-    def _get_item(self, libname: str, name: str) \
-            -> Union[FrameorSeriesUnion, Dict]:
+    def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
         """Internal method to retrieve item from library.
 
         Parameters
@@ -210,8 +216,10 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         try:
             import pystore
         except ModuleNotFoundError as e:
-            print("Install pystore, follow instructions at "
-                  "https://github.com/ranaroussi/pystore#dependencies")
+            print(
+                "Install pystore, follow instructions at "
+                "https://github.com/ranaroussi/pystore#dependencies"
+            )
             raise e
         self.name = name
         self.path = path
@@ -228,8 +236,10 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         """Internal method to initalize the libraries (stores)."""
         for libname in self._default_library_names:
             if libname in self.store.list_collections():
-                print(f"PystoreConnector: library '{self.path}/{libname}' "
-                      "already exists. Linking to existing library.")
+                print(
+                    f"PystoreConnector: library '{self.path}/{libname}' "
+                    "already exists. Linking to existing library."
+                )
             lib = self.store.collection(libname)
             self.libs[libname] = lib
 
@@ -250,11 +260,14 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         lib = self.store.collection(libname)
         return lib
 
-    def _add_item(self, libname: str,
-                  item: Union[FrameorSeriesUnion, Dict],
-                  name: str,
-                  metadata: Optional[Dict] = None,
-                  overwrite: bool = False) -> None:
+    def _add_item(
+        self,
+        libname: str,
+        item: Union[FrameorSeriesUnion, Dict],
+        name: str,
+        metadata: Optional[Dict] = None,
+        overwrite: bool = False,
+    ) -> None:
         """Internal method to add item to library (timeseries or model).
 
         Parameters
@@ -277,8 +290,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             is_type = "series"
         elif isinstance(item, dict):
             s = pd.DataFrame()  # empty DataFrame as placeholder
-            jsondict = json.loads(json.dumps(
-                item, cls=PastasEncoder, indent=4))
+            jsondict = json.loads(json.dumps(item, cls=PastasEncoder, indent=4))
             metadata = jsondict  # model dict is stored in metadata
             is_type = "series"
         elif isinstance(item, list):
@@ -297,8 +309,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         lib = self._get_library(libname)
         lib.write(name, s, metadata=metadata, overwrite=overwrite)
 
-    def _get_item(self, libname: str, name: str) \
-            -> Union[FrameorSeriesUnion, Dict]:
+    def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
         """Internal method to retrieve item from pystore library.
 
         Parameters
@@ -361,6 +372,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             dictionary containing metadata
         """
         from pystore.utils import read_metadata
+
         lib = self._get_library(libname)
         imeta = read_metadata(lib._item_path(name))
         if "name" not in imeta.keys():
@@ -445,11 +457,14 @@ class DictConnector(BaseConnector, ConnectorUtil):
         """
         return getattr(self, f"lib_{libname}")
 
-    def _add_item(self, libname: str,
-                  item: Union[FrameorSeriesUnion, Dict],
-                  name: str,
-                  metadata: Optional[Dict] = None,
-                  **_) -> None:
+    def _add_item(
+        self,
+        libname: str,
+        item: Union[FrameorSeriesUnion, Dict],
+        name: str,
+        metadata: Optional[Dict] = None,
+        **_,
+    ) -> None:
         """Internal method to add item (timeseries or models).
 
         Parameters
@@ -469,8 +484,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         else:
             lib[name] = (metadata, item)
 
-    def _get_item(self, libname: str, name: str) \
-            -> Union[FrameorSeriesUnion, Dict]:
+    def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
         """Internal method to retrieve item from pystore library.
 
         Parameters
@@ -582,8 +596,10 @@ class PasConnector(BaseConnector, ConnectorUtil):
                 print(f"PasConnector: library {val} created in {libdir}")
                 os.makedirs(libdir)
             else:
-                print(f"PasConnector: library '{val}' already exists. "
-                      f"Linking to existing directory: '{libdir}'")
+                print(
+                    f"PasConnector: library '{val}' already exists. "
+                    f"Linking to existing directory: '{libdir}'"
+                )
             setattr(self, f"lib_{val}", os.path.join(self.path, val))
 
     def _get_library(self, libname: str):
@@ -601,11 +617,14 @@ class PasConnector(BaseConnector, ConnectorUtil):
         """
         return getattr(self, "lib_" + libname)
 
-    def _add_item(self, libname: str,
-                  item: Union[FrameorSeriesUnion, Dict],
-                  name: str,
-                  metadata: Optional[Dict] = None,
-                  **_) -> None:
+    def _add_item(
+        self,
+        libname: str,
+        item: Union[FrameorSeriesUnion, Dict],
+        name: str,
+        metadata: Optional[Dict] = None,
+        **_,
+    ) -> None:
         """Internal method to add item (timeseries or models).
 
         Parameters
@@ -647,8 +666,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
             with open(fname, "w") as fm:
                 fm.write(jsondict)
 
-    def _get_item(self, libname: str, name: str) \
-            -> Union[FrameorSeriesUnion, Dict]:
+    def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
         """Internal method to retrieve item.
 
         Parameters
@@ -728,24 +746,32 @@ class PasConnector(BaseConnector, ConnectorUtil):
     def oseries_names(self):
         """List of oseries names."""
         lib = self._get_library("oseries")
-        return [i[:-4] for i in os.listdir(lib)
-                if i.endswith('.pas') if not i.endswith("_meta.pas")]
+        return [
+            i[:-4]
+            for i in os.listdir(lib)
+            if i.endswith(".pas")
+            if not i.endswith("_meta.pas")
+        ]
 
     @property
     def stresses_names(self):
         """List of stresses names."""
         lib = self._get_library("stresses")
-        return [i[:-4] for i in os.listdir(lib)
-                if i.endswith('.pas') if not i.endswith("_meta.pas")]
+        return [
+            i[:-4]
+            for i in os.listdir(lib)
+            if i.endswith(".pas")
+            if not i.endswith("_meta.pas")
+        ]
 
     @property
     def model_names(self):
         """List of model names."""
         lib = self._get_library("models")
-        return [i[:-4] for i in os.listdir(lib) if i.endswith('.pas')]
+        return [i[:-4] for i in os.listdir(lib) if i.endswith(".pas")]
 
     @property
     def oseries_with_models(self):
         """List of oseries with models."""
         lib = self._get_library("oseries_models")
-        return [i[:-4] for i in os.listdir(lib) if i.endswith('.pas')]
+        return [i[:-4] for i in os.listdir(lib) if i.endswith(".pas")]
