@@ -1497,6 +1497,26 @@ class ConnectorUtil:
             meta = json.load(f)
         return meta
 
+    def _get_model_orphans(self):
+        """Get models whose oseries no longer exist in database.
+
+        Returns
+        -------
+        dict
+            dictionary with oseries names as keys and lists of model names
+            as values
+        """
+        d = {}
+        for mlnam in tqdm(self.model_names, desc="Identifying model orphans"):
+            mdict = self.get_models(mlnam, return_dict=True)
+            onam = mdict["oseries"]["name"]
+            if onam not in self.oseries_names:
+                if onam in d:
+                    d[onam] = d[onam].append(mlnam)
+                else:
+                    d[onam] = [mlnam]
+        return d
+
 
 class ModelAccessor:
     """Object for managing access to stored models.
