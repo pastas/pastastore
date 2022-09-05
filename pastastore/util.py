@@ -493,8 +493,9 @@ def frontiers_checks(pstore,
 
         ml = pstore.get_models(mlnam)
 
-        checks = pd.DataFrame(
-            columns=["stat", "threshold", "units", "check_passed"])
+        if ml.parameters["optimal"].hasnans:
+            print(f"Warning! Skipping model '{mlnam}' because " "it is not solved!")
+            continue
 
         # Check 1 - Fit Statistic
         if check1_rsq:
