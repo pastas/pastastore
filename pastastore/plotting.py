@@ -476,11 +476,13 @@ class Maps:
 
         return ax
 
-    def oseries(self, labels=True, adjust=False, figsize=(10, 8), **kwargs):
+    def oseries(self, names=None, labels=True, adjust=False, figsize=(10, 8), **kwargs):
         """Plot oseries locations on map.
 
         Parameters
         ----------
+        names: list, optional
+            oseries names, by default None which plots all oseries locations
         labels: bool, optional
             label models, by default True
         adjust: bool, optional
@@ -497,7 +499,9 @@ class Maps:
         --------
         self.add_background_map
         """
-        oseries = self.pstore.oseries
+
+        names = self.pstore.conn._parse_names(names, 'oseries')
+        oseries = self.pstore.oseries.loc[names]
         mask0 = (oseries["x"] != 0.0) | (oseries["y"] != 0.0)
         ax = self._plotmap_dataframe(oseries.loc[mask0], figsize=figsize,
                                      **kwargs)
