@@ -57,9 +57,11 @@ class PastaStore:
 
     def _register_connector_methods(self):
         """Internal method for registering connector methods."""
-        methods = [func for func in dir(self.conn) if
-                   callable(getattr(self.conn, func)) and
-                   not func.startswith("_")]
+        methods = [
+            func
+            for func in dir(self.conn)
+            if callable(getattr(self.conn, func)) and not func.startswith("_")
+        ]
         for meth in methods:
             setattr(self, meth, getattr(self.conn, meth))
 
@@ -115,8 +117,9 @@ class PastaStore:
         """Representation string of the object."""
         return f"<PastaStore> {self.name}: \n - " + self.conn.__str__()
 
-    def get_oseries_distances(self, names: Optional[Union[list, str]] = None) \
-            -> FrameorSeriesUnion:
+    def get_oseries_distances(
+        self, names: Optional[Union[list, str]] = None
+    ) -> FrameorSeriesUnion:
         """Method to obtain the distances in meters between the oseries.
 
         Parameters
@@ -142,14 +145,20 @@ class PastaStore:
         xh, xi = np.meshgrid(xt, xo)
         yh, yi = np.meshgrid(yt, yo)
 
-        distances = pd.DataFrame(np.sqrt((xh - xi) ** 2 + (yh - yi) ** 2),
-                                 index=names, columns=other_df.index)
+        distances = pd.DataFrame(
+            np.sqrt((xh - xi) ** 2 + (yh - yi) ** 2),
+            index=names,
+            columns=other_df.index,
+        )
 
         return distances
 
-    def get_nearest_oseries(self, names: Optional[Union[list, str]] = None,
-                            n: int = 1, maxdist: Optional[float] = None) \
-            -> FrameorSeriesUnion:
+    def get_nearest_oseries(
+        self,
+        names: Optional[Union[list, str]] = None,
+        n: int = 1,
+        maxdist: Optional[float] = None,
+    ) -> FrameorSeriesUnion:
         """Method to obtain the nearest (n) oseries.
 
         Parameters
@@ -174,20 +183,21 @@ class PastaStore:
         data = pd.DataFrame(columns=np.arange(n))
 
         for series_name in distances.index:
-            others = distances.loc[series_name].dropna(
-            ).sort_values().index.tolist()
+            others = distances.loc[series_name].dropna().sort_values().index.tolist()
             # remove self
             others.remove(series_name)
-            series = pd.DataFrame(index=[series_name],
-                                  columns=data.columns,
-                                  data=[others[:n]])
+            series = pd.DataFrame(
+                index=[series_name], columns=data.columns, data=[others[:n]]
+            )
             data = pd.concat([data, series], axis=0)
         return data
 
-    def get_distances(self, oseries: Optional[Union[list, str]] = None,
-                      stresses: Optional[Union[list, str]] = None,
-                      kind: Optional[Union[str, List[str]]] = None) \
-            -> FrameorSeriesUnion:
+    def get_distances(
+        self,
+        oseries: Optional[Union[list, str]] = None,
+        stresses: Optional[Union[list, str]] = None,
+        kind: Optional[Union[str, List[str]]] = None,
+    ) -> FrameorSeriesUnion:
         """Method to obtain the distances in meters between the oseries and
         stresses.
 
@@ -232,17 +242,20 @@ class PastaStore:
         xh, xi = np.meshgrid(xt, xo)
         yh, yi = np.meshgrid(yt, yo)
 
-        distances = pd.DataFrame(np.sqrt((xh - xi) ** 2 + (yh - yi) ** 2),
-                                 index=oseries, columns=stresses)
+        distances = pd.DataFrame(
+            np.sqrt((xh - xi) ** 2 + (yh - yi) ** 2), index=oseries, columns=stresses
+        )
 
         return distances
 
-    def get_nearest_stresses(self, oseries: Optional[Union[list, str]] = None,
-                             stresses: Optional[Union[list, str]] = None,
-                             kind: Optional[Union[list, str]] = None,
-                             n: int = 1,
-                             maxdist: Optional[float] = None) -> \
-            FrameorSeriesUnion:
+    def get_nearest_stresses(
+        self,
+        oseries: Optional[Union[list, str]] = None,
+        stresses: Optional[Union[list, str]] = None,
+        kind: Optional[Union[list, str]] = None,
+        n: int = 1,
+        maxdist: Optional[float] = None,
+    ) -> FrameorSeriesUnion:
         """Method to obtain the nearest (n) stresses of a specific kind.
 
         Parameters
@@ -272,8 +285,8 @@ class PastaStore:
         data = pd.DataFrame(columns=np.arange(n))
 
         for series in distances.index:
-            series = pd.DataFrame([
-                distances.loc[series].dropna().sort_values().index[:n]]
+            series = pd.DataFrame(
+                [distances.loc[series].dropna().sort_values().index[:n]]
             )
             data = pd.concat([data, series], axis=0)
         return data
@@ -299,10 +312,11 @@ class PastaStore:
         """
 
         names = self.conn._parse_names(names, libname=libname)
-        tmintmax = pd.DataFrame(index=names, columns=["tmin", "tmax"],
-                                dtype='datetime64[ns]')
+        tmintmax = pd.DataFrame(
+            index=names, columns=["tmin", "tmax"], dtype="datetime64[ns]"
+        )
         desc = f"Get tmin/tmax {libname}"
-        for n in (tqdm(names, desc=desc) if progressbar else names):
+        for n in tqdm(names, desc=desc) if progressbar else names:
             if libname == "oseries":
                 s = self.conn.get_oseries(n)
             else:
@@ -311,12 +325,14 @@ class PastaStore:
             tmintmax.loc[n, "tmax"] = s.last_valid_index()
         return tmintmax
 
-    def get_parameters(self, parameters: Optional[List[str]] = None,
-                       modelnames: Optional[List[str]] = None,
-                       param_value: Optional[str] = "optimal",
-                       progressbar: Optional[bool] = False,
-                       ignore_errors: Optional[bool] = False) \
-            -> FrameorSeriesUnion:
+    def get_parameters(
+        self,
+        parameters: Optional[List[str]] = None,
+        modelnames: Optional[List[str]] = None,
+        param_value: Optional[str] = "optimal",
+        progressbar: Optional[bool] = False,
+        ignore_errors: Optional[bool] = False,
+    ) -> FrameorSeriesUnion:
         """Get model parameters. NaN-values are returned when the parameters
         are not present in the model or the model is not optimized.
 
@@ -349,11 +365,9 @@ class PastaStore:
 
         # loop through model names and store results
         desc = "Get model parameters"
-        for mlname in (tqdm(modelnames, desc=desc)
-                       if progressbar else modelnames):
+        for mlname in tqdm(modelnames, desc=desc) if progressbar else modelnames:
             try:
-                mldict = self.get_models(mlname, return_dict=True,
-                                         progressbar=False)
+                mldict = self.get_models(mlname, return_dict=True, progressbar=False)
             except Exception as e:
                 if ignore_errors:
                     p.loc[mlname, :] = np.nan
@@ -366,17 +380,19 @@ class PastaStore:
                 pindex = parameters
 
             for c in pindex:
-                p.loc[mlname, c] = \
-                    mldict["parameters"].loc[c, param_value]
+                p.loc[mlname, c] = mldict["parameters"].loc[c, param_value]
 
         p = p.squeeze()
         return p.astype(float)
 
-    def get_statistics(self, statistics: List[str],
-                       modelnames: Optional[List[str]] = None,
-                       progressbar: Optional[bool] = False,
-                       ignore_errors: Optional[bool] = False, **kwargs) \
-            -> FrameorSeriesUnion:
+    def get_statistics(
+        self,
+        statistics: List[str],
+        modelnames: Optional[List[str]] = None,
+        progressbar: Optional[bool] = False,
+        ignore_errors: Optional[bool] = False,
+        **kwargs,
+    ) -> FrameorSeriesUnion:
         """Get model statistics.
 
         Parameters
@@ -408,8 +424,7 @@ class PastaStore:
 
         # loop through model names
         desc = "Get model statistics"
-        for mlname in (tqdm(modelnames, desc=desc)
-                       if progressbar else modelnames):
+        for mlname in tqdm(modelnames, desc=desc) if progressbar else modelnames:
             try:
                 ml = self.get_models(mlname, progressbar=False)
             except Exception as e:
@@ -424,9 +439,13 @@ class PastaStore:
         s = s.squeeze()
         return s.astype(float)
 
-    def create_model(self, name: str, modelname: str = None,
-                     add_recharge: bool = True,
-                     recharge_name: str = "recharge") -> ps.Model:
+    def create_model(
+        self,
+        name: str,
+        modelname: str = None,
+        add_recharge: bool = True,
+        recharge_name: str = "recharge",
+    ) -> ps.Model:
         """Create a pastas Model.
 
         Parameters
@@ -460,8 +479,7 @@ class PastaStore:
 
         # convert to Timeseries and create model
         if not ts.dropna().empty:
-            ts = ps.TimeSeries(ts, name=name, settings="oseries",
-                               metadata=meta)
+            ts = ps.TimeSeries(ts, name=name, settings="oseries", metadata=meta)
             if modelname is None:
                 modelname = name
             ml = ps.Model(ts, name=modelname, metadata=meta)
@@ -472,15 +490,17 @@ class PastaStore:
         else:
             raise ValueError("Empty timeseries!")
 
-    def create_models_bulk(self, oseries: Optional[Union[list, str]] = None,
-                           add_recharge: bool = True,
-                           store: bool = True,
-                           solve: bool = False,
-                           progressbar: bool = True,
-                           return_models: bool = False,
-                           ignore_errors: bool = False,
-                           **kwargs) \
-            -> Union[Tuple[dict, dict], dict]:
+    def create_models_bulk(
+        self,
+        oseries: Optional[Union[list, str]] = None,
+        add_recharge: bool = True,
+        store: bool = True,
+        solve: bool = False,
+        progressbar: bool = True,
+        return_models: bool = False,
+        ignore_errors: bool = False,
+        **kwargs,
+    ) -> Union[Tuple[dict, dict], dict]:
         """Bulk creation of pastas models.
 
         Parameters
@@ -517,7 +537,7 @@ class PastaStore:
         models = {}
         errors = {}
         desc = "Bulk creation models"
-        for o in (tqdm(oseries, desc=desc) if progressbar else oseries):
+        for o in tqdm(oseries, desc=desc) if progressbar else oseries:
             try:
                 iml = self.create_model(o, add_recharge=add_recharge)
             except Exception as e:
@@ -539,9 +559,13 @@ class PastaStore:
         else:
             return errors
 
-    def add_recharge(self, ml: ps.Model, rfunc=ps.Gamma,
-                     recharge=ps.rch.Linear(),
-                     recharge_name: str = "recharge") -> None:
+    def add_recharge(
+        self,
+        ml: ps.Model,
+        rfunc=ps.Gamma,
+        recharge=ps.rch.Linear(),
+        recharge_name: str = "recharge",
+    ) -> None:
         """Add recharge to a pastas model.
 
         Uses closest precipitation and evaporation timeseries in database.
@@ -564,15 +588,16 @@ class PastaStore:
         names = []
         for var in ("prec", "evap"):
             try:
-                name = self.get_nearest_stresses(
-                    ml.oseries.name, kind=var).iloc[0, 0]
+                name = self.get_nearest_stresses(ml.oseries.name, kind=var).iloc[0, 0]
             except AttributeError:
                 msg = "No precipitation or evaporation timeseries found!"
                 raise Exception(msg)
             if isinstance(name, float):
                 if np.isnan(name):
-                    raise ValueError(f"Unable to find nearest '{var}' stress! "
-                                     "Check X and Y coordinates.")
+                    raise ValueError(
+                        f"Unable to find nearest '{var}' stress! "
+                        "Check X and Y coordinates."
+                    )
             else:
                 names.append(name)
         if len(names) == 0:
@@ -584,20 +609,31 @@ class PastaStore:
         stresses = []
         for (k, s), setting in zip(tsdict.items(), ("prec", "evap")):
             metadata = self.conn.get_metadata("stresses", k, as_frame=False)
-            stresses.append(ps.TimeSeries(s, name=k, settings=setting,
-                                          metadata=metadata))
+            stresses.append(
+                ps.TimeSeries(s, name=k, settings=setting, metadata=metadata)
+            )
 
         # add recharge to model
-        rch = ps.RechargeModel(stresses[0], stresses[1], rfunc,
-                               name=recharge_name, recharge=recharge,
-                               settings=("prec", "evap"),
-                               metadata=[i.metadata for i in stresses])
+        rch = ps.RechargeModel(
+            stresses[0],
+            stresses[1],
+            rfunc,
+            name=recharge_name,
+            recharge=recharge,
+            settings=("prec", "evap"),
+            metadata=[i.metadata for i in stresses],
+        )
         ml.add_stressmodel(rch)
 
-    def solve_models(self, mls: Optional[Union[ps.Model, list, str]] = None,
-                     report: bool = False, ignore_solve_errors: bool = False,
-                     store_result: bool = True, progressbar: bool = True,
-                     **kwargs) -> None:
+    def solve_models(
+        self,
+        mls: Optional[Union[ps.Model, list, str]] = None,
+        report: bool = False,
+        ignore_solve_errors: bool = False,
+        store_result: bool = True,
+        progressbar: bool = True,
+        **kwargs,
+    ) -> None:
         """Solves the models in the store.
 
         Parameters
@@ -625,7 +661,7 @@ class PastaStore:
             mls = [mls.name]
 
         desc = "Solving models"
-        for ml_name in (tqdm(mls, desc=desc) if progressbar else mls):
+        for ml_name in tqdm(mls, desc=desc) if progressbar else mls:
             ml = self.conn.get_models(ml_name)
 
             m_kwargs = {}
@@ -650,8 +686,9 @@ class PastaStore:
                 else:
                     raise e
 
-    def model_results(self, mls: Optional[Union[ps.Model, list, str]] = None,
-                      progressbar: bool = True):  # pragma: no cover
+    def model_results(
+        self, mls: Optional[Union[ps.Model, list, str]] = None, progressbar: bool = True
+    ):  # pragma: no cover
         """Get pastas model results.
 
         Parameters
@@ -676,8 +713,7 @@ class PastaStore:
         try:
             from art_tools import pastas_get_model_results
         except Exception:
-            raise ModuleNotFoundError(
-                "You need 'art_tools' to use this method!")
+            raise ModuleNotFoundError("You need 'art_tools' to use this method!")
 
         if mls is None:
             mls = self.conn.models
@@ -686,14 +722,15 @@ class PastaStore:
 
         results_list = []
         desc = "Get model results"
-        for mlname in (tqdm(mls, desc=desc) if progressbar else mls):
+        for mlname in tqdm(mls, desc=desc) if progressbar else mls:
             try:
                 iml = self.conn.get_models(mlname)
             except Exception as e:
                 print("{1}: '{0}' could not be parsed!".format(mlname, e))
                 continue
             iresults = pastas_get_model_results(
-                iml, par_selection='all', stats=('evp',), stderrors=True)
+                iml, par_selection="all", stats=("evp",), stderrors=True
+            )
             results_list.append(iresults)
 
         return pd.concat(results_list, axis=1).transpose()
@@ -711,27 +748,28 @@ class PastaStore:
             show progressbar, by default True
         """
         from zipfile import ZIP_DEFLATED, ZipFile
+
         if os.path.exists(fname) and not overwrite:
-            raise FileExistsError("File already exists! "
-                                  "Use 'overwrite=True' to "
-                                  "force writing file.")
+            raise FileExistsError(
+                "File already exists! " "Use 'overwrite=True' to " "force writing file."
+            )
         elif os.path.exists(fname):
             warnings.warn(f"Overwriting file '{os.path.basename(fname)}'")
 
         with ZipFile(fname, "w", compression=ZIP_DEFLATED) as archive:
             # oseries
-            self.conn._series_to_archive(archive, "oseries",
-                                         progressbar=progressbar)
+            self.conn._series_to_archive(archive, "oseries", progressbar=progressbar)
             # stresses
-            self.conn._series_to_archive(archive, "stresses",
-                                         progressbar=progressbar)
+            self.conn._series_to_archive(archive, "stresses", progressbar=progressbar)
             # models
             self.conn._models_to_archive(archive, progressbar=progressbar)
 
-    def export_model_series_to_csv(self,
-                                   names: Optional[Union[list, str]] = None,
-                                   exportdir: str = ".",
-                                   exportmeta: bool = True):  # pragma: no cover
+    def export_model_series_to_csv(
+        self,
+        names: Optional[Union[list, str]] = None,
+        exportdir: str = ".",
+        exportmeta: bool = True,
+    ):  # pragma: no cover
         """Export model timeseries to csv files.
 
         Parameters
@@ -761,8 +799,7 @@ class PastaStore:
                         istress = mldict["stressmodels"][sm][istress]
                         stress_name = istress["name"]
                         ts = self.get_stresses(stress_name)
-                        ts.to_csv(os.path.join(
-                            exportdir, f"{stress_name}.csv"))
+                        ts.to_csv(os.path.join(exportdir, f"{stress_name}.csv"))
                         if exportmeta:
                             tsmeta = self.get_metadata("stresses", stress_name)
                             metalist.append(tsmeta)
@@ -770,19 +807,20 @@ class PastaStore:
                     for istress in mldict["stressmodels"][sm]["stress"]:
                         stress_name = istress["name"]
                         ts = self.get_stresses(stress_name)
-                        ts.to_csv(os.path.join(
-                            exportdir, f"{stress_name}.csv"))
+                        ts.to_csv(os.path.join(exportdir, f"{stress_name}.csv"))
                         if exportmeta:
                             tsmeta = self.get_metadata("stresses", stress_name)
                             metalist.append(tsmeta)
 
             if exportmeta:
                 pd.concat(metalist, axis=0).to_csv(
-                    os.path.join(exportdir, f"metadata_{name}.csv"))
+                    os.path.join(exportdir, f"metadata_{name}.csv")
+                )
 
     @classmethod
-    def from_zip(cls, fname: str, conn, storename: Optional[str] = None,
-                 progressbar: bool = True):
+    def from_zip(
+        cls, fname: str, conn, storename: Optional[str] = None, progressbar: bool = True
+    ):
         """Load PastaStore from zipfile.
 
         Parameters
@@ -803,22 +841,20 @@ class PastaStore:
             return PastaStore containing data from zipfile
         """
         from zipfile import ZipFile
+
         with ZipFile(fname, "r") as archive:
-            namelist = [fi for fi in archive.namelist()
-                        if not fi.endswith("_meta.json")]
-            for f in (tqdm(namelist, desc="Reading zip") if progressbar
-                      else namelist):
+            namelist = [
+                fi for fi in archive.namelist() if not fi.endswith("_meta.json")
+            ]
+            for f in tqdm(namelist, desc="Reading zip") if progressbar else namelist:
                 libname, fjson = os.path.split(f)
                 if libname in ["stresses", "oseries"]:
-                    s = pd.read_json(archive.open(f),
-                                     orient="columns")
+                    s = pd.read_json(archive.open(f), orient="columns")
                     if not isinstance(s.index, pd.DatetimeIndex):
-                        s.index = pd.to_datetime(s.index, unit='ms')
+                        s.index = pd.to_datetime(s.index, unit="ms")
                     s = s.sort_index()
-                    meta = json.load(archive.open(
-                        f.replace(".json", "_meta.json")))
-                    conn._add_series(libname, s, fjson.split(".")[0],
-                                     metadata=meta)
+                    meta = json.load(archive.open(f.replace(".json", "_meta.json")))
+                    conn._add_series(libname, s, fjson.split(".")[0], metadata=meta)
                 elif libname in ["models"]:
                     ml = json.load(archive.open(f), object_hook=pastas_hook)
                     conn.add_model(ml)
@@ -826,8 +862,12 @@ class PastaStore:
             storename = conn.name
         return cls(storename, conn)
 
-    def search(self, libname: str, s: Optional[Union[list, str]] = None,
-               case_sensitive: bool = True):
+    def search(
+        self,
+        libname: str,
+        s: Optional[Union[list, str]] = None,
+        case_sensitive: bool = True,
+    ):
         """Search for names of timeseries or models starting with s.
 
         Parameters
@@ -846,14 +886,13 @@ class PastaStore:
         """
 
         if libname == "models":
-            lib_names = getattr(self, 'model_names')
+            lib_names = getattr(self, "model_names")
         elif libname == "stresses":
-            lib_names = getattr(self, 'stresses_names')
+            lib_names = getattr(self, "stresses_names")
         elif libname == "oseries":
-            lib_names = getattr(self, 'oseries_names')
+            lib_names = getattr(self, "oseries_names")
         else:
-            raise ValueError(
-                "Provide valid libname: 'models', 'stresses' or 'oseries'")
+            raise ValueError("Provide valid libname: 'models', 'stresses' or 'oseries'")
 
         if isinstance(s, str):
             if case_sensitive:
@@ -866,17 +905,17 @@ class PastaStore:
                 if case_sensitive:
                     m = np.append(m, [n for n in lib_names if sub in n])
                 else:
-                    m = np.append(
-                        m, [n for n in lib_names if sub.lower() in n.lower()])
+                    m = np.append(m, [n for n in lib_names if sub.lower() in n.lower()])
             matches = list(np.unique(m))
 
         return matches
 
     def get_model_timeseries_names(
-            self,
-            modelnames: Optional[Union[list, str]] = None,
-            dropna: bool = True,
-            progressbar: bool = True) -> FrameorSeriesUnion:
+        self,
+        modelnames: Optional[Union[list, str]] = None,
+        dropna: bool = True,
+        progressbar: bool = True,
+    ) -> FrameorSeriesUnion:
         """Get timeseries names contained in model.
 
         Parameters
@@ -899,11 +938,15 @@ class PastaStore:
         """
 
         model_names = self.conn._parse_names(modelnames, libname="models")
-        structure = pd.DataFrame(index=model_names,
-                                 columns=["oseries"] + self.stresses_names)
+        structure = pd.DataFrame(
+            index=model_names, columns=["oseries"] + self.stresses_names
+        )
 
-        for mlnam in (tqdm(model_names, desc="Get model timeseries names")
-                      if progressbar else model_names):
+        for mlnam in (
+            tqdm(model_names, desc="Get model timeseries names")
+            if progressbar
+            else model_names
+        ):
             iml = self.get_models(mlnam, return_dict=True)
 
             # oseries

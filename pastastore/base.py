@@ -3,6 +3,7 @@ import json
 import warnings
 from abc import ABC, abstractmethod, abstractproperty
 from collections.abc import Iterable
+from itertools import chain
 from typing import Dict, List, Optional, Tuple, Union
 
 import pandas as pd
@@ -26,18 +27,24 @@ class BaseConnector(ABC):
     override each abstractmethod and abstractproperty.
     """
 
-    _default_library_names = ["oseries", "stresses", "models",
-                              "oseries_models"]
+    _default_library_names = [
+        "oseries",
+        "stresses",
+        "models",
+        "oseries_models",
+    ]
 
     # whether to check model timeseries contents against stored copies
     check_model_series_values = True
 
     def __repr__(self):
         """Representation string of the object."""
-        return (f"<{type(self).__name__}> '{self.name}': "
-                f"{self.n_oseries} oseries, "
-                f"{self.n_stresses} stresses, "
-                f"{self.n_models} models")
+        return (
+            f"<{type(self).__name__}> '{self.name}': "
+            f"{self.n_oseries} oseries, "
+            f"{self.n_stresses} stresses, "
+            f"{self.n_models} models"
+        )
 
     @abstractmethod
     def _get_library(self, libname: str):
@@ -58,11 +65,14 @@ class BaseConnector(ABC):
         pass
 
     @abstractmethod
-    def _add_item(self, libname: str,
-                  item: Union[FrameorSeriesUnion, Dict],
-                  name: str,
-                  metadata: Optional[Dict] = None,
-                  overwrite: bool = False) -> None:
+    def _add_item(
+        self,
+        libname: str,
+        item: Union[FrameorSeriesUnion, Dict],
+        name: str,
+        metadata: Optional[Dict] = None,
+        overwrite: bool = False,
+    ) -> None:
         """Internal method to add item for both timeseries and pastas.Models.
 
         Must be overriden by subclass.
@@ -81,8 +91,7 @@ class BaseConnector(ABC):
         pass
 
     @abstractmethod
-    def _get_item(self, libname: str, name: str) \
-            -> Union[FrameorSeriesUnion, Dict]:
+    def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
         """Internal method to get item (series or pastas.Models).
 
         Must be overriden by subclass.
@@ -179,11 +188,14 @@ class BaseConnector(ABC):
         self.check_model_series_values = b
         print(f"Model timeseries checking set to: {b}.")
 
-    def _add_series(self, libname: str,
-                    series: FrameorSeriesUnion,
-                    name: str,
-                    metadata: Optional[dict] = None,
-                    overwrite: bool = False) -> None:
+    def _add_series(
+        self,
+        libname: str,
+        series: FrameorSeriesUnion,
+        name: str,
+        metadata: Optional[dict] = None,
+        overwrite: bool = False,
+    ) -> None:
         """Internal method to add series to database.
 
         Parameters
@@ -211,17 +223,22 @@ class BaseConnector(ABC):
         series = self._set_series_name(series, name)
         in_store = getattr(self, f"{libname}_names")
         if name not in in_store or overwrite:
-            self._add_item(libname, series, name, metadata=metadata,
-                           overwrite=overwrite)
+            self._add_item(
+                libname, series, name, metadata=metadata, overwrite=overwrite
+            )
             self._clear_cache(libname)
         else:
-            raise ItemInLibraryException(f"Item with name '{name}' already"
-                                         f" in '{libname}' library!")
+            raise ItemInLibraryException(
+                f"Item with name '{name}' already" f" in '{libname}' library!"
+            )
 
-    def _update_series(self, libname: str,
-                       series: FrameorSeriesUnion,
-                       name: str,
-                       metadata: Optional[dict] = None) -> None:
+    def _update_series(
+        self,
+        libname: str,
+        series: FrameorSeriesUnion,
+        name: str,
+        metadata: Optional[dict] = None,
+    ) -> None:
         """Internal method to update timeseries.
 
         Parameters
@@ -250,13 +267,15 @@ class BaseConnector(ABC):
         update_meta = self._get_metadata(libname, name)
         if metadata is not None:
             update_meta.update(metadata)
-        self._add_series(libname, update, name, metadata=update_meta,
-                         overwrite=True)
+        self._add_series(libname, update, name, metadata=update_meta, overwrite=True)
 
-    def _upsert_series(self, libname: str,
-                       series: FrameorSeriesUnion,
-                       name: str,
-                       metadata: Optional[dict] = None) -> None:
+    def _upsert_series(
+        self,
+        libname: str,
+        series: FrameorSeriesUnion,
+        name: str,
+        metadata: Optional[dict] = None,
+    ) -> None:
         """Update or insert series depending on whether it exists in store.
 
         Parameters
@@ -301,13 +320,15 @@ class BaseConnector(ABC):
         # get series, since just updating metadata is not really defined
         # in all cases
         s = self._get_series(libname, name, progressbar=False)
-        self._add_series(libname, s, name, metadata=update_meta,
-                         overwrite=True)
+        self._add_series(libname, s, name, metadata=update_meta, overwrite=True)
 
-    def add_oseries(self, series: Union[FrameorSeriesUnion, ps.TimeSeries],
-                    name: str,
-                    metadata: Optional[dict] = None,
-                    overwrite: bool = False) -> None:
+    def add_oseries(
+        self,
+        series: Union[FrameorSeriesUnion, ps.TimeSeries],
+        name: str,
+        metadata: Optional[dict] = None,
+        overwrite: bool = False,
+    ) -> None:
         """Add oseries to the database.
 
         Parameters
@@ -325,13 +346,22 @@ class BaseConnector(ABC):
             by default False
         """
         series, metadata = self._parse_series_input(series, metadata)
-        self._add_series("oseries", series, name=name, metadata=metadata,
-                         overwrite=overwrite)
+        self._add_series(
+            "oseries",
+            series,
+            name=name,
+            metadata=metadata,
+            overwrite=overwrite,
+        )
 
-    def add_stress(self, series: Union[FrameorSeriesUnion, ps.TimeSeries],
-                   name: str, kind: str,
-                   metadata: Optional[dict] = None,
-                   overwrite: bool = False) -> None:
+    def add_stress(
+        self,
+        series: Union[FrameorSeriesUnion, ps.TimeSeries],
+        name: str,
+        kind: str,
+        metadata: Optional[dict] = None,
+        overwrite: bool = False,
+    ) -> None:
         """Add stress to the database.
 
         Parameters
@@ -356,12 +386,20 @@ class BaseConnector(ABC):
         if metadata is None:
             metadata = {}
         metadata["kind"] = kind
-        self._add_series("stresses", series, name=name,
-                         metadata=metadata, overwrite=overwrite)
+        self._add_series(
+            "stresses",
+            series,
+            name=name,
+            metadata=metadata,
+            overwrite=overwrite,
+        )
 
-    def add_model(self, ml: Union[ps.Model, dict],
-                  overwrite: bool = False,
-                  validate_metadata: bool = False) -> None:
+    def add_model(
+        self,
+        ml: Union[ps.Model, dict],
+        overwrite: bool = False,
+        validate_metadata: bool = False,
+    ) -> None:
         """Add model to the database.
 
         Parameters
@@ -403,18 +441,21 @@ class BaseConnector(ABC):
             self._check_oseries_in_store(ml)
             self._check_stresses_in_store(ml)
             # write model to store
-            self._add_item("models", mldict, name, metadata=metadata,
-                           overwrite=overwrite)
+            self._add_item(
+                "models", mldict, name, metadata=metadata, overwrite=overwrite
+            )
         else:
-            raise ItemInLibraryException(f"Model with name '{name}' "
-                                         "already in 'models' library!")
+            raise ItemInLibraryException(
+                f"Model with name '{name}' " "already in 'models' library!"
+            )
         self._clear_cache("_modelnames_cache")
         self._add_oseries_model_links(str(mldict["oseries"]["name"]), name)
 
     @staticmethod
-    def _parse_series_input(series: Union[FrameorSeriesUnion, ps.TimeSeries],
-                            metadata: Optional[Dict] = None) \
-            -> Tuple[FrameorSeriesUnion, Optional[Dict]]:
+    def _parse_series_input(
+        series: Union[FrameorSeriesUnion, ps.TimeSeries],
+        metadata: Optional[Dict] = None,
+    ) -> Tuple[FrameorSeriesUnion, Optional[Dict]]:
         """Internal method to parse series input.
 
         Parameters
@@ -432,8 +473,10 @@ class BaseConnector(ABC):
         """
         if isinstance(series, ps.TimeSeries):
             if metadata is not None:
-                print("Warning! Metadata kwarg ignored. Metadata taken from "
-                      "pastas.TimeSeries object!")
+                print(
+                    "Warning! Metadata kwarg ignored. Metadata taken from "
+                    "pastas.TimeSeries object!"
+                )
             s = series.series_original
             m = series.metadata
         else:
@@ -441,8 +484,12 @@ class BaseConnector(ABC):
             m = metadata
         return s, m
 
-    def update_oseries(self, series: Union[FrameorSeriesUnion, ps.TimeSeries],
-                       name: str, metadata: Optional[dict] = None) -> None:
+    def update_oseries(
+        self,
+        series: Union[FrameorSeriesUnion, ps.TimeSeries],
+        name: str,
+        metadata: Optional[dict] = None,
+    ) -> None:
         """Update oseries values.
 
         Parameters
@@ -458,8 +505,12 @@ class BaseConnector(ABC):
         series, metadata = self._parse_series_input(series, metadata)
         self._update_series("oseries", series, name, metadata=metadata)
 
-    def upsert_oseries(self, series: Union[FrameorSeriesUnion, ps.TimeSeries],
-                       name: str, metadata: Optional[dict] = None) -> None:
+    def upsert_oseries(
+        self,
+        series: Union[FrameorSeriesUnion, ps.TimeSeries],
+        name: str,
+        metadata: Optional[dict] = None,
+    ) -> None:
         """Update or insert oseries values depending on whether it exists.
 
         Parameters
@@ -475,8 +526,12 @@ class BaseConnector(ABC):
         series, metadata = self._parse_series_input(series, metadata)
         self._upsert_series("oseries", series, name, metadata=metadata)
 
-    def update_stress(self, series: Union[FrameorSeriesUnion, ps.TimeSeries],
-                      name: str, metadata: Optional[dict] = None) -> None:
+    def update_stress(
+        self,
+        series: Union[FrameorSeriesUnion, ps.TimeSeries],
+        name: str,
+        metadata: Optional[dict] = None,
+    ) -> None:
         """Update stresses values.
 
         Note: the 'kind' attribute of a stress cannot be updated! To update
@@ -495,9 +550,13 @@ class BaseConnector(ABC):
         series, metadata = self._parse_series_input(series, metadata)
         self._update_series("stresses", series, name, metadata=metadata)
 
-    def upsert_stress(self, series: Union[FrameorSeriesUnion, ps.TimeSeries],
-                      name: str, kind: str,
-                      metadata: Optional[dict] = None) -> None:
+    def upsert_stress(
+        self,
+        series: Union[FrameorSeriesUnion, ps.TimeSeries],
+        name: str,
+        kind: str,
+        metadata: Optional[dict] = None,
+    ) -> None:
         """Update or insert stress values depending on whether it exists.
 
         Parameters
@@ -564,9 +623,13 @@ class BaseConnector(ABC):
             self._del_item("stresses", n)
         self._clear_cache("stresses")
 
-    def _get_series(self, libname: str, names: Union[list, str],
-                    progressbar: bool = True, squeeze: bool = True) \
-            -> FrameorSeriesUnion:
+    def _get_series(
+        self,
+        libname: str,
+        names: Union[list, str],
+        progressbar: bool = True,
+        squeeze: bool = True,
+    ) -> FrameorSeriesUnion:
         """Internal method to get timeseries.
 
         Parameters
@@ -590,7 +653,7 @@ class BaseConnector(ABC):
         ts = {}
         names = self._parse_names(names, libname=libname)
         desc = f"Get {libname}"
-        for n in (tqdm(names, desc=desc) if progressbar else names):
+        for n in tqdm(names, desc=desc) if progressbar else names:
             ts[n] = self._get_item(libname, n)
         # return frame if len == 1
         if len(ts) == 1 and squeeze:
@@ -598,9 +661,14 @@ class BaseConnector(ABC):
         else:
             return ts
 
-    def get_metadata(self, libname: str, names: Union[list, str],
-                     progressbar: bool = False, as_frame: bool = True,
-                     squeeze: bool = True) -> Union[dict, pd.DataFrame]:
+    def get_metadata(
+        self,
+        libname: str,
+        names: Union[list, str],
+        progressbar: bool = False,
+        as_frame: bool = True,
+        squeeze: bool = True,
+    ) -> Union[dict, pd.DataFrame]:
         """Read metadata from database.
 
         Parameters
@@ -621,7 +689,7 @@ class BaseConnector(ABC):
         metalist = []
         names = self._parse_names(names, libname=libname)
         desc = f"Get metadata {libname}"
-        for n in (tqdm(names, desc=desc) if progressbar else names):
+        for n in tqdm(names, desc=desc) if progressbar else names:
             imeta = self._get_metadata(libname, n)
             if imeta is None:
                 imeta = {}
@@ -637,12 +705,13 @@ class BaseConnector(ABC):
             else:
                 return metalist
 
-    def get_oseries(self, names: Union[list, str],
-                    return_metadata: bool = False,
-                    progressbar: bool = False,
-                    squeeze: bool = True) \
-            -> Union[Union[FrameorSeriesUnion, Dict],
-                     Optional[Union[Dict, List]]]:
+    def get_oseries(
+        self,
+        names: Union[list, str],
+        return_metadata: bool = False,
+        progressbar: bool = False,
+        squeeze: bool = True,
+    ) -> Union[Union[FrameorSeriesUnion, Dict], Optional[Union[Dict, List]]]:
         """Get oseries from database.
 
         Parameters
@@ -666,24 +735,28 @@ class BaseConnector(ABC):
         metadata : dict or list of dict
             metadata for each oseries, only returned if return_metadata=True
         """
-        oseries = self._get_series("oseries", names, progressbar=progressbar,
-                                   squeeze=squeeze)
+        oseries = self._get_series(
+            "oseries", names, progressbar=progressbar, squeeze=squeeze
+        )
         if return_metadata:
-            metadata = self.get_metadata("oseries",
-                                         names,
-                                         progressbar=progressbar,
-                                         as_frame=False,
-                                         squeeze=squeeze)
+            metadata = self.get_metadata(
+                "oseries",
+                names,
+                progressbar=progressbar,
+                as_frame=False,
+                squeeze=squeeze,
+            )
             return oseries, metadata
         else:
             return oseries
 
-    def get_stresses(self, names: Union[list, str],
-                     return_metadata: bool = False,
-                     progressbar: bool = False,
-                     squeeze: bool = True) \
-            -> Union[Union[FrameorSeriesUnion, Dict],
-                     Optional[Union[Dict, List]]]:
+    def get_stresses(
+        self,
+        names: Union[list, str],
+        return_metadata: bool = False,
+        progressbar: bool = False,
+        squeeze: bool = True,
+    ) -> Union[Union[FrameorSeriesUnion, Dict], Optional[Union[Dict, List]]]:
         """Get stresses from database.
 
         Parameters
@@ -707,22 +780,29 @@ class BaseConnector(ABC):
         metadata : dict or list of dict
             metadata for each stress, only returned if return_metadata=True
         """
-        stresses = self._get_series("stresses", names, progressbar=progressbar,
-                                    squeeze=squeeze)
+        stresses = self._get_series(
+            "stresses", names, progressbar=progressbar, squeeze=squeeze
+        )
         if return_metadata:
-            metadata = self.get_metadata("stresses",
-                                         names,
-                                         progressbar=progressbar,
-                                         as_frame=False,
-                                         squeeze=squeeze)
+            metadata = self.get_metadata(
+                "stresses",
+                names,
+                progressbar=progressbar,
+                as_frame=False,
+                squeeze=squeeze,
+            )
             return stresses, metadata
         else:
             return stresses
 
-    def get_models(self, names: Union[list, str], return_dict: bool = False,
-                   progressbar: bool = False, squeeze: bool = True,
-                   update_ts_settings: bool = False) \
-            -> Union[ps.Model, list]:
+    def get_models(
+        self,
+        names: Union[list, str],
+        return_dict: bool = False,
+        progressbar: bool = False,
+        squeeze: bool = True,
+        update_ts_settings: bool = False,
+    ) -> Union[ps.Model, list]:
         """Load models from database.
 
         Parameters
@@ -750,21 +830,21 @@ class BaseConnector(ABC):
         models = []
         names = self._parse_names(names, libname="models")
         desc = "Get models"
-        for n in (tqdm(names, desc=desc) if progressbar else names):
+        for n in tqdm(names, desc=desc) if progressbar else names:
             data = self._get_item("models", n)
             if return_dict:
                 ml = data
             else:
-                ml = self._parse_model_dict(
-                    data, update_ts_settings=update_ts_settings)
+                ml = self._parse_model_dict(data, update_ts_settings=update_ts_settings)
             models.append(ml)
         if len(models) == 1 and squeeze:
             return models[0]
         else:
             return models
 
-    def empty_library(self, libname: str, prompt: bool = True,
-                      progressbar: bool = True):
+    def empty_library(
+        self, libname: str, prompt: bool = True, progressbar: bool = True
+    ):
         """Empty library of all its contents.
 
         Parameters
@@ -779,17 +859,19 @@ class BaseConnector(ABC):
             show progressbar, by default True
         """
         if prompt:
-            ui = input(f"Do you want to empty '{libname}'"
-                       " library of all its contents? [y/N] ")
+            ui = input(
+                f"Do you want to empty '{libname}'"
+                " library of all its contents? [y/N] "
+            )
             if ui.lower() != "y":
                 return
         names = self._parse_names(None, libname)
-        for name in (tqdm(names, desc=f"Deleting items from {libname}")
-                     if progressbar else names):
+        for name in (
+            tqdm(names, desc=f"Deleting items from {libname}") if progressbar else names
+        ):
             self._del_item(libname, name)
         self._clear_cache(libname)
-        print(f"Emptied library {libname} in {self.name}: "
-              f"{self.__class__}")
+        print(f"Emptied library {libname} in {self.name}: " f"{self.__class__}")
 
     def _iter_series(self, libname: str, names: Optional[List[str]] = None):
         """Internal method iterate over timeseries in library.
@@ -846,8 +928,9 @@ class BaseConnector(ABC):
         """
         yield from self._iter_series("stresses", names=names)
 
-    def iter_models(self, modelnames: Optional[List[str]] = None,
-                    return_dict: bool = False):
+    def iter_models(
+        self, modelnames: Optional[List[str]] = None, return_dict: bool = False
+    ):
         """Iterate over models in library.
 
         Parameters
@@ -867,11 +950,9 @@ class BaseConnector(ABC):
 
         modelnames = self._parse_names(modelnames, "models")
         for mlnam in modelnames:
-            yield self.get_models(mlnam, return_dict=return_dict,
-                                  progressbar=False)
+            yield self.get_models(mlnam, return_dict=return_dict, progressbar=False)
 
-    def _add_oseries_model_links(self, onam: str,
-                                 mlnames: Union[str, List[str]]):
+    def _add_oseries_model_links(self, onam: str, mlnames: Union[str, List[str]]):
         """Add model name to stored list of models per oseries.
 
         Parameters
@@ -931,9 +1012,11 @@ class BaseConnector(ABC):
         if self.n_models > 0:
             if len(self.oseries_models) == 0:
                 links = self._get_all_oseries_model_links()
-                for onam, mllinks in tqdm(links.items(),
-                                          desc="Store models per oseries",
-                                          total=len(links)):
+                for onam, mllinks in tqdm(
+                    links.items(),
+                    desc="Store models per oseries",
+                    total=len(links),
+                ):
                     self._add_oseries_model_links(onam, mllinks)
 
     def _get_all_oseries_model_links(self):
@@ -946,9 +1029,11 @@ class BaseConnector(ABC):
             values
         """
         links = {}
-        for mldict in tqdm(self.iter_models(return_dict=True),
-                           total=self.n_models,
-                           desc="Get models per oseries"):
+        for mldict in tqdm(
+            self.iter_models(return_dict=True),
+            total=self.n_models,
+            desc="Get models per oseries",
+        ):
             onam = mldict["oseries"]["name"]
             mlnam = mldict["name"]
             if onam in links:
@@ -982,7 +1067,7 @@ class BaseConnector(ABC):
         """List of model names."""
         return self.model_names
 
-    @ property
+    @property
     def n_oseries(self):
         return len(self.oseries_names)
 
@@ -1018,8 +1103,11 @@ class ConnectorUtil:
     operations on database.
     """
 
-    def _parse_names(self, names: Optional[Union[list, str]] = None,
-                     libname: Optional[str] = "oseries") -> list:
+    def _parse_names(
+        self,
+        names: Optional[Union[list, str]] = None,
+        libname: Optional[str] = "oseries",
+    ) -> list:
         """Internal method to parse names kwarg, returns iterable with name(s).
 
         Parameters
@@ -1085,8 +1173,7 @@ class ConnectorUtil:
             meta.index = names
         return meta
 
-    def _parse_model_dict(self, mdict: dict,
-                          update_ts_settings: bool = False):
+    def _parse_model_dict(self, mdict: dict, update_ts_settings: bool = False):
         """Internal method to parse dictionary describing pastas models.
 
         Parameters
@@ -1103,57 +1190,53 @@ class ConnectorUtil:
             timeseries analysis model
         """
         # oseries
-        if 'series' not in mdict['oseries']:
-            name = str(mdict["oseries"]['name'])
+        if "series" not in mdict["oseries"]:
+            name = str(mdict["oseries"]["name"])
             if name not in self.oseries.index:
-                msg = 'oseries {} not present in project'.format(name)
+                msg = "oseries {} not present in project".format(name)
                 raise LookupError(msg)
-            mdict['oseries']['series'] = self.get_oseries(name)
+            mdict["oseries"]["series"] = self.get_oseries(name)
             # update tmin/tmax from timeseries
             if update_ts_settings:
-                mdict["oseries"]["settings"]["tmin"] = \
-                    mdict['oseries']['series'].index[0]
-                mdict["oseries"]["settings"]["tmax"] = \
-                    mdict['oseries']['series'].index[-1]
+                mdict["oseries"]["settings"]["tmin"] = mdict["oseries"]["series"].index[
+                    0
+                ]
+                mdict["oseries"]["settings"]["tmax"] = mdict["oseries"]["series"].index[
+                    -1
+                ]
 
         # StressModel, WellModel
         for ts in mdict["stressmodels"].values():
             if "stress" in ts.keys():
                 for stress in ts["stress"]:
-                    if 'series' not in stress:
-                        name = str(stress['name'])
+                    if "series" not in stress:
+                        name = str(stress["name"])
                         if name in self.stresses.index:
-                            stress['series'] = self.get_stresses(name)
+                            stress["series"] = self.get_stresses(name)
                             # update tmin/tmax from timeseries
                             if update_ts_settings:
-                                stress["settings"]["tmin"] = \
-                                    stress['series'].index[0]
-                                stress["settings"]["tmax"] = \
-                                    stress['series'].index[-1]
+                                stress["settings"]["tmin"] = stress["series"].index[0]
+                                stress["settings"]["tmax"] = stress["series"].index[-1]
 
             # RechargeModel, TarsoModel
             if ("prec" in ts.keys()) and ("evap" in ts.keys()):
                 for stress in [ts["prec"], ts["evap"]]:
-                    if 'series' not in stress:
-                        name = str(stress['name'])
+                    if "series" not in stress:
+                        name = str(stress["name"])
                         if name in self.stresses.index:
-                            stress['series'] = self.get_stresses(name)
+                            stress["series"] = self.get_stresses(name)
                             # update tmin/tmax from timeseries
                             if update_ts_settings:
-                                stress["settings"]["tmin"] = \
-                                    stress['series'].index[0]
-                                stress["settings"]["tmax"] = \
-                                    stress['series'].index[-1]
+                                stress["settings"]["tmin"] = stress["series"].index[0]
+                                stress["settings"]["tmax"] = stress["series"].index[-1]
                         else:
-                            msg = "stress '{}' not present in project".format(
-                                name)
+                            msg = "stress '{}' not present in project".format(name)
                             raise KeyError(msg)
         # hack for pcov w dtype object (when filled with NaNs on store?)
         if "fit" in mdict:
             if "pcov" in mdict["fit"]:
                 pcov = mdict["fit"]["pcov"]
-                if pcov.dtypes.apply(
-                        lambda dtyp: isinstance(dtyp, object)).any():
+                if pcov.dtypes.apply(lambda dtyp: isinstance(dtyp, object)).any():
                     mdict["fit"]["pcov"] = pcov.astype(float)
 
         try:
@@ -1178,14 +1261,11 @@ class ConnectorUtil:
         TypeError
             if object is not of type pandas.DataFrame or pandas.Series
         """
-        if not (isinstance(series, pd.DataFrame) or
-                isinstance(series, pd.Series)):
-            raise TypeError("Please provide pandas.DataFrame"
-                            " or pandas.Series!")
+        if not (isinstance(series, pd.DataFrame) or isinstance(series, pd.Series)):
+            raise TypeError("Please provide pandas.DataFrame" " or pandas.Series!")
         if isinstance(series, pd.DataFrame):
             if series.columns.size > 1:
-                raise ValueError("Only DataFrames with one "
-                                 "column are supported!")
+                raise ValueError("Only DataFrames with one " "column are supported!")
 
     @staticmethod
     def _set_series_name(series, name):
@@ -1230,44 +1310,54 @@ class ConnectorUtil:
             unsupported = set(smtyps) - set(supported_stressmodels)
             raise NotImplementedError(
                 "PastaStore does not support storing models with the "
-                f"following stressmodels: {unsupported}")
+                f"following stressmodels: {unsupported}"
+            )
 
     @staticmethod
     def _check_model_series_names_for_store(ml):
         prec_evap_model = ["RechargeModel", "TarsoModel"]
         if isinstance(ml, ps.Model):
             # non RechargeModel nor Tarsomodel stressmodels
-            series_names = [istress.series.name
-                            for sm in ml.stressmodels.values()
-                            if sm._name not in prec_evap_model
-                            for istress in sm.stress]
+            series_names = [
+                istress.series.name
+                for sm in ml.stressmodels.values()
+                if sm._name not in prec_evap_model
+                for istress in sm.stress
+            ]
             # RechargeModel, TarsoModel
-            if isin(prec_evap_model,
-                    [i._name for i in ml.stressmodels.values()]
-                    ).any():
-                series_names += [istress.series.name
-                                 for sm in ml.stressmodels.values()
-                                 if sm._name in prec_evap_model
-                                 for istress in sm.stress]
+            if isin(prec_evap_model, [i._name for i in ml.stressmodels.values()]).any():
+                series_names += [
+                    istress.series.name
+                    for sm in ml.stressmodels.values()
+                    if sm._name in prec_evap_model
+                    for istress in sm.stress
+                ]
         elif isinstance(ml, dict):
             # non RechargeModel nor Tarsomodel stressmodels
-            series_names = [istress["name"] for sm in
-                            ml["stressmodels"].values()
-                            if sm["stressmodel"] not in prec_evap_model
-                            for istress in sm["stress"]]
+            series_names = [
+                istress["name"]
+                for sm in ml["stressmodels"].values()
+                if sm["stressmodel"] not in prec_evap_model
+                for istress in sm["stress"]
+            ]
             # RechargeModel, TarsoModel
-            if isin(prec_evap_model,
-                    [i["stressmodel"] for i in ml["stressmodels"].values()]
-                    ).any():
-                series_names += [istress["name"] for sm in
-                                 ml["stressmodels"].values()
-                                 if sm["stressmodel"] in prec_evap_model
-                                 for istress in [sm["prec"], sm["evap"]]]
+            if isin(
+                prec_evap_model,
+                [i["stressmodel"] for i in ml["stressmodels"].values()],
+            ).any():
+                series_names += [
+                    istress["name"]
+                    for sm in ml["stressmodels"].values()
+                    if sm["stressmodel"] in prec_evap_model
+                    for istress in [sm["prec"], sm["evap"]]
+                ]
         else:
             raise TypeError("Expected pastas.Model or dict!")
         if len(series_names) - len(set(series_names)) > 0:
-            msg = ("There are multiple stresses series with the same name! "
-                   "Each series name must be unique for the PastaStore!")
+            msg = (
+                "There are multiple stresses series with the same name! "
+                "Each series name must be unique for the PastaStore!"
+            )
             raise ValueError(msg)
 
     def _check_oseries_in_store(self, ml: Union[ps.Model, dict]):
@@ -1285,8 +1375,10 @@ class ConnectorUtil:
         else:
             raise TypeError("Expected pastas.Model or dict!")
         if name not in self.oseries.index:
-            msg = (f"Cannot add model because oseries '{name}' "
-                   "is not contained in store.")
+            msg = (
+                f"Cannot add model because oseries '{name}' "
+                "is not contained in store."
+            )
             raise LookupError(msg)
         # expensive check
         if self.check_model_series_values and isinstance(ml, ps.Model):
@@ -1294,7 +1386,8 @@ class ConnectorUtil:
             if not ml.oseries.series_original.dropna().equals(s_org):
                 raise ValueError(
                     f"Cannot add model because model oseries '{name}'"
-                    " is different from stored oseries!")
+                    " is different from stored oseries!"
+                )
 
     def _check_stresses_in_store(self, ml: Union[ps.Model, dict]):
         """Internal method, check if stresses timeseries are contained in
@@ -1314,15 +1407,18 @@ class ConnectorUtil:
                     stresses = sm.stress
                 for s in stresses:
                     if s.name not in self.stresses.index:
-                        msg = (f"Cannot add model because stress '{s.name}' "
-                               "is not contained in store.")
+                        msg = (
+                            f"Cannot add model because stress '{s.name}' "
+                            "is not contained in store."
+                        )
                         raise LookupError(msg)
                     if self.check_model_series_values:
                         s_org = self.get_stresses(s.name).squeeze()
                         if not s.series_original.equals(s_org):
                             raise ValueError(
                                 f"Cannot add model because model stress "
-                                f"'{s.name}' is different from stored stress!")
+                                f"'{s.name}' is different from stored stress!"
+                            )
         elif isinstance(ml, dict):
             for sm in ml["stressmodels"].values():
                 if sm["stressmodel"] in prec_evap_model:
@@ -1331,17 +1427,21 @@ class ConnectorUtil:
                     stresses = sm["stress"]
                 for s in stresses:
                     if s["name"] not in self.stresses.index:
-                        msg = (f"Cannot add model because stress '{s['name']}' "
-                               "is not contained in store.")
+                        msg = (
+                            f"Cannot add model because stress '{s['name']}' "
+                            "is not contained in store."
+                        )
                         raise LookupError(msg)
         else:
             raise TypeError("Expected pastas.Model or dict!")
 
-    def _stored_series_to_json(self,
-                               libname: str,
-                               names: Optional[Union[list, str]] = None,
-                               squeeze: bool = True,
-                               progressbar: bool = False):
+    def _stored_series_to_json(
+        self,
+        libname: str,
+        names: Optional[Union[list, str]] = None,
+        squeeze: bool = True,
+        progressbar: bool = False,
+    ):
         """Write stored series to JSON.
 
         Parameters
@@ -1364,15 +1464,17 @@ class ConnectorUtil:
         """
         names = self._parse_names(names, libname=libname)
         files = []
-        for n in (tqdm(names, desc=libname) if progressbar else names):
+        for n in tqdm(names, desc=libname) if progressbar else names:
             s = self._get_series(libname, n, progressbar=False)
             if isinstance(s, pd.Series):
                 s = s.to_frame()
             try:
                 sjson = s.to_json(orient="columns")
             except ValueError as e:
-                msg = (f"DatetimeIndex of '{n}' probably contains NaT "
-                       "or duplicate timestamps!")
+                msg = (
+                    f"DatetimeIndex of '{n}' probably contains NaT "
+                    "or duplicate timestamps!"
+                )
                 raise ValueError(msg) from e
             files.append(sjson)
         if len(files) == 1 and squeeze:
@@ -1380,11 +1482,13 @@ class ConnectorUtil:
         else:
             return files
 
-    def _stored_metadata_to_json(self,
-                                 libname: str,
-                                 names: Optional[Union[list, str]] = None,
-                                 squeeze: bool = True,
-                                 progressbar: bool = False):
+    def _stored_metadata_to_json(
+        self,
+        libname: str,
+        names: Optional[Union[list, str]] = None,
+        squeeze: bool = True,
+        progressbar: bool = False,
+    ):
         """Write metadata from stored series to JSON.
 
         Parameters
@@ -1405,7 +1509,7 @@ class ConnectorUtil:
         """
         names = self._parse_names(names, libname=libname)
         files = []
-        for n in (tqdm(names, desc=libname) if progressbar else names):
+        for n in tqdm(names, desc=libname) if progressbar else names:
             meta = self.get_metadata(libname, n, as_frame=False)
             meta_json = json.dumps(meta, cls=PastasEncoder, indent=4)
             files.append(meta_json)
@@ -1414,9 +1518,13 @@ class ConnectorUtil:
         else:
             return files
 
-    def _series_to_archive(self, archive, libname: str,
-                           names: Optional[Union[list, str]] = None,
-                           progressbar: bool = True):
+    def _series_to_archive(
+        self,
+        archive,
+        libname: str,
+        names: Optional[Union[list, str]] = None,
+        progressbar: bool = True,
+    ):
         """Internal method for writing DataFrame or Series to zipfile.
 
         Parameters
@@ -1432,11 +1540,13 @@ class ConnectorUtil:
             show progressbar, by default True
         """
         names = self._parse_names(names, libname=libname)
-        for n in (tqdm(names, desc=libname) if progressbar else names):
+        for n in tqdm(names, desc=libname) if progressbar else names:
             sjson = self._stored_series_to_json(
-                libname, names=n, progressbar=False, squeeze=True)
+                libname, names=n, progressbar=False, squeeze=True
+            )
             meta_json = self._stored_metadata_to_json(
-                libname, names=n, progressbar=False, squeeze=True)
+                libname, names=n, progressbar=False, squeeze=True
+            )
             archive.writestr(f"{libname}/{n}.json", sjson)
             archive.writestr(f"{libname}/{n}_meta.json", meta_json)
 
@@ -1454,12 +1564,12 @@ class ConnectorUtil:
             show progressbar, by default True
         """
         names = self._parse_names(names, libname="models")
-        for n in (tqdm(names, desc="models") if progressbar else names):
+        for n in tqdm(names, desc="models") if progressbar else names:
             m = self.get_models(n, return_dict=True)
             jsondict = json.dumps(m, cls=PastasEncoder, indent=4)
             archive.writestr(f"models/{n}.pas", jsondict)
 
-    @ staticmethod
+    @staticmethod
     def _series_from_json(fjson: str):
         """Load timeseries from JSON.
 
@@ -1475,11 +1585,11 @@ class ConnectorUtil:
         """
         s = pd.read_json(fjson, orient="columns")
         if not isinstance(s.index, pd.DatetimeIndex):
-            s.index = pd.to_datetime(s.index, unit='ms')
+            s.index = pd.to_datetime(s.index, unit="ms")
         s = s.sort_index()  # needed for some reason ...
         return s
 
-    @ staticmethod
+    @staticmethod
     def _metadata_from_json(fjson: str):
         """Load metadata dictionary from JSON.
 
