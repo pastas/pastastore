@@ -1553,3 +1553,10 @@ class ModelAccessor:
             model
         """
         yield from self.conn.iter_models()
+
+    def __len__(self):
+        """No.
+
+        of models
+        """
+        return self.conn.n_models
