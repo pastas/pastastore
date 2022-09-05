@@ -32,7 +32,7 @@ or `.[adjusttext]`.
 
 _Note: There are external dependencies when using the `pystore` or `arctic`
 connectors. To install these dependencies read (see [Connector Dependencies
-section](#dependencies))! since these are \_not_ automatically installed.\_
+section](#dependencies))! since these are **not** automatically installed._
 
 ## Usage
 
