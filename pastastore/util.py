@@ -3,13 +3,12 @@ from typing import Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
-from pastas.stats.tests import runs_test, stoffer_toloi
 from numpy.lib._iotools import NameValidator
+from pastas.stats.tests import runs_test, stoffer_toloi
 from tqdm import tqdm
 
 
-def _custom_warning(message, category=UserWarning, filename='', lineno=-1,
-                    *args):
+def _custom_warning(message, category=UserWarning, filename="", lineno=-1, *args):
     print(f"{filename}:{lineno}: {category.__name__}: {message}")
 
 
@@ -17,10 +16,12 @@ class ItemInLibraryException(Exception):
     pass
 
 
-def delete_pystore_connector(conn=None,
-                             path: Optional[str] = None,
-                             name: Optional[str] = None,
-                             libraries: Optional[List[str]] = None) -> None:
+def delete_pystore_connector(
+    conn=None,
+    path: Optional[str] = None,
+    name: Optional[str] = None,
+    libraries: Optional[List[str]] = None,
+) -> None:
     """Delete libraries from pystore.
 
     Parameters
@@ -56,10 +57,12 @@ def delete_pystore_connector(conn=None,
             print(f" - deleted: {lib}")
 
 
-def delete_arctic_connector(conn=None,
-                            connstr: Optional[str] = None,
-                            name: Optional[str] = None,
-                            libraries: Optional[List[str]] = None) -> None:
+def delete_arctic_connector(
+    conn=None,
+    connstr: Optional[str] = None,
+    name: Optional[str] = None,
+    libraries: Optional[List[str]] = None,
+) -> None:
     """Delete libraries from arctic database.
 
     Parameters
@@ -119,6 +122,7 @@ def delete_dict_connector(conn, libraries: Optional[List[str]] = None) -> None:
 
 def delete_pas_connector(conn, libraries: Optional[List[str]] = None) -> None:
     import shutil
+
     print(f"Deleting PasConnector database: '{conn.name}' ... ", end="")
     if libraries is None:
         shutil.rmtree(conn.path)
@@ -155,8 +159,7 @@ def delete_pastastore(pstore, libraries: Optional[List[str]] = None) -> None:
         when Connector type is not recognized
     """
     if pstore.conn.conn_type == "pystore":
-        delete_pystore_connector(
-            conn=pstore.conn, libraries=libraries)
+        delete_pystore_connector(conn=pstore.conn, libraries=libraries)
     elif pstore.conn.conn_type == "dict":
         delete_dict_connector(pstore)
     elif pstore.conn.conn_type == "arctic":
@@ -164,14 +167,18 @@ def delete_pastastore(pstore, libraries: Optional[List[str]] = None) -> None:
     elif pstore.conn.conn_type == "pas":
         delete_pas_connector(conn=pstore.conn, libraries=libraries)
     else:
-        raise TypeError("Unrecognized pastastore Connector type: "
-                        f"{pstore.conn.conn_type}")
+        raise TypeError(
+            "Unrecognized pastastore Connector type: " f"{pstore.conn.conn_type}"
+        )
 
 
-def validate_names(s: Optional[str] = None, d: Optional[dict] = None,
-                   replace_space: Optional[str] = "_",
-                   deletechars: Optional[str] = None, **kwargs) \
-        -> Union[str, Dict]:
+def validate_names(
+    s: Optional[str] = None,
+    d: Optional[dict] = None,
+    replace_space: Optional[str] = "_",
+    deletechars: Optional[str] = None,
+    **kwargs,
+) -> Union[str, Dict]:
     """Remove invalid characters from string or dictionary keys.
 
     Parameters
@@ -190,9 +197,9 @@ def validate_names(s: Optional[str] = None, d: Optional[dict] = None,
     str, dict
         string or dict with invalid characters removed
     """
-    validator = NameValidator(replace_space=replace_space,
-                              deletechars=deletechars,
-                              **kwargs)
+    validator = NameValidator(
+        replace_space=replace_space, deletechars=deletechars, **kwargs
+    )
     if s is not None:
         new_str = validator(s)  # tuple
         if len(new_str) == 1:
@@ -275,8 +282,7 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
         for sm_name, sm in ml.stressmodels.items():
 
             df.loc[f"stressmodel: '{sm_name}'"] = sm_name
-            df.loc["- rfunc"] = (sm.rfunc._name if sm.rfunc is not None
-                                 else "NA")
+            df.loc["- rfunc"] = sm.rfunc._name if sm.rfunc is not None else "NA"
 
             if sm._name == "RechargeModel":
                 stresses = [sm.prec, sm.evap]
@@ -286,8 +292,9 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
             for ts in stresses:
                 df.loc[f"- timeseries: '{ts.name}'"] = ts.name
                 for tsk in ts.settings.keys():
-                    df.loc[f"  - {ts.name} settings: {tsk}", f"model {i}"] = \
-                        ts.settings[tsk]
+                    df.loc[
+                        f"  - {ts.name} settings: {tsk}", f"model {i}"
+                    ] = ts.settings[tsk]
 
                 if i == 0:
                     so1.append(ts.series_original.copy())
@@ -319,10 +326,8 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                 counter += 1
 
         for p in ml.parameters.index:
-            df.loc[f"param: {p} (init)", f"model {i}"] = \
-                ml.parameters.loc[p, "initial"]
-            df.loc[f"param: {p} (opt)", f"model {i}"] = \
-                ml.parameters.loc[p, "optimal"]
+            df.loc[f"param: {p} (init)", f"model {i}"] = ml.parameters.loc[p, "initial"]
+            df.loc[f"param: {p} (opt)", f"model {i}"] = ml.parameters.loc[p, "optimal"]
 
         if stats:
             stats_df = ml.stats.summary(stats=stats)
@@ -336,7 +341,8 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
     param_mask = df.index.str.startswith("param: ")
     df.loc[param_mask, "comparison"] = np.isclose(
         df.loc[param_mask, "model 0"].astype(float).values,
-        df.loc[param_mask, "model 1"].astype(float).values)
+        df.loc[param_mask, "model 1"].astype(float).values,
+    )
 
     # ensure NaN == NaN is not counted as a difference
     nanmask = df.iloc[:, 0].isna() & df.iloc[:, 1].isna()
@@ -345,8 +351,10 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
     # for stats comparison must be almost_equal
     if stats:
         stats_idx = [f"stats: {s}" for s in stats]
-        b = np.isclose(df.loc[stats_idx, "model 0"].astype(float).values,
-                       df.loc[stats_idx, "model 1"].astype(float).values)
+        b = np.isclose(
+            df.loc[stats_idx, "model 0"].astype(float).values,
+            df.loc[stats_idx, "model 1"].astype(float).values,
+        )
         df.loc[stats_idx, "comparison"] = b
 
     if detailed_comparison:
@@ -355,8 +363,13 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
         return df["comparison"].iloc[1:].all()  # ignore name difference
 
 
-def copy_database(conn1, conn2, libraries: Optional[List[str]] = None,
-                  overwrite: bool = False, progressbar: bool = False) -> None:
+def copy_database(
+    conn1,
+    conn2,
+    libraries: Optional[List[str]] = None,
+    overwrite: bool = False,
+    progressbar: bool = False,
+) -> None:
     """Copy libraries from one database to another.
 
     Parameters
@@ -383,38 +396,54 @@ def copy_database(conn1, conn2, libraries: Optional[List[str]] = None,
 
     for lib in libraries:
         if lib == "oseries":
-            for name in (tqdm(conn1.oseries_names, desc="copying oseries") if
-                         progressbar else conn1.oseries_names):
+            for name in (
+                tqdm(conn1.oseries_names, desc="copying oseries")
+                if progressbar
+                else conn1.oseries_names
+            ):
                 o, meta = conn1.get_oseries(name, return_metadata=True)
                 conn2.add_oseries(o, name, metadata=meta, overwrite=overwrite)
         elif lib == "stresses":
-            for name in (tqdm(conn1.stresses_names, desc="copying stresses") if
-                         progressbar else conn1.stresses_names):
+            for name in (
+                tqdm(conn1.stresses_names, desc="copying stresses")
+                if progressbar
+                else conn1.stresses_names
+            ):
                 s, meta = conn1.get_stresses(name, return_metadata=True)
-                conn2.add_stress(s, name, kind=meta["kind"], metadata=meta,
-                                 overwrite=overwrite)
+                conn2.add_stress(
+                    s,
+                    name,
+                    kind=meta["kind"],
+                    metadata=meta,
+                    overwrite=overwrite,
+                )
         elif lib == "models":
-            for name in (tqdm(conn1.model_names, desc="copying models") if
-                         progressbar else conn1.model_names):
+            for name in (
+                tqdm(conn1.model_names, desc="copying models")
+                if progressbar
+                else conn1.model_names
+            ):
                 mldict = conn1.get_models(name, return_dict=True)
                 conn2.add_model(mldict, overwrite=overwrite)
         else:
             raise ValueError(f"Library name '{lib}' not recognized!")
 
 
-def frontiers_checks(pstore,
-                     modelnames: Optional[List[str]] = None,
-                     oseries: Optional[List[str]] = None,
-                     check1_rsq: bool = True,
-                     check1_threshold: float = 0.7,
-                     check2_autocor: bool = True,
-                     check2_test: str = "runs",
-                     check2_pvalue: float = 0.05,
-                     check3_tmem: bool = True,
-                     check3_cutoff: float = 0.95,
-                     check4_gain: bool = True,
-                     check5_parambounds: bool = False,
-                     csv_dir: Optional[str] = None) -> pd.DataFrame:
+def frontiers_checks(
+    pstore,
+    modelnames: Optional[List[str]] = None,
+    oseries: Optional[List[str]] = None,
+    check1_rsq: bool = True,
+    check1_threshold: float = 0.7,
+    check2_autocor: bool = True,
+    check2_test: str = "runs",
+    check2_pvalue: float = 0.05,
+    check3_tmem: bool = True,
+    check3_cutoff: float = 0.95,
+    check4_gain: bool = True,
+    check5_parambounds: bool = False,
+    csv_dir: Optional[str] = None,
+) -> pd.DataFrame:
     """Check models in a PastaStore to see if they pass reliability criteria.
 
     The reliability criteria are taken from Brakenhoff et al. 2022 [bra_2022]_.
@@ -480,8 +509,10 @@ def frontiers_checks(pstore,
     if modelnames is not None:
         models = modelnames
         if oseries is not None:
-            print("Warning! Both 'modelnames' and 'oseries' provided,"
-                  " only using 'modelnames'!")
+            print(
+                "Warning! Both 'modelnames' and 'oseries' provided,"
+                " only using 'modelnames'!"
+            )
     elif oseries is not None:
         models = []
         for o in oseries:
@@ -493,15 +524,21 @@ def frontiers_checks(pstore,
 
         ml = pstore.get_models(mlnam)
 
-        checks = pd.DataFrame(
-            columns=["stat", "threshold", "units", "check_passed"])
+        if ml.parameters["optimal"].hasnans:
+            print(f"Warning! Skipping model '{mlnam}' because " "it is not solved!")
+            continue
+
+        checks = pd.DataFrame(columns=["stat", "threshold", "units", "check_passed"])
 
         # Check 1 - Fit Statistic
         if check1_rsq:
             rsq = ml.stats.rsq()
             check_rsq_passed = rsq >= check1_threshold
             checks.loc["rsq >= threshold", :] = (
-                rsq, check1_threshold, "-", check_rsq_passed
+                rsq,
+                check1_threshold,
+                "-",
+                check_rsq_passed,
             )
 
         # Check 2 - Autocorrelation Noise
@@ -514,23 +551,27 @@ def frontiers_checks(pstore,
                 else:  # Significant autocorrelation
                     check_runs_acf_passed = False
                 checks.loc["ACF: Runs test", :] = (
-                    p_runs, check2_pvalue, "-", check_runs_acf_passed
+                    p_runs,
+                    check2_pvalue,
+                    "-",
+                    check_runs_acf_passed,
                 )
             if check2_test == "stoffer" or check2_test == "both":
-                _, p_stoffer = stoffer_toloi(
-                    noise, snap_to_equidistant_timestamps=True)
+                _, p_stoffer = stoffer_toloi(noise, snap_to_equidistant_timestamps=True)
                 if p_stoffer > check2_pvalue:
                     check_st_acf_passed = True
                 else:
                     check_st_acf_passed = False
                 checks.loc["ACF: Stoffer-Toloi test", :] = (
-                    p_stoffer, check2_pvalue, "-", check_st_acf_passed
+                    p_stoffer,
+                    check2_pvalue,
+                    "-",
+                    check_st_acf_passed,
                 )
 
         # Check 3 - Response Time
         if check3_tmem:
-            len_oseries_calib = (
-                ml.settings["tmax"] - ml.settings["tmin"]).days
+            len_oseries_calib = (ml.settings["tmax"] - ml.settings["tmin"]).days
             for sm_name, sm in ml.stressmodels.items():
                 if sm_name.startswith("wells"):
                     p = ml.get_parameters(sm_name)
@@ -540,26 +581,34 @@ def frontiers_checks(pstore,
                     check_tmem_passed = tmem < len_oseries_calib / 2
                     idxlbl = f"calib_period > 2*t_mem_95%: {sm_name} (r=1)"
                     checks.loc[idxlbl, :] = (
-                        tmem, len_oseries_calib, "days", check_tmem_passed
+                        tmem,
+                        len_oseries_calib,
+                        "days",
+                        check_tmem_passed,
                     )
                     nwells = sm.distances.index.size
                     for iw in range(nwells):
                         p = sm.get_parameters(model=ml, istress=iw)
                         t = sm.rfunc.get_t(p, dt=1, cutoff=0.999)
-                        step = sm.rfunc.step(
-                            p, cutoff=0.999) / sm.rfunc.gain(p)
+                        step = sm.rfunc.step(p, cutoff=0.999) / sm.rfunc.gain(p)
                         tmem = np.interp(check3_cutoff, step, t)
                         check_tmem_passed = tmem < len_oseries_calib / 2
-                        idxlbl = (f"calib_period > 2*t_mem_95%: "
-                                  f"{sm_name}-{iw:02g}")
+                        idxlbl = f"calib_period > 2*t_mem_95%: " f"{sm_name}-{iw:02g}"
                         checks.loc[idxlbl, :] = (
-                            tmem, len_oseries_calib, "days", check_tmem_passed
+                            tmem,
+                            len_oseries_calib,
+                            "days",
+                            check_tmem_passed,
                         )
                 else:
                     tmem = ml.get_response_tmax(sm_name)
                     check_tmem_passed = tmem < len_oseries_calib / 2
                     checks.loc[f"calib_period > 2*t_mem_95%: {sm_name}", :] = (
-                        tmem, len_oseries_calib, "days", check_tmem_passed)
+                        tmem,
+                        len_oseries_calib,
+                        "days",
+                        check_tmem_passed,
+                    )
 
         # Check 4 - Uncertainty Gain
         if check4_gain:
@@ -569,11 +618,12 @@ def frontiers_checks(pstore,
                     gain = sm.rfunc.gain(p)
                     A = ml.parameters.loc[f"{sm_name}_A", "optimal"]
                     b = ml.parameters.loc[f"{sm_name}_b", "optimal"]
-                    var_A = ml.parameters.loc[f"{sm_name}_A", "stderr"]**2
-                    var_b = ml.parameters.loc[f"{sm_name}_b", "stderr"]**2
+                    var_A = ml.parameters.loc[f"{sm_name}_A", "stderr"] ** 2
+                    var_b = ml.parameters.loc[f"{sm_name}_b", "stderr"] ** 2
                     cov_Ab = ml.fit.pcov.loc[f"{sm_name}_A", f"{sm_name}_b"]
-                    gain_std = np.sqrt(sm.rfunc.variance_gain(
-                        A, b, var_A, var_b, cov_Ab))
+                    gain_std = np.sqrt(
+                        sm.rfunc.variance_gain(A, b, var_A, var_b, cov_Ab)
+                    )
                     if gain_std is None:
                         gain_std = np.nan
                         check_gain_passed = pd.NA
@@ -582,15 +632,16 @@ def frontiers_checks(pstore,
                     else:
                         check_gain_passed = np.abs(gain) > 2 * gain_std
                     checks.loc[f"gain > 2*std: {sm_name} (r=1)"] = (
-                        gain, 2 * gain_std, "(unit head)/(unit well stress)",
-                        check_gain_passed
+                        gain,
+                        2 * gain_std,
+                        "(unit head)/(unit well stress)",
+                        check_gain_passed,
                     )
 
                     for iw in range(sm.distances.index.size):
                         p = sm.get_parameters(model=ml, istress=iw)
                         gain = sm.rfunc.gain(p)
-                        gain_std = np.sqrt(
-                            sm.variance_gain(model=ml, istress=iw))
+                        gain_std = np.sqrt(sm.variance_gain(model=ml, istress=iw))
                         if gain_std is None:
                             gain_std = np.nan
                             check_gain_passed = pd.NA
@@ -599,9 +650,10 @@ def frontiers_checks(pstore,
                         else:
                             check_gain_passed = np.abs(gain) > 2 * gain_std
                         checks.loc[f"gain > 2*std: {sm_name}-{iw:02g}"] = (
-                            gain, 2 * gain_std,
+                            gain,
+                            2 * gain_std,
                             "(unit head)/(unit well stress)",
-                            check_gain_passed
+                            check_gain_passed,
                         )
                 else:
                     gain = ml.parameters.loc[f"{sm_name}_A", "optimal"]
@@ -615,36 +667,44 @@ def frontiers_checks(pstore,
                         check_gain_passed = np.abs(gain) > 2 * gain_std
                     check_gain_passed = np.abs(gain) > 2 * gain_std
                     checks.loc[f"gain > 2*std: {sm_name}"] = (
-                        gain, 2 * gain_std, "(unit head)/(unit well stress)",
-                        check_gain_passed
+                        gain,
+                        2 * gain_std,
+                        "(unit head)/(unit well stress)",
+                        check_gain_passed,
                     )
 
         # Check 5 - Parameter Bounds
         if check5_parambounds:
             upper, lower = ml._check_parameters_bounds()
             for param in ml.parameters.index:
-                bounds = (ml.parameters.loc[param, "pmin"],
-                          ml.parameters.loc[param, "pmax"])
+                bounds = (
+                    ml.parameters.loc[param, "pmin"],
+                    ml.parameters.loc[param, "pmax"],
+                )
                 b = ~(upper.loc[param] or lower.loc[param])
 
                 checks.loc[f"Parameter bounds: {param}", :] = (
-                    ml.parameters.loc[param, "optimal"], bounds, "_", b
+                    ml.parameters.loc[param, "optimal"],
+                    bounds,
+                    "_",
+                    b,
                 )
 
         df.loc[ml.name, "all_checks_passed"] = checks["check_passed"].all()
         df.loc[ml.name, checks.index] = checks.loc[:, "check_passed"]
 
         if csv_dir:
-            checks.to_csv(f"{csv_dir}/checks_{ml.name}.csv",
-                          na_rep="NaN")
+            checks.to_csv(f"{csv_dir}/checks_{ml.name}.csv", na_rep="NaN")
 
     return df
 
 
-def frontiers_aic_select(pstore,
-                         modelnames: Optional[List[str]] = None,
-                         oseries: Optional[List[str]] = None,
-                         full_output: bool = False) -> pd.DataFrame:
+def frontiers_aic_select(
+    pstore,
+    modelnames: Optional[List[str]] = None,
+    oseries: Optional[List[str]] = None,
+    full_output: bool = False,
+) -> pd.DataFrame:
     """Select the best model structure based on the minimum AIC.
 
     As proposed by Brakenhoff et al. 2022 [bra_2022]_.
@@ -683,12 +743,15 @@ def frontiers_aic_select(pstore,
         for o in oseries:
             modelnames += pstore.oseries_models[o]
     elif oseries is not None:
-        print("Warning! Both 'modelnames' and 'oseries' provided, "
-              "using only 'modelnames'")
+        print(
+            "Warning! Both 'modelnames' and 'oseries' provided, "
+            "using only 'modelnames'"
+        )
 
     # Dataframe of models with corresponding oseries
-    df = pstore.get_model_timeseries_names(
-        modelnames, progressbar=False).loc[:, ["oseries"]]
+    df = pstore.get_model_timeseries_names(modelnames, progressbar=False).loc[
+        :, ["oseries"]
+    ]
     # AIC of models
     aic = pstore.get_statistics(["aic"], modelnames)
     if full_output:
@@ -697,21 +760,16 @@ def frontiers_aic_select(pstore,
         collect = []
         gr = df.join(aic).groupby("oseries")
         for o, idf in gr:
-            idf.index.name = 'modelname'
-            idf = (idf
-                   .sort_values("aic")
-                   .reset_index()
-                   .set_index(["oseries", "modelname"])
-                   )
+            idf.index.name = "modelname"
+            idf = (
+                idf.sort_values("aic").reset_index().set_index(["oseries", "modelname"])
+            )
             idf = idf.rename(columns={"aic": "AIC"})
             idf["dAIC"] = idf["AIC"] - idf["AIC"].min()
             idf = idf.replace(0.0, np.nan)
             collect.append(idf)
         return pd.concat(collect, axis=0)
     else:
-        return (df
-                .join(aic)
-                .groupby("oseries")
-                .idxmin()
-                .rename(columns={"aic": "min_aic"})
-                )
+        return (
+            df.join(aic).groupby("oseries").idxmin().rename(columns={"aic": "min_aic"})
+        )

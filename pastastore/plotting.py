@@ -42,8 +42,16 @@ class Plots:
         """
         self.pstore = pstore
 
-    def _timeseries(self, libname, names=None, ax=None, split=False,
-                    figsize=(10, 5), progressbar=True, **kwargs):
+    def _timeseries(
+        self,
+        libname,
+        names=None,
+        ax=None,
+        split=False,
+        figsize=(10, 5),
+        progressbar=True,
+        **kwargs,
+    ):
         """Internal method to plot timeseries from pastastore.
 
         Parameters
@@ -79,21 +87,22 @@ class Plots:
         names = self.pstore.conn._parse_names(names, libname)
 
         if len(names) > 20 and split:
-            raise ValueError("More than 20 timeseries leads to too many "
-                             "subplots, set split=False.")
+            raise ValueError(
+                "More than 20 timeseries leads to too many "
+                "subplots, set split=False."
+            )
 
         if ax is None:
             if split:
-                fig, axes = plt.subplots(len(names), 1, sharex=True,
-                                         figsize=figsize)
+                fig, axes = plt.subplots(len(names), 1, sharex=True, figsize=figsize)
             else:
                 fig, axes = plt.subplots(1, 1, figsize=figsize)
         else:
             axes = ax
 
-        tsdict = self.pstore.conn._get_series(libname, names,
-                                              progressbar=progressbar,
-                                              squeeze=False)
+        tsdict = self.pstore.conn._get_series(
+            libname, names, progressbar=progressbar, squeeze=False
+        )
         for i, (n, ts) in enumerate(tsdict.items()):
             if split and ax is None:
                 iax = axes[i]
@@ -103,7 +112,7 @@ class Plots:
                 iax = ax
             iax.plot(ts.index, ts.squeeze(), label=n, **kwargs)
             if split:
-                iax.legend(loc='best', fontsize="x-small")
+                iax.legend(loc="best", fontsize="x-small")
 
         if not split:
             axes.legend(loc=(0, 1), frameon=False, ncol=7, fontsize="x-small")
@@ -111,8 +120,7 @@ class Plots:
         fig.tight_layout()
         return axes
 
-    def oseries(self, names=None, ax=None, split=False,
-                figsize=(10, 5), **kwargs):
+    def oseries(self, names=None, ax=None, split=False, figsize=(10, 5), **kwargs):
         """Plot oseries.
 
         Parameters
@@ -134,11 +142,13 @@ class Plots:
         ax : matplotlib.Axes
             axes handle
         """
-        return self._timeseries("oseries", names=names, ax=ax,
-                                split=split, figsize=figsize, **kwargs)
+        return self._timeseries(
+            "oseries", names=names, ax=ax, split=split, figsize=figsize, **kwargs
+        )
 
-    def stresses(self, names=None, kind=None, ax=None, split=False,
-                 figsize=(10, 5), **kwargs):
+    def stresses(
+        self, names=None, kind=None, ax=None, split=False, figsize=(10, 5), **kwargs
+    ):
         """Plot stresses.
 
         Parameters
@@ -171,15 +181,25 @@ class Plots:
             mask = stresses["kind"] == kind
             names = stresses.loc[mask].index.to_list()
 
-        return self._timeseries("stresses", names=names, ax=ax,
-                                split=split, figsize=figsize, **kwargs)
+        return self._timeseries(
+            "stresses", names=names, ax=ax, split=split, figsize=figsize, **kwargs
+        )
 
-    def data_availability(self, libname, names=None, kind=None,
-                          intervals=None,
-                          ignore=('second', 'minute', '14 days'),
-                          normtype='log', cmap='viridis_r',
-                          set_yticks=False, figsize=(10, 8),
-                          progressbar=True, dropna=True, **kwargs):
+    def data_availability(
+        self,
+        libname,
+        names=None,
+        kind=None,
+        intervals=None,
+        ignore=("second", "minute", "14 days"),
+        normtype="log",
+        cmap="viridis_r",
+        set_yticks=False,
+        figsize=(10, 8),
+        progressbar=True,
+        dropna=True,
+        **kwargs,
+    ):
         """Plot the data-availability for multiple timeseries in pastastore.
 
         Parameters
@@ -226,20 +246,36 @@ class Plots:
                 names = stresses.loc[mask].index.to_list()
 
         series = self.pstore.conn._get_series(
-            libname, names, progressbar=progressbar, squeeze=False).values()
+            libname, names, progressbar=progressbar, squeeze=False
+        ).values()
 
-        ax = self._data_availability(series, names=names, intervals=intervals,
-                                     ignore=ignore, normtype=normtype,
-                                     cmap=cmap, set_yticks=set_yticks,
-                                     figsize=figsize, dropna=dropna, **kwargs)
+        ax = self._data_availability(
+            series,
+            names=names,
+            intervals=intervals,
+            ignore=ignore,
+            normtype=normtype,
+            cmap=cmap,
+            set_yticks=set_yticks,
+            figsize=figsize,
+            dropna=dropna,
+            **kwargs,
+        )
         return ax
 
     @staticmethod
-    def _data_availability(series, names=None, intervals=None,
-                           ignore=('second', 'minute', '14 days'),
-                           normtype='log', cmap='viridis_r',
-                           set_yticks=False, figsize=(10, 8),
-                           dropna=True, **kwargs):
+    def _data_availability(
+        series,
+        names=None,
+        intervals=None,
+        ignore=("second", "minute", "14 days"),
+        normtype="log",
+        cmap="viridis_r",
+        set_yticks=False,
+        figsize=(10, 8),
+        dropna=True,
+        **kwargs,
+    ):
         """Plot the data-availability for a list of timeseries.
 
         Parameters
@@ -280,15 +316,17 @@ class Plots:
         f, ax = plt.subplots(figsize=figsize, **kwargs)
         ax.invert_yaxis()
         if intervals is None:
-            intervals = {'second': 1,
-                         'minute': 60,
-                         'hour': 60 * 60,
-                         'day': 60 * 60 * 24,
-                         'week': 60 * 60 * 24 * 7,
-                         '14 days': 60 * 60 * 24 * 14,
-                         'month': 60 * 60 * 24 * 31,
-                         'quarter': 60 * 60 * 24 * 31 * 4,
-                         'year': 60 * 60 * 24 * 366}
+            intervals = {
+                "second": 1,
+                "minute": 60,
+                "hour": 60 * 60,
+                "day": 60 * 60 * 24,
+                "week": 60 * 60 * 24 * 7,
+                "14 days": 60 * 60 * 24 * 14,
+                "month": 60 * 60 * 24 * 31,
+                "quarter": 60 * 60 * 24 * 31 * 4,
+                "year": 60 * 60 * 24 * 366,
+            }
             for i in ignore:
                 if i in intervals:
                     intervals.pop(i)
@@ -296,24 +334,29 @@ class Plots:
         bounds = np.array([intervals[i] for i in intervals])
         bounds = bounds.astype(float) * (10**9)
         labels = intervals.keys()
-        if normtype == 'log':
+        if normtype == "log":
             norm = LogNorm(vmin=bounds[0], vmax=bounds[-1])
         else:
             norm = BoundaryNorm(boundaries=bounds, ncolors=256)
         cmap = plt.cm.get_cmap(cmap, 256)
-        cmap.set_over((1., 1., 1.))
+        cmap.set_over((1.0, 1.0, 1.0))
 
         for i, s in enumerate(series):
             if not s.empty:
                 if dropna:
                     s = s.dropna()
-                pc = ax.pcolormesh(s.index, [i, i + 1],
-                                   [np.diff(s.index).astype(float)],
-                                   norm=norm, cmap=cmap,
-                                   linewidth=0, rasterized=True)
+                pc = ax.pcolormesh(
+                    s.index,
+                    [i, i + 1],
+                    [np.diff(s.index).astype(float)],
+                    norm=norm,
+                    cmap=cmap,
+                    linewidth=0,
+                    rasterized=True,
+                )
         # make a colorbar in an ax on the
         # right side, then set the current axes to ax again
-        cb = f.colorbar(pc, ax=ax, extend='both')
+        cb = f.colorbar(pc, ax=ax, extend="both")
         cb.set_ticks(bounds)
         cb.ax.set_yticklabels(labels)
         cb.ax.minorticks_off()
@@ -323,14 +366,21 @@ class Plots:
                 names = [s.name for s in series]
             ax.set_yticklabels(names)
         else:
-            ax.set_ylabel('Timeseries (-)')
+            ax.set_ylabel("Timeseries (-)")
         ax.grid()
         f.tight_layout(pad=0.0)
         return ax
 
-    def cumulative_hist(self, statistic='rsq', modelnames=None,
-                        extend=False, ax=None, figsize=(6, 6),
-                        label=None, legend=True):
+    def cumulative_hist(
+        self,
+        statistic="rsq",
+        modelnames=None,
+        extend=False,
+        ax=None,
+        figsize=(6, 6),
+        label=None,
+        legend=True,
+    ):
         """Plot a cumulative step histogram for a model statistic.
 
         Parameters
@@ -360,51 +410,54 @@ class Plots:
             The axes in which the cumulative histogram is plotted
         """
 
-        statsdf = self.pstore.get_statistics([statistic],
-                                             modelnames=modelnames,
-                                             progressbar=False)
+        statsdf = self.pstore.get_statistics(
+            [statistic], modelnames=modelnames, progressbar=False
+        )
 
         if ax is None:
             _, ax = plt.subplots(1, 1, figsize=figsize)
             ax.set_xticks(np.linspace(0, 1, 11))
             ax.set_xlim(0, 1)
             ax.set_ylabel(statistic)
-            ax.set_xlabel('Density')
-            ax.set_title('Cumulative Step Histogram')
-        if statistic == 'evp':
+            ax.set_xlabel("Density")
+            ax.set_title("Cumulative Step Histogram")
+        if statistic == "evp":
             ax.set_yticks(np.linspace(0, 100, 11))
             if extend:
-                statsdf = statsdf.append(
-                    pd.Series(100, index=['dummy']))
+                statsdf = statsdf.append(pd.Series(100, index=["dummy"]))
                 ax.set_ylim(0, 100)
             else:
                 ax.set_ylim(0, statsdf.max())
-        elif statistic in ('rsq', 'nse', 'kge_2012'):
+        elif statistic in ("rsq", "nse", "kge_2012"):
             ax.set_yticks(np.linspace(0, 1, 11))
             if extend:
-                statsdf = statsdf.append(
-                    pd.Series(1, index=['dummy']))
+                statsdf = statsdf.append(pd.Series(1, index=["dummy"]))
                 statsdf[statsdf < 0] = 0
                 ax.set_ylim(0, 1)
             else:
                 ax.set_ylim(0, statsdf.max())
-        elif statistic in ('aic', 'bic'):
+        elif statistic in ("aic", "bic"):
             ax.set_ylim(statsdf.min(), statsdf.max())
         else:
             if extend:
-                statsdf = statsdf.append(
-                    pd.Series(0, index=['dummy']))
+                statsdf = statsdf.append(pd.Series(0, index=["dummy"]))
             ax.set_ylim(0, statsdf.max())
 
         if label is None:
             if extend:
-                label = f'No. Models = {len(statsdf)-1}'
+                label = f"No. Models = {len(statsdf)-1}"
             else:
-                label = f'No. Models = {len(statsdf)}'
+                label = f"No. Models = {len(statsdf)}"
 
-        statsdf.hist(ax=ax, bins=len(statsdf), density=True,
-                     cumulative=True, histtype='step',
-                     orientation='horizontal', label=label)
+        statsdf.hist(
+            ax=ax,
+            bins=len(statsdf),
+            density=True,
+            cumulative=True,
+            histtype="step",
+            orientation="horizontal",
+            label=label,
+        )
 
         if legend:
             ax.legend(loc=4)
@@ -435,8 +488,7 @@ class Maps:
         """
         self.pstore = pstore
 
-    def stresses(self, kind=None, labels=True, adjust=False, figsize=(10, 8),
-                 **kwargs):
+    def stresses(self, kind=None, labels=True, adjust=False, figsize=(10, 8), **kwargs):
         """Plot stresses locations on map.
 
         Parameters
@@ -469,8 +521,7 @@ class Maps:
 
         mask0 = (stresses["x"] != 0.0) | (stresses["y"] != 0.0)
 
-        ax = self._plotmap_dataframe(stresses.loc[mask0], figsize=figsize,
-                                     **kwargs)
+        ax = self._plotmap_dataframe(stresses.loc[mask0], figsize=figsize, **kwargs)
         if labels:
             self.add_labels(stresses, ax, adjust=adjust)
 
@@ -500,11 +551,10 @@ class Maps:
         self.add_background_map
         """
 
-        names = self.pstore.conn._parse_names(names, 'oseries')
+        names = self.pstore.conn._parse_names(names, "oseries")
         oseries = self.pstore.oseries.loc[names]
         mask0 = (oseries["x"] != 0.0) | (oseries["y"] != 0.0)
-        ax = self._plotmap_dataframe(oseries.loc[mask0], figsize=figsize,
-                                     **kwargs)
+        ax = self._plotmap_dataframe(oseries.loc[mask0], figsize=figsize, **kwargs)
         if labels:
             self.add_labels(oseries, ax, adjust=adjust)
 
@@ -532,23 +582,34 @@ class Maps:
         self.add_background_map
         """
 
-        model_oseries = [self.pstore.get_models(m, return_dict=True)[
-            "oseries"]["name"] for m in self.pstore.model_names]
+        model_oseries = [
+            self.pstore.get_models(m, return_dict=True)["oseries"]["name"]
+            for m in self.pstore.model_names
+        ]
 
         models = self.pstore.oseries.loc[model_oseries]
         models.index = self.pstore.model_names
 
         # mask out 0.0 coordinates
         mask0 = (models["x"] != 0.0) | (models["y"] != 0.0)
-        ax = self._plotmap_dataframe(models.loc[mask0], figsize=figsize,
-                                     **kwargs)
+        ax = self._plotmap_dataframe(models.loc[mask0], figsize=figsize, **kwargs)
         if labels:
             self.add_labels(models, ax, adjust=adjust)
 
         return ax
 
-    def modelstat(self, statistic, label=True, adjust=False, cmap="viridis",
-                  norm=None, vmin=None, vmax=None, figsize=(10, 8), **kwargs):
+    def modelstat(
+        self,
+        statistic,
+        label=True,
+        adjust=False,
+        cmap="viridis",
+        norm=None,
+        vmin=None,
+        vmax=None,
+        figsize=(10, 8),
+        **kwargs,
+    ):
         """Plot model statistic on map.
 
         Parameters
@@ -579,11 +640,12 @@ class Maps:
         --------
         self.add_background_map
         """
-        statsdf = self.pstore.get_statistics([statistic],
-                                             progressbar=False).to_frame()
+        statsdf = self.pstore.get_statistics([statistic], progressbar=False).to_frame()
 
-        statsdf["oseries"] = [self.pstore.get_models(m, return_dict=True)[
-            "oseries"]["name"] for m in statsdf.index]
+        statsdf["oseries"] = [
+            self.pstore.get_models(m, return_dict=True)["oseries"]["name"]
+            for m in statsdf.index
+        ]
         statsdf = statsdf.reset_index().set_index("oseries")
         df = statsdf.join(self.pstore.oseries, how="left")
 
@@ -593,23 +655,23 @@ class Maps:
             "vmin": vmin,
             "vmax": vmax,
             "edgecolors": "w",
-            "linewidths": 0.7
+            "linewidths": 0.7,
         }
 
         scatter_kwargs.update(kwargs)
 
-        ax = self._plotmap_dataframe(df,
-                                     column=statistic,
-                                     figsize=figsize,
-                                     **scatter_kwargs)
+        ax = self._plotmap_dataframe(
+            df, column=statistic, figsize=figsize, **scatter_kwargs
+        )
         if label:
             df.set_index("index", inplace=True)
             self.add_labels(df, ax, adjust=adjust)
         return ax
 
     @staticmethod
-    def _plotmap_dataframe(df, x="x", y="y", column=None, ax=None,
-                           figsize=(10, 8), **kwargs):
+    def _plotmap_dataframe(
+        df, x="x", y="y", column=None, ax=None, figsize=(10, 8), **kwargs
+    ):
         """Internal method for plotting dataframe with point locations.
 
         Can be called directly for more control over plot characteristics.
@@ -683,8 +745,7 @@ class Maps:
 
         return ax
 
-    def model(self, ml, label=True,
-              metadata_source="model", offset=0.0):
+    def model(self, ml, label=True, metadata_source="model", offset=0.0):
         """Plot oseries and stresses from one model on a map.
 
         Parameters
@@ -724,12 +785,14 @@ class Maps:
                     yi = istress.metadata["y"]
                 elif metadata_source == "store":
                     imeta = self.pstore.get_metadata(
-                        "stresses", istress.name, as_frame=False)
+                        "stresses", istress.name, as_frame=False
+                    )
                     xi = imeta.pop("x", np.nan)
                     yi = imeta.pop("y", np.nan)
                 else:
-                    raise ValueError("metadata_source must be either "
-                                     "'model' or 'store'!")
+                    raise ValueError(
+                        "metadata_source must be either " "'model' or 'store'!"
+                    )
                 if np.isnan(xi) or np.isnan(yi):
                     print(f"No x,y-data for {istress.name}!")
                     continue
@@ -737,8 +800,7 @@ class Maps:
                     print(f"x,y-data is 0.0 for {istress.name}, not plotting!")
                     continue
 
-                stresses.loc[istress.name, :] = (
-                    xi, yi, name, f"C{count%10}")
+                stresses.loc[istress.name, :] = (xi, yi, name, f"C{count%10}")
             count += 1
 
         # create figure
@@ -752,40 +814,57 @@ class Maps:
             xm = float(ml.oseries.metadata["x"])
             ym = float(ml.oseries.metadata["y"])
         elif metadata_source == "store":
-            ometa = self.pstore.get_metadata(
-                "oseries", ml.oseries.name, as_frame=False)
+            ometa = self.pstore.get_metadata("oseries", ml.oseries.name, as_frame=False)
             xm = float(ometa.pop("x", np.nan))
             ym = float(ometa.pop("y", np.nan))
         else:
-            raise ValueError("metadata_source must be either "
-                             "'model' or 'store'!")
+            raise ValueError("metadata_source must be either " "'model' or 'store'!")
 
-        po = ax.scatter(xm, ym, s=osize, marker="o",
-                        label=oserieslabel, color="k")
+        po = ax.scatter(xm, ym, s=osize, marker="o", label=oserieslabel, color="k")
         legend_list = [po]
 
         # add stresses
-        ax.scatter(stresses["x"], stresses["y"], s=50, c=stresses.color,
-                   marker="o", edgecolors="k", linewidths=0.75)
+        ax.scatter(
+            stresses["x"],
+            stresses["y"],
+            s=50,
+            c=stresses.color,
+            marker="o",
+            edgecolors="k",
+            linewidths=0.75,
+        )
 
         # label oseries
         if label:
             stroke = [patheffects.withStroke(linewidth=3, foreground="w")]
-            txt = ax.annotate(text=oserieslabel, xy=(xm, ym), fontsize=8,
-                              textcoords="offset points", xytext=(10, 10))
+            txt = ax.annotate(
+                text=oserieslabel,
+                xy=(xm, ym),
+                fontsize=8,
+                textcoords="offset points",
+                xytext=(10, 10),
+            )
             txt.set_path_effects(stroke)
 
         # get legend entries for stressmodels
-        uniques = stresses.loc[:, ["stressmodel", "color"]
-                               ].drop_duplicates(keep="first")
+        uniques = stresses.loc[:, ["stressmodel", "color"]].drop_duplicates(
+            keep="first"
+        )
         for name, row in uniques.iterrows():
-            h, = ax.plot([], [], marker="o", label=row.stressmodel, ls="",
-                         mec="k", ms=10, color=row.color)
+            (h,) = ax.plot(
+                [],
+                [],
+                marker="o",
+                label=row.stressmodel,
+                ls="",
+                mec="k",
+                ms=10,
+                color=row.color,
+            )
             legend_list.append(h)
 
         # add legend
-        ax.legend(legend_list, [i.get_label()
-                                for i in legend_list], loc="best")
+        ax.legend(legend_list, [i.get_label() for i in legend_list], loc="best")
 
         # set axes properties
         ax.set_xlabel("x")
@@ -805,17 +884,30 @@ class Maps:
             for name, row in stresses.iterrows():
                 namestr = str(name)
                 namestr += f"\n({row.stressmodel})"
-                txt = ax.annotate(text=namestr, xy=(row.x, row.y), fontsize=8,
-                                  textcoords="offset points", xytext=(10, 10))
+                txt = ax.annotate(
+                    text=namestr,
+                    xy=(row.x, row.y),
+                    fontsize=8,
+                    textcoords="offset points",
+                    xytext=(10, 10),
+                )
                 txt.set_path_effects(stroke)
 
         fig.tight_layout()
 
         return ax
 
-    def stresslinks(self, kinds=None, model_names=None, color_lines=False,
-                    alpha=0.4, figsize=(10, 8), legend=True, labels=False,
-                    adjust=False):
+    def stresslinks(
+        self,
+        kinds=None,
+        model_names=None,
+        color_lines=False,
+        alpha=0.4,
+        figsize=(10, 8),
+        legend=True,
+        labels=False,
+        adjust=False,
+    ):
         """Create a map linking models with their stresses.
 
         Parameters
@@ -851,11 +943,10 @@ class Maps:
         self.add_background_map
         """
         if model_names:
-            m_idx = self.pstore.search(libname='models', s=model_names)
+            m_idx = self.pstore.search(libname="models", s=model_names)
         else:
             m_idx = self.pstore.model_names
-        struct = self.pstore.get_model_timeseries_names(
-            progressbar=False).loc[m_idx]
+        struct = self.pstore.get_model_timeseries_names(progressbar=False).loc[m_idx]
 
         oseries = self.pstore.oseries
         stresses = self.pstore.stresses
@@ -867,45 +958,67 @@ class Maps:
         _, ax = plt.subplots(figsize=figsize)
         segments = []
         segment_colors = []
-        ax.scatter(oseries.loc[struct['oseries'], 'x'],
-                   oseries.loc[struct['oseries'], 'y'], color='C0')
+        ax.scatter(
+            oseries.loc[struct["oseries"], "x"],
+            oseries.loc[struct["oseries"], "y"],
+            color="C0",
+        )
         for m in struct.index:
-            os = oseries.loc[struct.loc[m, 'oseries']]
-            mstresses = struct.loc[m].drop('oseries').dropna().index
+            os = oseries.loc[struct.loc[m, "oseries"]]
+            mstresses = struct.loc[m].drop("oseries").dropna().index
             st = stresses.loc[mstresses]
             for s in mstresses:
-                if np.isin(st.loc[s, 'kind'], kinds):
-                    c, = np.where(skind == st.loc[s, 'kind'])
+                if np.isin(st.loc[s, "kind"], kinds):
+                    (c,) = np.where(skind == st.loc[s, "kind"])
                     if color_lines:
-                        color = f'C{c[0]+1}'
+                        color = f"C{c[0]+1}"
                     else:
-                        color = 'k'
-                    segments.append([[os['x'], os['y']],
-                                     [st.loc[s, 'x'], st.loc[s, 'y']]])
+                        color = "k"
+                    segments.append(
+                        [[os["x"], os["y"]], [st.loc[s, "x"], st.loc[s, "y"]]]
+                    )
                     segment_colors.append(color)
 
                     stused = np.append(stused, s)
 
         if labels:
-            self.add_labels(
-                oseries.loc[struct['oseries'].unique()], ax, adjust=adjust)
+            self.add_labels(oseries.loc[struct["oseries"].unique()], ax, adjust=adjust)
             self.add_labels(stresses.loc[np.unique(stused)], ax, adjust=adjust)
 
-        ax.scatter([x[1][0] for x in segments],
-                   [y[1][1] for y in segments],
-                   color=segment_colors)
-        ax.add_collection(LineCollection(segments, colors=segment_colors,
-                                         linewidths=0.5, alpha=alpha))
+        ax.scatter(
+            [x[1][0] for x in segments],
+            [y[1][1] for y in segments],
+            color=segment_colors,
+        )
+        ax.add_collection(
+            LineCollection(segments, colors=segment_colors, linewidths=0.5, alpha=alpha)
+        )
 
         if legend:
-            legend_elements = [Line2D([], [], marker='o', color='w',
-                                      markerfacecolor='C0',
-                                      label='oseries', markersize=10)]
+            legend_elements = [
+                Line2D(
+                    [],
+                    [],
+                    marker="o",
+                    color="w",
+                    markerfacecolor="C0",
+                    label="oseries",
+                    markersize=10,
+                )
+            ]
             for kind in skind:
-                c, = np.where(skind == kind)
-                legend_elements.append(Line2D([], [], marker='o', color='w',
-                                              markerfacecolor=f'C{c[0]+1}',
-                                              label=kind, markersize=10))
+                (c,) = np.where(skind == kind)
+                legend_elements.append(
+                    Line2D(
+                        [],
+                        [],
+                        marker="o",
+                        color="w",
+                        markerfacecolor=f"C{c[0]+1}",
+                        label=kind,
+                        markersize=10,
+                    )
+                )
             ax.legend(handles=legend_elements)
 
         return ax
@@ -923,21 +1036,23 @@ class Maps:
             that can be passed as map_provider arguments.
         """
         import contextily as ctx
+
         providers = {}
 
         def get_providers(provider):
             if "url" in provider:
-                providers[provider['name']] = provider
+                providers[provider["name"]] = provider
             else:
                 for prov in provider.values():
                     get_providers(prov)
+
         get_providers(ctx.providers)
         return providers
 
     @staticmethod
-    def add_background_map(ax, proj="epsg:28992",
-                           map_provider="OpenStreetMap.Mapnik",
-                           **kwargs):
+    def add_background_map(
+        ax, proj="epsg:28992", map_provider="OpenStreetMap.Mapnik", **kwargs
+    ):
         """Add background map to axes using contextily.
 
         Parameters
@@ -955,11 +1070,11 @@ class Maps:
 
         if isinstance(proj, str):
             import pyproj
+
             proj = pyproj.Proj(proj)
 
         providers = Maps._list_contextily_providers()
-        ctx.add_basemap(ax, source=providers[map_provider], crs=proj.srs,
-                        **kwargs)
+        ctx.add_basemap(ax, source=providers[map_provider], crs=proj.srs, **kwargs)
 
     @staticmethod
     def add_labels(df, ax, adjust=False, **kwargs):
@@ -985,11 +1100,15 @@ class Maps:
 
             texts = []
             for name, row in df.iterrows():
-                texts.append(ax.text(row['x'], row['y'], name,
-                                     **{"path_effects": stroke}))
+                texts.append(
+                    ax.text(row["x"], row["y"], name, **{"path_effects": stroke})
+                )
 
-            adjust_text(texts, force_text=0.05, **{'arrowprops':
-                        {'arrowstyle': '-', 'color': 'k', 'alpha': 0.5}})
+            adjust_text(
+                texts,
+                force_text=0.05,
+                **{"arrowprops": {"arrowstyle": "-", "color": "k", "alpha": 0.5}},
+            )
 
         else:
             fontsize = kwargs.pop("fontsize", 10)
@@ -998,9 +1117,11 @@ class Maps:
 
             for name, row in df.iterrows():
                 namestr = str(name)
-                ax.annotate(text=namestr,
-                            xy=(row["x"], row["y"]),
-                            fontsize=fontsize,
-                            textcoords=textcoords,
-                            xytext=xytext,
-                            **{"path_effects": stroke})
+                ax.annotate(
+                    text=namestr,
+                    xy=(row["x"], row["y"]),
+                    fontsize=fontsize,
+                    textcoords=textcoords,
+                    xytext=xytext,
+                    **{"path_effects": stroke},
+                )
