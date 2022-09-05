@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
+from pastas.stats.tests import runs_test, stoffer_toloi
 from numpy.lib._iotools import NameValidator
 from tqdm import tqdm
 
@@ -399,3 +400,318 @@ def copy_database(conn1, conn2, libraries: Optional[List[str]] = None,
                 conn2.add_model(mldict, overwrite=overwrite)
         else:
             raise ValueError(f"Library name '{lib}' not recognized!")
+
+
+def frontiers_checks(pstore,
+                     modelnames: Optional[List[str]] = None,
+                     oseries: Optional[List[str]] = None,
+                     check1_rsq: bool = True,
+                     check1_threshold: float = 0.7,
+                     check2_autocor: bool = True,
+                     check2_test: str = "runs",
+                     check2_pvalue: float = 0.05,
+                     check3_tmem: bool = True,
+                     check3_cutoff: float = 0.95,
+                     check4_gain: bool = True,
+                     check5_parambounds: bool = False,
+                     csv_dir: Optional[str] = None) -> pd.DataFrame:
+    """Check models in a PastaStore to see if they pass reliability criteria.
+
+    The reliability criteria are taken from Brakenhoff et al. 2022 [bra_2022]_.
+    These criteria were applied in a region with recharge, river levels and
+    pumping wells as stresses. This is by no means an exhaustive list of
+    reliability criteria but might serve as a reasonable starting point for
+    model diagnostic checking.
+
+    Parameters
+    ----------
+    pstore : pastastore.PastaStore
+        reference to a PastaStore
+    modelnames : list of str, optional
+        list of model names to consider, if None checks 'oseries', if both are
+        None, all stored models will be checked
+    oseries :  list of str, optional
+        list of oseries to consider, corresponding models will be picked up
+        from pastastore. If None, uses all stored models are checked.
+    check1 : bool, optional
+        check if model fit is above a threshold of the coefficient
+        of determination $R^2$ , by default True
+    check1_threshold : float, optional
+        threshold of the $R^2$ fit statistic, by default 0.7
+    check2 : bool, optional
+        check if the noise of the model has autocorrelation with
+        statistical test, by default True
+    check2_test : str, optional
+        statistical test for autocorrelation. Available options are Runs
+        test "runs", Stoffer-Toloi "stoffer" or "both", by default "runs"
+    check2_pvalue : float, optional
+        p-value for the statistical test to define the confindence
+        interval, by default 0.05
+    check3 : bool, optional
+        check if the length of the response time is within the
+        calibration period, by default True
+    check3_cutoff : float, optional
+        the cutoff of the response time, by default 0.95
+    check4 : bool, optional
+        check if the uncertainty of the gain, by default True
+    check5 : bool, optional
+        check if parameters hit parameter bounds, by default False
+    csv_dir : string, optional
+        directory to store CSV file with overview of checks for every
+        model, by default None which will not store results
+
+    Returns
+    -------
+    df : pandas.DataFrame
+        dataFrame with all models and whether or not they pass
+        the reliability checks
+
+
+    References
+    ----------
+    .. [bra_2022] Brakenhoff, D.A., Vonk M.A., Collenteur, R.A.,
+    van Baar, M., Bakker, M.: Application of Time Series Analysis
+    to Estimate Drawdown From Multiple Well Fields.
+    Front. Earth Sci., 14 June 2022 doi:10.3389/feart.2022.907609
+    """
+
+    df = pd.DataFrame(columns=["all_checks_passed"])
+
+    if modelnames is not None:
+        models = modelnames
+        if oseries is not None:
+            print("Warning! Both 'modelnames' and 'oseries' provided,"
+                  " only using 'modelnames'!")
+    elif oseries is not None:
+        models = []
+        for o in oseries:
+            models += pstore.oseries_models[o]
+    else:
+        models = pstore.model_names
+
+    for mlnam in tqdm(models, desc="Running model diagnostics"):
+
+        ml = pstore.get_models(mlnam)
+
+        checks = pd.DataFrame(
+            columns=["stat", "threshold", "units", "check_passed"])
+
+        # Check 1 - Fit Statistic
+        if check1_rsq:
+            rsq = ml.stats.rsq()
+            check_rsq_passed = rsq >= check1_threshold
+            checks.loc["rsq >= threshold", :] = (
+                rsq, check1_threshold, "-", check_rsq_passed
+            )
+
+        # Check 2 - Autocorrelation Noise
+        if check2_autocor:
+            noise = ml.noise().iloc[1:]
+            if check2_test == "runs" or check2_test == "both":
+                _, p_runs = runs_test(noise)
+                if p_runs > check2_pvalue:  # No autocorrelation
+                    check_runs_acf_passed = True
+                else:  # Significant autocorrelation
+                    check_runs_acf_passed = False
+                checks.loc["ACF: Runs test", :] = (
+                    p_runs, check2_pvalue, "-", check_runs_acf_passed
+                )
+            if check2_test == "stoffer" or check2_test == "both":
+                _, p_stoffer = stoffer_toloi(
+                    noise, snap_to_equidistant_timestamps=True)
+                if p_stoffer > check2_pvalue:
+                    check_st_acf_passed = True
+                else:
+                    check_st_acf_passed = False
+                checks.loc["ACF: Stoffer-Toloi test", :] = (
+                    p_stoffer, check2_pvalue, "-", check_st_acf_passed
+                )
+
+        # Check 3 - Response Time
+        if check3_tmem:
+            len_oseries_calib = (
+                ml.settings["tmax"] - ml.settings["tmin"]).days
+            for sm_name, sm in ml.stressmodels.items():
+                if sm_name.startswith("wells"):
+                    p = ml.get_parameters(sm_name)
+                    t = sm.rfunc.get_t(p, dt=1, cutoff=0.999)
+                    step = sm.rfunc.step(p, cutoff=0.999) / sm.rfunc.gain(p)
+                    tmem = np.interp(check3_cutoff, step, t)
+                    check_tmem_passed = tmem < len_oseries_calib / 2
+                    idxlbl = f"calib_period > 2*t_mem_95%: {sm_name} (r=1)"
+                    checks.loc[idxlbl, :] = (
+                        tmem, len_oseries_calib, "days", check_tmem_passed
+                    )
+                    nwells = sm.distances.index.size
+                    for iw in range(nwells):
+                        p = sm.get_parameters(model=ml, istress=iw)
+                        t = sm.rfunc.get_t(p, dt=1, cutoff=0.999)
+                        step = sm.rfunc.step(
+                            p, cutoff=0.999) / sm.rfunc.gain(p)
+                        tmem = np.interp(check3_cutoff, step, t)
+                        check_tmem_passed = tmem < len_oseries_calib / 2
+                        idxlbl = (f"calib_period > 2*t_mem_95%: "
+                                  f"{sm_name}-{iw:02g}")
+                        checks.loc[idxlbl, :] = (
+                            tmem, len_oseries_calib, "days", check_tmem_passed
+                        )
+                else:
+                    tmem = ml.get_response_tmax(sm_name)
+                    check_tmem_passed = tmem < len_oseries_calib / 2
+                    checks.loc[f"calib_period > 2*t_mem_95%: {sm_name}", :] = (
+                        tmem, len_oseries_calib, "days", check_tmem_passed)
+
+        # Check 4 - Uncertainty Gain
+        if check4_gain:
+            for sm_name, sm in ml.stressmodels.items():
+                if sm_name.startswith("wells"):
+                    p = ml.get_parameters(sm_name)
+                    gain = sm.rfunc.gain(p)
+                    A = ml.parameters.loc[f"{sm_name}_A", "optimal"]
+                    b = ml.parameters.loc[f"{sm_name}_b", "optimal"]
+                    var_A = ml.parameters.loc[f"{sm_name}_A", "stderr"]**2
+                    var_b = ml.parameters.loc[f"{sm_name}_b", "stderr"]**2
+                    cov_Ab = ml.fit.pcov.loc[f"{sm_name}_A", f"{sm_name}_b"]
+                    gain_std = np.sqrt(sm.rfunc.variance_gain(
+                        A, b, var_A, var_b, cov_Ab))
+                    if gain_std is None:
+                        gain_std = np.nan
+                        check_gain_passed = pd.NA
+                    elif np.isnan(gain_std):
+                        check_gain_passed = pd.NA
+                    else:
+                        check_gain_passed = np.abs(gain) > 2 * gain_std
+                    checks.loc[f"gain > 2*std: {sm_name} (r=1)"] = (
+                        gain, 2 * gain_std, "(unit head)/(unit well stress)",
+                        check_gain_passed
+                    )
+
+                    for iw in range(sm.distances.index.size):
+                        p = sm.get_parameters(model=ml, istress=iw)
+                        gain = sm.rfunc.gain(p)
+                        gain_std = np.sqrt(
+                            sm.variance_gain(model=ml, istress=iw))
+                        if gain_std is None:
+                            gain_std = np.nan
+                            check_gain_passed = pd.NA
+                        elif np.isnan(gain_std):
+                            check_gain_passed = pd.NA
+                        else:
+                            check_gain_passed = np.abs(gain) > 2 * gain_std
+                        checks.loc[f"gain > 2*std: {sm_name}-{iw:02g}"] = (
+                            gain, 2 * gain_std,
+                            "(unit head)/(unit well stress)",
+                            check_gain_passed
+                        )
+                else:
+                    gain = ml.parameters.loc[f"{sm_name}_A", "optimal"]
+                    gain_std = ml.parameters.loc[f"{sm_name}_A", "stderr"]
+                    if gain_std is None:
+                        gain_std = np.nan
+                        check_gain_passed = pd.NA
+                    elif np.isnan(gain_std):
+                        check_gain_passed = pd.NA
+                    else:
+                        check_gain_passed = np.abs(gain) > 2 * gain_std
+                    check_gain_passed = np.abs(gain) > 2 * gain_std
+                    checks.loc[f"gain > 2*std: {sm_name}"] = (
+                        gain, 2 * gain_std, "(unit head)/(unit well stress)",
+                        check_gain_passed
+                    )
+
+        # Check 5 - Parameter Bounds
+        if check5_parambounds:
+            upper, lower = ml._check_parameters_bounds()
+            for param in ml.parameters.index:
+                bounds = (ml.parameters.loc[param, "pmin"],
+                          ml.parameters.loc[param, "pmax"])
+                b = ~(upper.loc[param] or lower.loc[param])
+
+                checks.loc[f"Parameter bounds: {param}", :] = (
+                    ml.parameters.loc[param, "optimal"], bounds, "_", b
+                )
+
+        df.loc[ml.name, "all_checks_passed"] = checks["check_passed"].all()
+        df.loc[ml.name, checks.index] = checks.loc[:, "check_passed"]
+
+        if csv_dir:
+            checks.to_csv(f"{csv_dir}/checks_{ml.name}.csv",
+                          na_rep="NaN")
+
+    return df
+
+
+def frontiers_aic_select(pstore,
+                         modelnames: Optional[List[str]] = None,
+                         oseries: Optional[List[str]] = None,
+                         full_output: bool = False) -> pd.DataFrame:
+    """Select the best model structure based on the minimum AIC.
+
+    As proposed by Brakenhoff et al. 2022 [bra_2022]_.
+
+    Parameters
+    ----------
+    pstore : pastastore.PastaStore
+        reference to a PastaStore
+    modelnames : list of str
+        list of model names (that pass reliability criteria)
+    oseries : list of oseries
+        list of locations for which to select models, note that this uses all
+        models associated with a specific location.
+    full_output : bool, optional
+        if set to True, returns a DataFrame including all models per location
+        and their AIC values
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame with selected best model per location based on the AIC, or a
+        DataFrame containing statistics for each of the models per location
+
+    References
+    ----------
+    .. [bra_2022] Brakenhoff, D.A., Vonk M.A., Collenteur, R.A., van Baar, M.,
+    Bakker, M.: Application of Time Series Analysis to Estimate Drawdown From
+    Multiple Well Fields. Front. Earth Sci., 14 June 2022
+    doi:10.3389/feart.2022.907609
+    """
+
+    if modelnames is None and oseries is None:
+        modelnames = pstore.model_names
+    elif modelnames is None and oseries is not None:
+        modelnames = []
+        for o in oseries:
+            modelnames += pstore.oseries_models[o]
+    elif oseries is not None:
+        print("Warning! Both 'modelnames' and 'oseries' provided, "
+              "using only 'modelnames'")
+
+    # Dataframe of models with corresponding oseries
+    df = pstore.get_model_timeseries_names(
+        modelnames, progressbar=False).loc[:, ["oseries"]]
+    # AIC of models
+    aic = pstore.get_statistics(["aic"], modelnames)
+    if full_output:
+        # group models per location and obtain the AIC identify model
+        # with lowest AIC per location
+        collect = []
+        gr = df.join(aic).groupby("oseries")
+        for o, idf in gr:
+            idf.index.name = 'modelname'
+            idf = (idf
+                   .sort_values("aic")
+                   .reset_index()
+                   .set_index(["oseries", "modelname"])
+                   )
+            idf = idf.rename(columns={"aic": "AIC"})
+            idf["dAIC"] = idf["AIC"] - idf["AIC"].min()
+            idf = idf.replace(0.0, np.nan)
+            collect.append(idf)
+        return pd.concat(collect, axis=0)
+    else:
+        return (df
+                .join(aic)
+                .groupby("oseries")
+                .idxmin()
+                .rename(columns={"aic": "min_aic"})
+                )

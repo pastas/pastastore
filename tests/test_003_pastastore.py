@@ -276,5 +276,5 @@ def test_to_from_zip(pstore):
 
 def test_example_pastastore():
     from pastastore.datasets import example_pastastore
-    pstore = example_pastastore()
+    _ = example_pastastore()
     return

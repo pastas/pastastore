@@ -6,136 +6,147 @@
 
 # pastastore
 
-This module contains a tool to manage
+This module stores 
 [Pastas](https://pastas.readthedocs.io/en/latest/) timeseries and models in a
 database.
 
-Storing timeseries and models in a database gives the user a simple way to
-manage Pastas projects with the added bonus of allowing the user to pick
-upwhere they left off, without having to (re)load everything into memory.
-
-The connection to database/disk/memory is managed by a connector object.
-Currently, four connectors are included. The first implementation is an
-in-memory connector. The other three store data on disk or in a database. The
-PasConnector implementation writes human-readable JSON files to disk. The
-ArcticConnector and PystoreConnector implementations are designed to have fast
-read/write operations, while also compressing the stored data.
-
--   In-memory: uses dictionaries to hold timeseries and pastas Models in-memory.
-    Does not require any additional packages to use.
-
--   Pastas: uses Pastas write and read methods to store data as JSON files on
-    disk. Does not require any additional packages to use.
-
--   [Arctic](https://arctic.readthedocs.io/en/latest/) is a timeseries/dataframe
-    database that sits atop [MongoDB](https://www.mongodb.com). Arctic supports
-    pandas.DataFrames.
-
--   [PyStore](https://github.com/ranaroussi/pystore) is a datastore (inspired by
-    Arctic) created for storing pandas dataframes (especially timeseries) on disk.
-    Data is stored using fastparquet and compressed with Snappy.
+Storing timeseries and models in a database allows the user to manage time
+series and Pastas models on disk, which allows the user to pick up where they
+left off without having to reload everything.
 
 ## Installation
 
-Install the module by typing `pip install pastastore`.
+Install the module with `pip install pastastore`.
 
 For installing in development mode, clone the repository and install by typing
 `pip install -e .` from the module root directory.
 
-For plotting backgroundmaps, the `contextily` and `pyproj` packages are
+For plotting background maps, the `contextily` and `pyproj` packages are
 required. For a full install, including an optional dependency for plotting and
 labeling data on maps, use: `pip install pastastore[full]` or `pip install
 .[full]` when on MacOS or Linux. Windows users are asked to install `rasterio`
 themselves since it often cannot be installed using `pip`. `rasterio` is a
-dependency of `contextily`. Windows can install `pastastore` with the optional
-labeling package adjustText using `pip install pastastore[adjusttext]` or
-`.[adjusttext]`
+dependency of `contextily`. Windows users can install `pastastore` with the
+optional labeling package adjustText using `pip install pastastore[adjusttext]`
+or `.[adjusttext]`.
 
-There are external dependencies when using the `pystore` or `arctic`
+_Note: There are external dependencies when using the `pystore` or `arctic`
 connectors. To install these dependencies read (see [Connector Dependencies
-section](#dependencies))! since these are _not_ automatically installed.
+section](#dependencies))! since these are \_not_ automatically installed.\_
 
 ## Usage
 
-The following snippets show typical usage. The general idea is to first define
-the connector object. The next step is to pass that connector to `PastaStore`.
+The following snippets show typical usage. The first step is to define a
+so-called `Connector` object. This object contains methods to store time series
+or models to the database, or read objects from the database.
 
-### Using in-memory dictionaries
-
-This works out of the box after installing with `pip` without installing any
-additional Python dependencies or external software.
+The following code creates a PasConnector, which uses Pastas JSON-styled
+"`.pas`-files" to save models in a folder on your computer (in this case a
+folder called `pastas_db` in the current directory).
 
 ```python
 import pastastore as pst
 
-# define connector
-conn = pst.DictConnector("my_connector")
-
-# create project for managing Pastas data and models
-store = pst.PastaStore("my_project", conn)
+# create connector instance
+conn = pst.PasConnector("my_db", path="./pastas_db")
 ```
 
-### Using Pastas read/load methods
-
-Store data on disk as JSON files (with .pas extension) using Pastas read and
-load methods. This works out of the box after installing with `pip` without
-installing any additional Python dependencies or external software.
+The next step is to pass that connector to the `PastaStore` object. This object
+contains all kinds of useful methods to analyze and visualize time series, and
+build and analyze models.
 
 ```python
-import pastastore as pst
-
-# define connector
-path = "./data/pas"
-conn = pst.PasConnector("my_connector")
-
-# create project for managing Pastas data and models
-store = pst.PastaStore("my_project", conn)
+# create PastaStore instance
+pstore = pst.PastaStore("my_project", conn)
 ```
 
-### Using Arctic
-
-Store data in MongoDB using Arctic. Only works if there is an instance of 
-MongoDB running somewhere.
+Now the user can add time series, models or analyze or visualize existing
+objects in the database. Some examples showing the functionality of the
+PastaStore object are shown below:
 
 ```python
-import pastastore as pst
+import pandas as pd
 
-# define arctic connector
+# load oseries from CSV and add to database
+oseries = pd.read_csv("oseries.csv")
+pstore.add_oseries(oseries, "my_oseries", metadata={"x": 100_000, "y": 400_000})
+
+# read oseries from database
+oseries = pstore.get_oseries("my_oseries")
+
+# view oseries metadata DataFrame
+pstore.oseries
+
+# plot oseries location on map
+ax = pstore.maps.oseries()
+pstore.maps.add_background_map(ax)  # add a background map
+
+# plot my_oseries time series
+ax2 = pstore.plot.oseries(names=["my_oseries"])
+
+# export whole database to a zip file
+pstore.to_zip("my_db_backup.zip")
+```
+
+For more elaborate examples, refer to the
+[Notebooks](https://pastastore.readthedocs.io/en/latest/examples.html#example-notebooks).
+
+### Which Connector should you pick
+
+There are currently four Connectors included in `pastastore`. Each of the
+Connectors are briefly described below.
+
+-   PasConnector (works out of the box, **preferred choice**)
+-   DictConnector (works out of the box)
+-   ArcticConnector (requires `arctic` and MongoDB, **best performance**)
+-   PystoreConnector (requires `pystore` and `python-snappy`)
+
+#### PasConnector
+
+For most people the `PasConnector` is the best choice, as it does not require
+any other (external) dependencies, and uses human-readable files to store time
+series and pastas Models on disk.
+
+```python
+# requires a name, and path to a folder
+conn = pst.PasConnector("my_db", path="./pastas_db")
+```
+
+#### DictConnector
+
+The `DictConnector` does not store files on disk, storing everything in memory.
+This is usually not what you'd want, but it can be useful as a temporary
+storage container. All "stored" data will be lost if you restart the kernel.
+
+```python
+# requires a name
+conn = pst.DictConnector("my_temporary_db")
+```
+
+#### ArcticConnector
+
+Store data in MongoDB using Arctic. Only works if there is an instance of
+MongoDB running and the `arctic` python package is installed. This Connector
+has the best performance, both in terms of read/write speeds and data
+compression.
+
+```python
+# provide a name and a connection string to a running instance of MongoDB
 connstr = "mongodb://localhost:27017/"  # local instance of mongodb
-conn = pst.ArcticConnector("my_connector", connstr)
-
-# create project for managing Pastas data and models
-store = pst.PastaStore("my_project", conn)
+conn = pst.ArcticConnector("my_db", connstr)
 ```
 
-### Using Pystore
+#### PystoreConnector
 
 Store data on disk as parquet files using compression. Only works if
-`python-snappy` and `pystore` are installed.
+`python-snappy` and `pystore` are installed. Does not require separate database
+software running somewhere, but installation of `python-snappy` is a little
+more challenging. Slightly less performant than ArcticConnector, but faster
+than PasConnector.
 
 ```python
-import pastastore as pst
-
-# define pystore connector
-path = "./data/pystore"  # path to a directory
-conn = pst.PystoreConnector("my_connector", path)
-
-# create project for managing Pastas data and models
-store = pst.PastaStore("my_project", conn)
-```
-
-The database read/write/delete methods can be accessed through the reference to
-the connector object. For easy access, the most common methods are registered
-to the `store` object. E.g.
-
-```python
-series = store.conn.get_oseries("my_oseries")
-```
-
-is equivalent to:
-
-```python
-series = store.get_oseries("my_oseries")
+# provide a name and a path to a folder on disk
+conn = pst.PystoreConnector("my_db", path="./pastas_db")
 ```
 
 ## Connector Dependencies
