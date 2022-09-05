@@ -531,17 +531,26 @@ class BaseConnector(ABC):
             self._del_oseries_model_link(oname, n)
         self._clear_cache("_modelnames_cache")
 
-    def del_oseries(self, names: Union[list, str]):
+    def del_oseries(self, names: Union[list, str], remove_models: bool = False):
         """Delete oseries from the database.
 
         Parameters
         ----------
         names : str or list of str
             name(s) of the oseries to delete
+        remove_models : bool, optional
+            also delete models for deleted oseries, default is False
         """
-        for n in self._parse_names(names, libname="oseries"):
+        names = self._parse_names(names, libname="oseries")
+        for n in names:
             self._del_item("oseries", n)
         self._clear_cache("oseries")
+        # remove associated models from database
+        if remove_models:
+            modelnames = list(
+                chain.from_iterable([self.oseries_models.get(n, []) for n in names])
+            )
+            self.del_models(modelnames)
 
     def del_stress(self, names: Union[list, str]):
         """Delete stress from the database.
