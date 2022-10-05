@@ -8,7 +8,9 @@ from pastas.stats.tests import runs_test, stoffer_toloi
 from tqdm import tqdm
 
 
-def _custom_warning(message, category=UserWarning, filename="", lineno=-1, *args):
+def _custom_warning(
+    message, category=UserWarning, filename="", lineno=-1, *args
+):
     print(f"{filename}:{lineno}: {category.__name__}: {message}")
 
 
@@ -168,7 +170,8 @@ def delete_pastastore(pstore, libraries: Optional[List[str]] = None) -> None:
         delete_pas_connector(conn=pstore.conn, libraries=libraries)
     else:
         raise TypeError(
-            "Unrecognized pastastore Connector type: " f"{pstore.conn.conn_type}"
+            "Unrecognized pastastore Connector type: "
+            f"{pstore.conn.conn_type}"
         )
 
 
@@ -282,7 +285,9 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
         for sm_name, sm in ml.stressmodels.items():
 
             df.loc[f"stressmodel: '{sm_name}'"] = sm_name
-            df.loc["- rfunc"] = sm.rfunc._name if sm.rfunc is not None else "NA"
+            df.loc["- rfunc"] = (
+                sm.rfunc._name if sm.rfunc is not None else "NA"
+            )
 
             if sm._name == "RechargeModel":
                 stresses = [sm.prec, sm.evap]
@@ -326,8 +331,12 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                 counter += 1
 
         for p in ml.parameters.index:
-            df.loc[f"param: {p} (init)", f"model {i}"] = ml.parameters.loc[p, "initial"]
-            df.loc[f"param: {p} (opt)", f"model {i}"] = ml.parameters.loc[p, "optimal"]
+            df.loc[f"param: {p} (init)", f"model {i}"] = ml.parameters.loc[
+                p, "initial"
+            ]
+            df.loc[f"param: {p} (opt)", f"model {i}"] = ml.parameters.loc[
+                p, "optimal"
+            ]
 
         if stats:
             stats_df = ml.stats.summary(stats=stats)
@@ -525,10 +534,15 @@ def frontiers_checks(
         ml = pstore.get_models(mlnam)
 
         if ml.parameters["optimal"].hasnans:
-            print(f"Warning! Skipping model '{mlnam}' because " "it is not solved!")
+            print(
+                f"Warning! Skipping model '{mlnam}' because "
+                "it is not solved!"
+            )
             continue
 
-        checks = pd.DataFrame(columns=["stat", "threshold", "units", "check_passed"])
+        checks = pd.DataFrame(
+            columns=["stat", "threshold", "units", "check_passed"]
+        )
 
         # Check 1 - Fit Statistic
         if check1_rsq:
@@ -557,7 +571,9 @@ def frontiers_checks(
                     check_runs_acf_passed,
                 )
             if check2_test == "stoffer" or check2_test == "both":
-                _, p_stoffer = stoffer_toloi(noise, snap_to_equidistant_timestamps=True)
+                _, p_stoffer = stoffer_toloi(
+                    noise, snap_to_equidistant_timestamps=True
+                )
                 if p_stoffer > check2_pvalue:
                     check_st_acf_passed = True
                 else:
@@ -571,29 +587,24 @@ def frontiers_checks(
 
         # Check 3 - Response Time
         if check3_tmem:
-            len_oseries_calib = (ml.settings["tmax"] - ml.settings["tmin"]).days
+            len_oseries_calib = (
+                ml.settings["tmax"] - ml.settings["tmin"]
+            ).days
             for sm_name, sm in ml.stressmodels.items():
                 if sm_name.startswith("wells"):
-                    p = ml.get_parameters(sm_name)
-                    t = sm.rfunc.get_t(p, dt=1, cutoff=0.999)
-                    step = sm.rfunc.step(p, cutoff=0.999) / sm.rfunc.gain(p)
-                    tmem = np.interp(check3_cutoff, step, t)
-                    check_tmem_passed = tmem < len_oseries_calib / 2
-                    idxlbl = f"calib_period > 2*t_mem_95%: {sm_name} (r=1)"
-                    checks.loc[idxlbl, :] = (
-                        tmem,
-                        len_oseries_calib,
-                        "days",
-                        check_tmem_passed,
-                    )
                     nwells = sm.distances.index.size
                     for iw in range(nwells):
                         p = sm.get_parameters(model=ml, istress=iw)
                         t = sm.rfunc.get_t(p, dt=1, cutoff=0.999)
-                        step = sm.rfunc.step(p, cutoff=0.999) / sm.rfunc.gain(p)
+                        step = sm.rfunc.step(p, cutoff=0.999) / sm.rfunc.gain(
+                            p
+                        )
                         tmem = np.interp(check3_cutoff, step, t)
                         check_tmem_passed = tmem < len_oseries_calib / 2
-                        idxlbl = f"calib_period > 2*t_mem_95%: " f"{sm_name}-{iw:02g}"
+                        idxlbl = (
+                            f"calib_period > 2*t_mem_95%: "
+                            f"{sm_name}-{iw:02g} ({sm.distances.index[iw]})"
+                        )
                         checks.loc[idxlbl, :] = (
                             tmem,
                             len_oseries_calib,
@@ -631,17 +642,12 @@ def frontiers_checks(
                         check_gain_passed = pd.NA
                     else:
                         check_gain_passed = np.abs(gain) > 2 * gain_std
-                    checks.loc[f"gain > 2*std: {sm_name} (r=1)"] = (
-                        gain,
-                        2 * gain_std,
-                        "(unit head)/(unit well stress)",
-                        check_gain_passed,
-                    )
-
                     for iw in range(sm.distances.index.size):
                         p = sm.get_parameters(model=ml, istress=iw)
                         gain = sm.rfunc.gain(p)
-                        gain_std = np.sqrt(sm.variance_gain(model=ml, istress=iw))
+                        gain_std = np.sqrt(
+                            sm.variance_gain(model=ml, istress=iw)
+                        )
                         if gain_std is None:
                             gain_std = np.nan
                             check_gain_passed = pd.NA
@@ -649,7 +655,9 @@ def frontiers_checks(
                             check_gain_passed = pd.NA
                         else:
                             check_gain_passed = np.abs(gain) > 2 * gain_std
-                        checks.loc[f"gain > 2*std: {sm_name}-{iw:02g}"] = (
+                        checks.loc[
+                            f"gain > 2*std: {sm_name}-{iw:02g} ({sm.distances.index[iw]})"
+                        ] = (
                             gain,
                             2 * gain_std,
                             "(unit head)/(unit well stress)",
@@ -762,7 +770,9 @@ def frontiers_aic_select(
         for o, idf in gr:
             idf.index.name = "modelname"
             idf = (
-                idf.sort_values("aic").reset_index().set_index(["oseries", "modelname"])
+                idf.sort_values("aic")
+                .reset_index()
+                .set_index(["oseries", "modelname"])
             )
             idf = idf.rename(columns={"aic": "AIC"})
             idf["dAIC"] = idf["AIC"] - idf["AIC"].min()
@@ -771,5 +781,8 @@ def frontiers_aic_select(
         return pd.concat(collect, axis=0)
     else:
         return (
-            df.join(aic).groupby("oseries").idxmin().rename(columns={"aic": "min_aic"})
+            df.join(aic)
+            .groupby("oseries")
+            .idxmin()
+            .rename(columns={"aic": "min_aic"})
         )
