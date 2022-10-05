@@ -748,7 +748,6 @@ class Maps:
             axes object, returned if ax is None
         sc : scatter handle
             scatter plot handle, returned if ax is not None
-
         """
 
         if ax is None:

@@ -18,13 +18,15 @@ def test_plot_stresses(pstore):
 
 
 def test_plot_stresses_availability(pstore):
-    ax = pstore.plots.data_availability("stresses", kind="prec",
-                                        set_yticks=True)
+    ax = pstore.plots.data_availability(
+        "stresses", kind="prec", set_yticks=True
+    )
     plt.close(ax.figure)
     return
 
 
 # %% maps
+
 
 def test_map_oseries_w_bgmap(pstore):
     ax = pstore.maps.oseries()

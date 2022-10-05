@@ -171,7 +171,9 @@ class PastastoreYAML:
         """
         self.pstore = pstore
 
-    def _parse_rechargemodel_dict(self, d: Dict, onam: Optional[str] = None) -> Dict:
+    def _parse_rechargemodel_dict(
+        self, d: Dict, onam: Optional[str] = None
+    ) -> Dict:
         """Internal method to parse RechargeModel dictionary.
 
         Note: supports 'nearest' as input to 'prec' and 'evap',
@@ -208,7 +210,9 @@ class PastastoreYAML:
             else:
                 kind = "prec"
             pnam = self.pstore.get_nearest_stresses(onam, kind=kind).iloc[0, 0]
-            logger.info(f"  | using nearest timeseries with kind='{kind}': '{pnam}'")
+            logger.info(
+                f"  | using nearest timeseries with kind='{kind}': '{pnam}'"
+            )
             prec, pmeta = self.pstore.get_stresses(pnam, return_metadata=True)
             prec = ps.TimeSeries(prec, pnam, settings="prec", metadata=pmeta)
         elif isinstance(prec_val, str):
@@ -216,7 +220,9 @@ class PastastoreYAML:
             prec, pmeta = self.pstore.get_stresses(pnam, return_metadata=True)
             prec = ps.TimeSeries(prec, pnam, settings="prec", metadata=pmeta)
         else:
-            raise NotImplementedError(f"Could not parse prec value: '{prec_val}'")
+            raise NotImplementedError(
+                f"Could not parse prec value: '{prec_val}'"
+            )
         d["prec"] = prec.to_dict()
 
         # evaporation
@@ -233,7 +239,9 @@ class PastastoreYAML:
             else:
                 kind = "evap"
             enam = self.pstore.get_nearest_stresses(onam, kind=kind).iloc[0, 0]
-            logger.info(f"  | using nearest timeseries with kind='{kind}': '{enam}'")
+            logger.info(
+                f"  | using nearest timeseries with kind='{kind}': '{enam}'"
+            )
             evap, emeta = self.pstore.get_stresses(enam, return_metadata=True)
             evap = ps.TimeSeries(evap, enam, metadata=emeta, settings="evap")
         elif isinstance(evap_val, str):
@@ -241,7 +249,9 @@ class PastastoreYAML:
             evap, emeta = self.pstore.get_stresses(enam, return_metadata=True)
             evap = ps.TimeSeries(evap, enam, metadata=emeta, settings="evap")
         else:
-            raise NotImplementedError(f"Could not parse evap value: '{evap_val}'")
+            raise NotImplementedError(
+                f"Could not parse evap value: '{evap_val}'"
+            )
         d["evap"] = evap.to_dict()
 
         # rfunc
@@ -276,7 +286,9 @@ class PastastoreYAML:
 
         return d
 
-    def _parse_stressmodel_dict(self, d: Dict, onam: Optional[str] = None) -> Dict:
+    def _parse_stressmodel_dict(
+        self, d: Dict, onam: Optional[str] = None
+    ) -> Dict:
         """Internal method to parse StressModel dictionary.
 
         Note: supports 'nearest' or 'nearest <kind>' as input to 'stress',
@@ -316,10 +328,14 @@ class PastastoreYAML:
             if kind == "oseries":
                 snam = self.pstore.get_nearest_oseries(onam).iloc[0, 0]
             else:
-                snam = self.pstore.get_nearest_stresses(onam, kind=kind).iloc[0, 0]
+                snam = self.pstore.get_nearest_stresses(onam, kind=kind).iloc[
+                    0, 0
+                ]
 
         s, smeta = self.pstore.get_stresses(snam, return_metadata=True)
-        s = ps.TimeSeries(s, snam, settings=d.pop("settings", None), metadata=smeta)
+        s = ps.TimeSeries(
+            s, snam, settings=d.pop("settings", None), metadata=smeta
+        )
         d["stress"] = [s.to_dict()]
 
         # use stress name if not provided
@@ -333,7 +349,9 @@ class PastastoreYAML:
 
         return d
 
-    def _parse_wellmodel_dict(self, d: Dict, onam: Optional[str] = None) -> Dict:
+    def _parse_wellmodel_dict(
+        self, d: Dict, onam: Optional[str] = None
+    ) -> Dict:
         """Internal method to parse WellModel dictionary.
 
         Note: supports 'nearest' or 'nearest <number> <kind>' as input to
@@ -385,7 +403,8 @@ class PastastoreYAML:
                     .values
                 )
                 logger.info(
-                    f"  | using {n} nearest stress(es) with kind='{kind}': " f"{snames}"
+                    f"  | using {n} nearest stress(es) with kind='{kind}': "
+                    f"{snames}"
                 )
             else:
                 snames = [snames]
@@ -395,7 +414,9 @@ class PastastoreYAML:
         for snam in snames:
             s, smeta = self.pstore.get_stresses(snam, return_metadata=True)
             slist.append(
-                ps.TimeSeries(s, snam, settings="well", metadata=smeta).to_dict()
+                ps.TimeSeries(
+                    s, snam, settings="well", metadata=smeta
+                ).to_dict()
             )
         d["stress"] = slist
 
@@ -497,9 +518,12 @@ class PastastoreYAML:
 
                 # check if RechargeModel based on name if smtyp not defined
                 if (
-                    smnam.lower() in ["rch", "rech", "recharge", "rechargemodel"]
+                    smnam.lower()
+                    in ["rch", "rech", "recharge", "rechargemodel"]
                 ) and not smtyp:
-                    logger.info("| assuming RechargeModel based on stressmodel name.")
+                    logger.info(
+                        "| assuming RechargeModel based on stressmodel name."
+                    )
                     # check if stressmodel dictionary is empty, create (nearly
                     # empty) dict so defaults are used
                     if smyml is None:
@@ -513,14 +537,16 @@ class PastastoreYAML:
                     # cannot make any assumptions for non-RechargeModels
                     if smyml is None:
                         raise ValueError(
-                            "Insufficient information " f"for stressmodel '{name}'!"
+                            "Insufficient information "
+                            f"for stressmodel '{name}'!"
                         )
                     # get stressmodel type, with default StressModel
                     if "stressmodel" in smyml:
                         smtyp = smyml["stressmodel"]
                     else:
                         logger.info(
-                            "| no 'stressmodel' type provided, " "using 'StressModel'"
+                            "| no 'stressmodel' type provided, "
+                            "using 'StressModel'"
                         )
                         smtyp = "StressModel"
 
@@ -612,7 +638,9 @@ class PastastoreYAML:
                 continue
 
             model_list = self.pstore.get_models(
-                self.pstore.oseries_models[onam], return_dict=True, squeeze=False
+                self.pstore.oseries_models[onam],
+                return_dict=True,
+                squeeze=False,
             )
 
             model_dicts = {}

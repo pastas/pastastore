@@ -74,23 +74,36 @@ def test_load_yaml_wellmodel(pstore):
 
 @pytest.mark.dependency()
 def test_write_load_compare_yaml(request, pstore):
-    depends(request, [f"test_load_yaml_rechargemodel[{pstore.type}]",
-                      f"test_load_yaml_stressmodel[{pstore.type}]",
-                      f"test_load_yaml_wellmodel[{pstore.type}]"])
+    depends(
+        request,
+        [
+            f"test_load_yaml_rechargemodel[{pstore.type}]",
+            f"test_load_yaml_stressmodel[{pstore.type}]",
+            f"test_load_yaml_wellmodel[{pstore.type}]",
+        ],
+    )
     pstore.yaml.export_models(modelnames=["my_first_model"])
     ml1 = pstore.models["my_first_model"]
     ml2 = pstore.yaml.load("my_first_model.yaml")[0]
-    assert pst.util.compare_models(
-        ml1, ml2, detailed_comparison=True).iloc[1:, -1].all()
+    assert (
+        pst.util.compare_models(ml1, ml2, detailed_comparison=True)
+        .iloc[1:, -1]
+        .all()
+    )
     os.remove("my_first_model.yaml")
     return
 
 
 @pytest.mark.dependency()
 def test_write_yaml_per_oseries(request, pstore):
-    depends(request, [f"test_load_yaml_rechargemodel[{pstore.type}]",
-                      f"test_load_yaml_stressmodel[{pstore.type}]",
-                      f"test_load_yaml_wellmodel[{pstore.type}]"])
+    depends(
+        request,
+        [
+            f"test_load_yaml_rechargemodel[{pstore.type}]",
+            f"test_load_yaml_stressmodel[{pstore.type}]",
+            f"test_load_yaml_wellmodel[{pstore.type}]",
+        ],
+    )
     pstore.yaml.export_stored_models_per_oseries()
     os.remove("oseries1.yaml")
     os.remove("oseries2.yaml")
@@ -99,9 +112,14 @@ def test_write_yaml_per_oseries(request, pstore):
 
 @pytest.mark.dependency()
 def test_write_yaml_minimal(request, pstore):
-    depends(request, [f"test_load_yaml_rechargemodel[{pstore.type}]",
-                      f"test_load_yaml_stressmodel[{pstore.type}]",
-                      f"test_load_yaml_wellmodel[{pstore.type}]"])
+    depends(
+        request,
+        [
+            f"test_load_yaml_rechargemodel[{pstore.type}]",
+            f"test_load_yaml_stressmodel[{pstore.type}]",
+            f"test_load_yaml_wellmodel[{pstore.type}]",
+        ],
+    )
     ml = pstore.models["my_first_model"]
     pstore.yaml.export_model(ml, minimal_yaml=True)
     os.remove("my_first_model.yaml")
@@ -110,9 +128,14 @@ def test_write_yaml_minimal(request, pstore):
 
 @pytest.mark.dependency()
 def test_write_yaml_minimal_nearest(request, pstore):
-    depends(request, [f"test_load_yaml_rechargemodel[{pstore.type}]",
-                      f"test_load_yaml_stressmodel[{pstore.type}]",
-                      f"test_load_yaml_wellmodel[{pstore.type}]"])
+    depends(
+        request,
+        [
+            f"test_load_yaml_rechargemodel[{pstore.type}]",
+            f"test_load_yaml_stressmodel[{pstore.type}]",
+            f"test_load_yaml_wellmodel[{pstore.type}]",
+        ],
+    )
     ml = pstore.models["my_third_model"]
     pstore.yaml.export_model(ml, minimal_yaml=True, use_nearest=True)
     os.remove("my_third_model.yaml")

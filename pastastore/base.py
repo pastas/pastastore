@@ -91,7 +91,9 @@ class BaseConnector(ABC):
         pass
 
     @abstractmethod
-    def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
+    def _get_item(
+        self, libname: str, name: str
+    ) -> Union[FrameorSeriesUnion, Dict]:
         """Internal method to get item (series or pastas.Models).
 
         Must be overriden by subclass.
@@ -267,7 +269,9 @@ class BaseConnector(ABC):
         update_meta = self._get_metadata(libname, name)
         if metadata is not None:
             update_meta.update(metadata)
-        self._add_series(libname, update, name, metadata=update_meta, overwrite=True)
+        self._add_series(
+            libname, update, name, metadata=update_meta, overwrite=True
+        )
 
     def _upsert_series(
         self,
@@ -320,7 +324,9 @@ class BaseConnector(ABC):
         # get series, since just updating metadata is not really defined
         # in all cases
         s = self._get_series(libname, name, progressbar=False)
-        self._add_series(libname, s, name, metadata=update_meta, overwrite=True)
+        self._add_series(
+            libname, s, name, metadata=update_meta, overwrite=True
+        )
 
     def add_oseries(
         self,
@@ -590,7 +596,9 @@ class BaseConnector(ABC):
             self._del_oseries_model_link(oname, n)
         self._clear_cache("_modelnames_cache")
 
-    def del_oseries(self, names: Union[list, str], remove_models: bool = False):
+    def del_oseries(
+        self, names: Union[list, str], remove_models: bool = False
+    ):
         """Delete oseries from the database.
 
         Parameters
@@ -607,7 +615,9 @@ class BaseConnector(ABC):
         # remove associated models from database
         if remove_models:
             modelnames = list(
-                chain.from_iterable([self.oseries_models.get(n, []) for n in names])
+                chain.from_iterable(
+                    [self.oseries_models.get(n, []) for n in names]
+                )
             )
             self.del_models(modelnames)
 
@@ -835,7 +845,9 @@ class BaseConnector(ABC):
             if return_dict:
                 ml = data
             else:
-                ml = self._parse_model_dict(data, update_ts_settings=update_ts_settings)
+                ml = self._parse_model_dict(
+                    data, update_ts_settings=update_ts_settings
+                )
             models.append(ml)
         if len(models) == 1 and squeeze:
             return models[0]
@@ -867,11 +879,15 @@ class BaseConnector(ABC):
                 return
         names = self._parse_names(None, libname)
         for name in (
-            tqdm(names, desc=f"Deleting items from {libname}") if progressbar else names
+            tqdm(names, desc=f"Deleting items from {libname}")
+            if progressbar
+            else names
         ):
             self._del_item(libname, name)
         self._clear_cache(libname)
-        print(f"Emptied library {libname} in {self.name}: " f"{self.__class__}")
+        print(
+            f"Emptied library {libname} in {self.name}: " f"{self.__class__}"
+        )
 
     def _iter_series(self, libname: str, names: Optional[List[str]] = None):
         """Internal method iterate over timeseries in library.
@@ -950,9 +966,13 @@ class BaseConnector(ABC):
 
         modelnames = self._parse_names(modelnames, "models")
         for mlnam in modelnames:
-            yield self.get_models(mlnam, return_dict=return_dict, progressbar=False)
+            yield self.get_models(
+                mlnam, return_dict=return_dict, progressbar=False
+            )
 
-    def _add_oseries_model_links(self, onam: str, mlnames: Union[str, List[str]]):
+    def _add_oseries_model_links(
+        self, onam: str, mlnames: Union[str, List[str]]
+    ):
         """Add model name to stored list of models per oseries.
 
         Parameters
@@ -1198,12 +1218,12 @@ class ConnectorUtil:
             mdict["oseries"]["series"] = self.get_oseries(name)
             # update tmin/tmax from timeseries
             if update_ts_settings:
-                mdict["oseries"]["settings"]["tmin"] = mdict["oseries"]["series"].index[
-                    0
-                ]
-                mdict["oseries"]["settings"]["tmax"] = mdict["oseries"]["series"].index[
-                    -1
-                ]
+                mdict["oseries"]["settings"]["tmin"] = mdict["oseries"][
+                    "series"
+                ].index[0]
+                mdict["oseries"]["settings"]["tmax"] = mdict["oseries"][
+                    "series"
+                ].index[-1]
 
         # StressModel, WellModel
         for ts in mdict["stressmodels"].values():
@@ -1215,8 +1235,12 @@ class ConnectorUtil:
                             stress["series"] = self.get_stresses(name)
                             # update tmin/tmax from timeseries
                             if update_ts_settings:
-                                stress["settings"]["tmin"] = stress["series"].index[0]
-                                stress["settings"]["tmax"] = stress["series"].index[-1]
+                                stress["settings"]["tmin"] = stress[
+                                    "series"
+                                ].index[0]
+                                stress["settings"]["tmax"] = stress[
+                                    "series"
+                                ].index[-1]
 
             # RechargeModel, TarsoModel
             if ("prec" in ts.keys()) and ("evap" in ts.keys()):
@@ -1227,16 +1251,24 @@ class ConnectorUtil:
                             stress["series"] = self.get_stresses(name)
                             # update tmin/tmax from timeseries
                             if update_ts_settings:
-                                stress["settings"]["tmin"] = stress["series"].index[0]
-                                stress["settings"]["tmax"] = stress["series"].index[-1]
+                                stress["settings"]["tmin"] = stress[
+                                    "series"
+                                ].index[0]
+                                stress["settings"]["tmax"] = stress[
+                                    "series"
+                                ].index[-1]
                         else:
-                            msg = "stress '{}' not present in project".format(name)
+                            msg = "stress '{}' not present in project".format(
+                                name
+                            )
                             raise KeyError(msg)
         # hack for pcov w dtype object (when filled with NaNs on store?)
         if "fit" in mdict:
             if "pcov" in mdict["fit"]:
                 pcov = mdict["fit"]["pcov"]
-                if pcov.dtypes.apply(lambda dtyp: isinstance(dtyp, object)).any():
+                if pcov.dtypes.apply(
+                    lambda dtyp: isinstance(dtyp, object)
+                ).any():
                     mdict["fit"]["pcov"] = pcov.astype(float)
 
         try:
@@ -1261,11 +1293,17 @@ class ConnectorUtil:
         TypeError
             if object is not of type pandas.DataFrame or pandas.Series
         """
-        if not (isinstance(series, pd.DataFrame) or isinstance(series, pd.Series)):
-            raise TypeError("Please provide pandas.DataFrame" " or pandas.Series!")
+        if not (
+            isinstance(series, pd.DataFrame) or isinstance(series, pd.Series)
+        ):
+            raise TypeError(
+                "Please provide pandas.DataFrame" " or pandas.Series!"
+            )
         if isinstance(series, pd.DataFrame):
             if series.columns.size > 1:
-                raise ValueError("Only DataFrames with one " "column are supported!")
+                raise ValueError(
+                    "Only DataFrames with one " "column are supported!"
+                )
 
     @staticmethod
     def _set_series_name(series, name):
@@ -1325,7 +1363,9 @@ class ConnectorUtil:
                 for istress in sm.stress
             ]
             # RechargeModel, TarsoModel
-            if isin(prec_evap_model, [i._name for i in ml.stressmodels.values()]).any():
+            if isin(
+                prec_evap_model, [i._name for i in ml.stressmodels.values()]
+            ).any():
                 series_names += [
                     istress.series.name
                     for sm in ml.stressmodels.values()
