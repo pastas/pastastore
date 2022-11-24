@@ -507,11 +507,10 @@ def frontiers_checks(
 
     References
     ----------
-    .. [bra_2022] Brakenhoff, D.A., Vonk M.A., Collenteur, R.A.,
-    van Baar, M., Bakker, M.: Application of Time Series Analysis
-    to Estimate Drawdown From Multiple Well Fields.
-    Front. Earth Sci., 14 June 2022 doi:10.3389/feart.2022.907609
-    """
+    .. [bra_2022]
+    Brakenhoff, D.A., Vonk M.A., Collenteur, R.A., van Baar, M., Bakker, M.:
+    Application of Time Series Analysis to Estimate Drawdown From Multiple Well
+    Fields. Front. Earth Sci., 14 June 2022 doi:10.3389/feart.2022.907609"""
 
     df = pd.DataFrame(columns=["all_checks_passed"])
 
