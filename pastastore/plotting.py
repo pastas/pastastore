@@ -212,6 +212,8 @@ class Plots:
         kind=None,
         intervals=None,
         ignore=("second", "minute", "14 days"),
+        ax=None,
+        cax=None,
         normtype="log",
         cmap="viridis_r",
         set_yticks=False,
@@ -236,6 +238,12 @@ class Plots:
             A dict with frequencies as keys and number of seconds as values
         ignore : list, optional
             A list with frequencies in intervals to ignore
+        ax: matplotlib Axes, optional
+            pass axes object to plot data availability on existing figure. by
+            default None, in which case a new figure is created
+        cax: matplotlib Axes, optional
+            pass object axes to plot the colorbar on. by default None, which
+            gives default Maptlotlib behavior
         normtype : str, optional
             Determines the type of color normalisations, default is 'log'
         cmap : str, optional
@@ -274,6 +282,8 @@ class Plots:
             names=names,
             intervals=intervals,
             ignore=ignore,
+            ax=ax,
+            cax=cax,
             normtype=normtype,
             cmap=cmap,
             set_yticks=set_yticks,
@@ -289,6 +299,8 @@ class Plots:
         names=None,
         intervals=None,
         ignore=("second", "minute", "14 days"),
+        ax=None,
+        cax=None,
         normtype="log",
         cmap="viridis_r",
         set_yticks=False,
@@ -312,6 +324,12 @@ class Plots:
             A dict with frequencies as keys and number of seconds as values
         ignore : list, optional
             A list with frequencies in intervals to ignore
+        ax: matplotlib Axes, optional
+            pass axes object to plot data availability on existing figure. by
+            default None, in which case a new figure is created
+        cax: matplotlib Axes, optional
+            pass object axes to plot the colorbar on. by default None, which
+            gives default Maptlotlib behavior
         normtype : str, optional
             Determines the type of color normalisations, default is 'log'
         cmap : str, optional
@@ -333,7 +351,11 @@ class Plots:
             The axes in which the data-availability is plotted
         """
         # a good colormap is cmap='RdYlGn_r' or 'cubehelix'
-        f, ax = plt.subplots(figsize=figsize, **kwargs)
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize, **kwargs)
+        else:
+            fig = ax.get_figure()
+
         ax.invert_yaxis()
         if intervals is None:
             intervals = {
@@ -376,7 +398,7 @@ class Plots:
                 )
         # make a colorbar in an ax on the
         # right side, then set the current axes to ax again
-        cb = f.colorbar(pc, ax=ax, extend="both")
+        cb = fig.colorbar(pc, ax=ax, cax=cax, extend="both")
         cb.set_ticks(bounds)
         cb.ax.set_yticklabels(labels)
         cb.ax.minorticks_off()
@@ -388,7 +410,7 @@ class Plots:
         else:
             ax.set_ylabel("Timeseries (-)")
         ax.grid()
-        f.tight_layout(pad=0.0)
+
         return ax
 
     def cumulative_hist(
