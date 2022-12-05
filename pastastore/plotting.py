@@ -569,9 +569,13 @@ class Maps:
         kind_to_color = {k: f"C{i}" for i, k in enumerate(c.unique())}
         c = c.apply(lambda k: kind_to_color[k])
 
-        ax = self._plotmap_dataframe(
+        r = self._plotmap_dataframe(
             stresses.loc[mask0], c=c, figsize=figsize, **kwargs
         )
+        if "ax" in kwargs:
+            ax = kwargs["ax"]
+        else:
+            ax = r
         if labels:
             self.add_labels(stresses, ax, adjust=adjust)
 
@@ -606,12 +610,15 @@ class Maps:
         names = self.pstore.conn._parse_names(names, "oseries")
         oseries = self.pstore.oseries.loc[names]
         mask0 = (oseries["x"] != 0.0) | (oseries["y"] != 0.0)
-        ax = self._plotmap_dataframe(
+        r = self._plotmap_dataframe(
             oseries.loc[mask0], figsize=figsize, **kwargs
         )
+        if "ax" in kwargs:
+            ax = kwargs["ax"]
+        else:
+            ax = r
         if labels:
             self.add_labels(oseries, ax, adjust=adjust)
-
         return ax
 
     def models(self, labels=True, adjust=False, figsize=(10, 8), **kwargs):
@@ -646,12 +653,15 @@ class Maps:
 
         # mask out 0.0 coordinates
         mask0 = (models["x"] != 0.0) | (models["y"] != 0.0)
-        ax = self._plotmap_dataframe(
+        r = self._plotmap_dataframe(
             models.loc[mask0], figsize=figsize, **kwargs
         )
+        if "ax" in kwargs:
+            ax = kwargs["ax"]
+        else:
+            ax = r
         if labels:
             self.add_labels(models, ax, adjust=adjust)
-
         return ax
 
     def modelstat(
