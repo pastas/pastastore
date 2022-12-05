@@ -36,7 +36,7 @@ def test_get_tmintmax(pstore):
 def test_search(pstore):
     results = pstore.search("oseries", "OSER", case_sensitive=False)
     assert len(results) == 3
-    assert (len(set(results) - {"oseries1", "oseries2", "oseries3"}) == 0)
+    assert len(set(results) - {"oseries1", "oseries2", "oseries3"}) == 0
     return
 
 
@@ -118,8 +118,13 @@ def test_oseries_model_accessor(request, pstore):
 
 @pytest.mark.dependency()
 def test_store_model_missing_series(request, pstore):
-    depends(request, [f"test_create_model[{pstore.type}]",
-                      f"test_store_model[{pstore.type}]"])
+    depends(
+        request,
+        [
+            f"test_create_model[{pstore.type}]",
+            f"test_store_model[{pstore.type}]",
+        ],
+    )
     ml = test_create_model(pstore)
     o = pstore.get_oseries("oseries1")
     meta = pstore.get_metadata("oseries", "oseries1", as_frame=False)
@@ -135,27 +140,38 @@ def test_store_model_missing_series(request, pstore):
 
 @pytest.mark.dependency()
 def test_get_model(request, pstore):
-    depends(request, [f"test_create_model[{pstore.type}]",
-                      f"test_store_model[{pstore.type}]",
-                      f"test_store_model_missing_series[{pstore.type}]"])
+    depends(
+        request,
+        [
+            f"test_create_model[{pstore.type}]",
+            f"test_store_model[{pstore.type}]",
+            f"test_store_model_missing_series[{pstore.type}]",
+        ],
+    )
     ml = pstore.conn.get_models("oseries1")
     return ml
 
 
 @pytest.mark.dependency()
 def test_del_model(request, pstore):
-    depends(request, [f"test_create_model[{pstore.type}]",
-                      f"test_store_model[{pstore.type}]",
-                      f"test_store_model_missing_series[{pstore.type}]",
-                      f"test_get_model[{pstore.type}]"])
+    depends(
+        request,
+        [
+            f"test_create_model[{pstore.type}]",
+            f"test_store_model[{pstore.type}]",
+            f"test_store_model_missing_series[{pstore.type}]",
+            f"test_get_model[{pstore.type}]",
+        ],
+    )
     pstore.conn.del_models("oseries1")
     return
 
 
 @pytest.mark.dependency()
 def test_create_models(pstore):
-    mls = pstore.create_models_bulk(["oseries1", "oseries2"], store=True,
-                                    progressbar=False)
+    mls = pstore.create_models_bulk(
+        ["oseries1", "oseries2"], store=True, progressbar=False
+    )
     _ = pstore.conn.models
     return mls
 
@@ -179,9 +195,9 @@ def test_iter_models(request, pstore):
 @pytest.mark.dependency()
 def test_solve_models_and_get_stats(request, pstore):
     depends(request, [f"test_create_models[{pstore.type}]"])
-    mls = pstore.solve_models(ignore_solve_errors=False,
-                              progressbar=False,
-                              store_result=True)
+    mls = pstore.solve_models(
+        ignore_solve_errors=False, progressbar=False, store_result=True
+    )
     stats = pstore.get_statistics(["evp", "aic"], progressbar=False)
     assert stats.index.size == 2
     return mls, stats
@@ -190,10 +206,11 @@ def test_solve_models_and_get_stats(request, pstore):
 @pytest.mark.dependency()
 def test_save_and_load_model(request, pstore):
     ml = pstore.create_model("oseries2")
-    sm = ps.StressModel(pstore.get_stresses('well1'), ps.Gamma,
-                        name='well1', settings="well")
+    sm = ps.StressModel(
+        pstore.get_stresses("well1"), ps.Gamma, name="well1", settings="well"
+    )
     ml.add_stressmodel(sm)
-    ml.solve(tmin='1993-1-1')
+    ml.solve(tmin="1993-1-1")
     evp_ml = ml.stats.evp()
     pstore.add_model(ml, overwrite=True)
     ml2 = pstore.get_models(ml.name)
@@ -229,8 +246,9 @@ def test_update_ts_settings(request, pstore):
         assert ml2.oseries.settings["tmax"] == o.index[-1]
         assert ml2.stressmodels["recharge"].prec.settings["tmax"] == tmax
         assert ml2.stressmodels["recharge"].evap.settings["tmax"] == tmax
-        assert ml2.stressmodels["prec"].stress[0].settings["tmax"] == \
-            p2.index[-1]
+        assert (
+            ml2.stressmodels["prec"].stress[0].settings["tmax"] == p2.index[-1]
+        )
     except AssertionError:
         pstore.del_models("ml_oseries2")
         pstore.set_check_model_series_values(True)
@@ -257,8 +275,9 @@ def test_repr(pstore):
 
 def test_copy_dbase(pstore):
     conn2 = pst.DictConnector("destination")
-    pst.util.copy_database(pstore.conn, conn2, overwrite=False,
-                           progressbar=True)
+    pst.util.copy_database(
+        pstore.conn, conn2, overwrite=False, progressbar=True
+    )
     return
 
 
@@ -276,5 +295,6 @@ def test_to_from_zip(pstore):
 
 def test_example_pastastore():
     from pastastore.datasets import example_pastastore
+
     _ = example_pastastore()
     return

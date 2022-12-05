@@ -183,7 +183,12 @@ class PastaStore:
         data = pd.DataFrame(columns=np.arange(n))
 
         for series_name in distances.index:
-            others = distances.loc[series_name].dropna().sort_values().index.tolist()
+            others = (
+                distances.loc[series_name]
+                .dropna()
+                .sort_values()
+                .index.tolist()
+            )
             # remove self
             others.remove(series_name)
             series = pd.DataFrame(
@@ -243,7 +248,9 @@ class PastaStore:
         yh, yi = np.meshgrid(yt, yo)
 
         distances = pd.DataFrame(
-            np.sqrt((xh - xi) ** 2 + (yh - yi) ** 2), index=oseries, columns=stresses
+            np.sqrt((xh - xi) ** 2 + (yh - yi) ** 2),
+            index=oseries,
+            columns=stresses,
         )
 
         return distances
@@ -365,9 +372,13 @@ class PastaStore:
 
         # loop through model names and store results
         desc = "Get model parameters"
-        for mlname in tqdm(modelnames, desc=desc) if progressbar else modelnames:
+        for mlname in (
+            tqdm(modelnames, desc=desc) if progressbar else modelnames
+        ):
             try:
-                mldict = self.get_models(mlname, return_dict=True, progressbar=False)
+                mldict = self.get_models(
+                    mlname, return_dict=True, progressbar=False
+                )
             except Exception as e:
                 if ignore_errors:
                     p.loc[mlname, :] = np.nan
@@ -424,7 +435,9 @@ class PastaStore:
 
         # loop through model names
         desc = "Get model statistics"
-        for mlname in tqdm(modelnames, desc=desc) if progressbar else modelnames:
+        for mlname in (
+            tqdm(modelnames, desc=desc) if progressbar else modelnames
+        ):
             try:
                 ml = self.get_models(mlname, progressbar=False)
             except Exception as e:
@@ -479,7 +492,9 @@ class PastaStore:
 
         # convert to Timeseries and create model
         if not ts.dropna().empty:
-            ts = ps.TimeSeries(ts, name=name, settings="oseries", metadata=meta)
+            ts = ps.TimeSeries(
+                ts, name=name, settings="oseries", metadata=meta
+            )
             if modelname is None:
                 modelname = name
             ml = ps.Model(ts, name=modelname, metadata=meta)
@@ -588,7 +603,9 @@ class PastaStore:
         names = []
         for var in ("prec", "evap"):
             try:
-                name = self.get_nearest_stresses(ml.oseries.name, kind=var).iloc[0, 0]
+                name = self.get_nearest_stresses(
+                    ml.oseries.name, kind=var
+                ).iloc[0, 0]
             except AttributeError:
                 msg = "No precipitation or evaporation timeseries found!"
                 raise Exception(msg)
@@ -687,7 +704,9 @@ class PastaStore:
                     raise e
 
     def model_results(
-        self, mls: Optional[Union[ps.Model, list, str]] = None, progressbar: bool = True
+        self,
+        mls: Optional[Union[ps.Model, list, str]] = None,
+        progressbar: bool = True,
     ):  # pragma: no cover
         """Get pastas model results.
 
@@ -713,7 +732,9 @@ class PastaStore:
         try:
             from art_tools import pastas_get_model_results
         except Exception:
-            raise ModuleNotFoundError("You need 'art_tools' to use this method!")
+            raise ModuleNotFoundError(
+                "You need 'art_tools' to use this method!"
+            )
 
         if mls is None:
             mls = self.conn.models
@@ -751,16 +772,22 @@ class PastaStore:
 
         if os.path.exists(fname) and not overwrite:
             raise FileExistsError(
-                "File already exists! " "Use 'overwrite=True' to " "force writing file."
+                "File already exists! "
+                "Use 'overwrite=True' to "
+                "force writing file."
             )
         elif os.path.exists(fname):
             warnings.warn(f"Overwriting file '{os.path.basename(fname)}'")
 
         with ZipFile(fname, "w", compression=ZIP_DEFLATED) as archive:
             # oseries
-            self.conn._series_to_archive(archive, "oseries", progressbar=progressbar)
+            self.conn._series_to_archive(
+                archive, "oseries", progressbar=progressbar
+            )
             # stresses
-            self.conn._series_to_archive(archive, "stresses", progressbar=progressbar)
+            self.conn._series_to_archive(
+                archive, "stresses", progressbar=progressbar
+            )
             # models
             self.conn._models_to_archive(archive, progressbar=progressbar)
 
@@ -794,12 +821,17 @@ class PastaStore:
                 metalist = [self.get_metadata("oseries", oname)]
 
             for sm in mldict["stressmodels"]:
-                if mldict["stressmodels"][sm]["stressmodel"] == "RechargeModel":
+                if (
+                    mldict["stressmodels"][sm]["stressmodel"]
+                    == "RechargeModel"
+                ):
                     for istress in ["prec", "evap"]:
                         istress = mldict["stressmodels"][sm][istress]
                         stress_name = istress["name"]
                         ts = self.get_stresses(stress_name)
-                        ts.to_csv(os.path.join(exportdir, f"{stress_name}.csv"))
+                        ts.to_csv(
+                            os.path.join(exportdir, f"{stress_name}.csv")
+                        )
                         if exportmeta:
                             tsmeta = self.get_metadata("stresses", stress_name)
                             metalist.append(tsmeta)
@@ -807,7 +839,9 @@ class PastaStore:
                     for istress in mldict["stressmodels"][sm]["stress"]:
                         stress_name = istress["name"]
                         ts = self.get_stresses(stress_name)
-                        ts.to_csv(os.path.join(exportdir, f"{stress_name}.csv"))
+                        ts.to_csv(
+                            os.path.join(exportdir, f"{stress_name}.csv")
+                        )
                         if exportmeta:
                             tsmeta = self.get_metadata("stresses", stress_name)
                             metalist.append(tsmeta)
@@ -819,7 +853,11 @@ class PastaStore:
 
     @classmethod
     def from_zip(
-        cls, fname: str, conn, storename: Optional[str] = None, progressbar: bool = True
+        cls,
+        fname: str,
+        conn,
+        storename: Optional[str] = None,
+        progressbar: bool = True,
     ):
         """Load PastaStore from zipfile.
 
@@ -844,17 +882,25 @@ class PastaStore:
 
         with ZipFile(fname, "r") as archive:
             namelist = [
-                fi for fi in archive.namelist() if not fi.endswith("_meta.json")
+                fi
+                for fi in archive.namelist()
+                if not fi.endswith("_meta.json")
             ]
-            for f in tqdm(namelist, desc="Reading zip") if progressbar else namelist:
+            for f in (
+                tqdm(namelist, desc="Reading zip") if progressbar else namelist
+            ):
                 libname, fjson = os.path.split(f)
                 if libname in ["stresses", "oseries"]:
                     s = pd.read_json(archive.open(f), orient="columns")
                     if not isinstance(s.index, pd.DatetimeIndex):
                         s.index = pd.to_datetime(s.index, unit="ms")
                     s = s.sort_index()
-                    meta = json.load(archive.open(f.replace(".json", "_meta.json")))
-                    conn._add_series(libname, s, fjson.split(".")[0], metadata=meta)
+                    meta = json.load(
+                        archive.open(f.replace(".json", "_meta.json"))
+                    )
+                    conn._add_series(
+                        libname, s, fjson.split(".")[0], metadata=meta
+                    )
                 elif libname in ["models"]:
                     ml = json.load(archive.open(f), object_hook=pastas_hook)
                     conn.add_model(ml)
@@ -892,7 +938,9 @@ class PastaStore:
         elif libname == "oseries":
             lib_names = getattr(self, "oseries_names")
         else:
-            raise ValueError("Provide valid libname: 'models', 'stresses' or 'oseries'")
+            raise ValueError(
+                "Provide valid libname: 'models', 'stresses' or 'oseries'"
+            )
 
         if isinstance(s, str):
             if case_sensitive:
@@ -905,7 +953,9 @@ class PastaStore:
                 if case_sensitive:
                     m = np.append(m, [n for n in lib_names if sub in n])
                 else:
-                    m = np.append(m, [n for n in lib_names if sub.lower() in n.lower()])
+                    m = np.append(
+                        m, [n for n in lib_names if sub.lower() in n.lower()]
+                    )
             matches = list(np.unique(m))
 
         return matches

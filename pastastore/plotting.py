@@ -94,7 +94,9 @@ class Plots:
 
         if ax is None:
             if split:
-                fig, axes = plt.subplots(len(names), 1, sharex=True, figsize=figsize)
+                fig, axes = plt.subplots(
+                    len(names), 1, sharex=True, figsize=figsize
+                )
             else:
                 fig, axes = plt.subplots(1, 1, figsize=figsize)
         else:
@@ -120,7 +122,9 @@ class Plots:
         fig.tight_layout()
         return axes
 
-    def oseries(self, names=None, ax=None, split=False, figsize=(10, 5), **kwargs):
+    def oseries(
+        self, names=None, ax=None, split=False, figsize=(10, 5), **kwargs
+    ):
         """Plot oseries.
 
         Parameters
@@ -143,11 +147,22 @@ class Plots:
             axes handle
         """
         return self._timeseries(
-            "oseries", names=names, ax=ax, split=split, figsize=figsize, **kwargs
+            "oseries",
+            names=names,
+            ax=ax,
+            split=split,
+            figsize=figsize,
+            **kwargs,
         )
 
     def stresses(
-        self, names=None, kind=None, ax=None, split=False, figsize=(10, 5), **kwargs
+        self,
+        names=None,
+        kind=None,
+        ax=None,
+        split=False,
+        figsize=(10, 5),
+        **kwargs,
     ):
         """Plot stresses.
 
@@ -182,7 +197,12 @@ class Plots:
             names = stresses.loc[mask].index.to_list()
 
         return self._timeseries(
-            "stresses", names=names, ax=ax, split=split, figsize=figsize, **kwargs
+            "stresses",
+            names=names,
+            ax=ax,
+            split=split,
+            figsize=figsize,
+            **kwargs,
         )
 
     def data_availability(
@@ -192,6 +212,8 @@ class Plots:
         kind=None,
         intervals=None,
         ignore=("second", "minute", "14 days"),
+        ax=None,
+        cax=None,
         normtype="log",
         cmap="viridis_r",
         set_yticks=False,
@@ -216,6 +238,12 @@ class Plots:
             A dict with frequencies as keys and number of seconds as values
         ignore : list, optional
             A list with frequencies in intervals to ignore
+        ax: matplotlib Axes, optional
+            pass axes object to plot data availability on existing figure. by
+            default None, in which case a new figure is created
+        cax: matplotlib Axes, optional
+            pass object axes to plot the colorbar on. by default None, which
+            gives default Maptlotlib behavior
         normtype : str, optional
             Determines the type of color normalisations, default is 'log'
         cmap : str, optional
@@ -254,6 +282,8 @@ class Plots:
             names=names,
             intervals=intervals,
             ignore=ignore,
+            ax=ax,
+            cax=cax,
             normtype=normtype,
             cmap=cmap,
             set_yticks=set_yticks,
@@ -269,6 +299,8 @@ class Plots:
         names=None,
         intervals=None,
         ignore=("second", "minute", "14 days"),
+        ax=None,
+        cax=None,
         normtype="log",
         cmap="viridis_r",
         set_yticks=False,
@@ -292,6 +324,12 @@ class Plots:
             A dict with frequencies as keys and number of seconds as values
         ignore : list, optional
             A list with frequencies in intervals to ignore
+        ax: matplotlib Axes, optional
+            pass axes object to plot data availability on existing figure. by
+            default None, in which case a new figure is created
+        cax: matplotlib Axes, optional
+            pass object axes to plot the colorbar on. by default None, which
+            gives default Maptlotlib behavior
         normtype : str, optional
             Determines the type of color normalisations, default is 'log'
         cmap : str, optional
@@ -313,7 +351,11 @@ class Plots:
             The axes in which the data-availability is plotted
         """
         # a good colormap is cmap='RdYlGn_r' or 'cubehelix'
-        f, ax = plt.subplots(figsize=figsize, **kwargs)
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize, **kwargs)
+        else:
+            fig = ax.get_figure()
+
         ax.invert_yaxis()
         if intervals is None:
             intervals = {
@@ -356,7 +398,7 @@ class Plots:
                 )
         # make a colorbar in an ax on the
         # right side, then set the current axes to ax again
-        cb = f.colorbar(pc, ax=ax, extend="both")
+        cb = fig.colorbar(pc, ax=ax, cax=cax, extend="both")
         cb.set_ticks(bounds)
         cb.ax.set_yticklabels(labels)
         cb.ax.minorticks_off()
@@ -368,7 +410,7 @@ class Plots:
         else:
             ax.set_ylabel("Timeseries (-)")
         ax.grid()
-        f.tight_layout(pad=0.0)
+
         return ax
 
     def cumulative_hist(
@@ -488,7 +530,9 @@ class Maps:
         """
         self.pstore = pstore
 
-    def stresses(self, kind=None, labels=True, adjust=False, figsize=(10, 8), **kwargs):
+    def stresses(
+        self, kind=None, labels=True, adjust=False, figsize=(10, 8), **kwargs
+    ):
         """Plot stresses locations on map.
 
         Parameters
@@ -521,13 +565,25 @@ class Maps:
 
         mask0 = (stresses["x"] != 0.0) | (stresses["y"] != 0.0)
 
-        ax = self._plotmap_dataframe(stresses.loc[mask0], figsize=figsize, **kwargs)
+        c = stresses.loc[mask0, "kind"]
+        kind_to_color = {k: f"C{i}" for i, k in enumerate(c.unique())}
+        c = c.apply(lambda k: kind_to_color[k])
+
+        r = self._plotmap_dataframe(
+            stresses.loc[mask0], c=c, figsize=figsize, **kwargs
+        )
+        if "ax" in kwargs:
+            ax = kwargs["ax"]
+        else:
+            ax = r
         if labels:
             self.add_labels(stresses, ax, adjust=adjust)
 
         return ax
 
-    def oseries(self, names=None, labels=True, adjust=False, figsize=(10, 8), **kwargs):
+    def oseries(
+        self, names=None, labels=True, adjust=False, figsize=(10, 8), **kwargs
+    ):
         """Plot oseries locations on map.
 
         Parameters
@@ -554,10 +610,15 @@ class Maps:
         names = self.pstore.conn._parse_names(names, "oseries")
         oseries = self.pstore.oseries.loc[names]
         mask0 = (oseries["x"] != 0.0) | (oseries["y"] != 0.0)
-        ax = self._plotmap_dataframe(oseries.loc[mask0], figsize=figsize, **kwargs)
+        r = self._plotmap_dataframe(
+            oseries.loc[mask0], figsize=figsize, **kwargs
+        )
+        if "ax" in kwargs:
+            ax = kwargs["ax"]
+        else:
+            ax = r
         if labels:
             self.add_labels(oseries, ax, adjust=adjust)
-
         return ax
 
     def models(self, labels=True, adjust=False, figsize=(10, 8), **kwargs):
@@ -592,10 +653,15 @@ class Maps:
 
         # mask out 0.0 coordinates
         mask0 = (models["x"] != 0.0) | (models["y"] != 0.0)
-        ax = self._plotmap_dataframe(models.loc[mask0], figsize=figsize, **kwargs)
+        r = self._plotmap_dataframe(
+            models.loc[mask0], figsize=figsize, **kwargs
+        )
+        if "ax" in kwargs:
+            ax = kwargs["ax"]
+        else:
+            ax = r
         if labels:
             self.add_labels(models, ax, adjust=adjust)
-
         return ax
 
     def modelstat(
@@ -640,7 +706,9 @@ class Maps:
         --------
         self.add_background_map
         """
-        statsdf = self.pstore.get_statistics([statistic], progressbar=False).to_frame()
+        statsdf = self.pstore.get_statistics(
+            [statistic], progressbar=False
+        ).to_frame()
 
         statsdf["oseries"] = [
             self.pstore.get_models(m, return_dict=True)["oseries"]["name"]
@@ -670,7 +738,14 @@ class Maps:
 
     @staticmethod
     def _plotmap_dataframe(
-        df, x="x", y="y", column=None, ax=None, figsize=(10, 8), **kwargs
+        df,
+        x="x",
+        y="y",
+        column=None,
+        colorbar=True,
+        ax=None,
+        figsize=(10, 8),
+        **kwargs,
     ):
         """Internal method for plotting dataframe with point locations.
 
@@ -688,6 +763,8 @@ class Maps:
         column : str, optional
             name of the column containing data used for determining the
             color of each point, by default None (all one color)
+        colorbar : bool, optional
+            show colorbar, only if column is provided, by default True
         ax : matplotlib Axes
             axes handle to plot dataframe, optional, default is None
             which creates a new figure
@@ -700,12 +777,16 @@ class Maps:
         Returns
         -------
         ax : matplotlib.Axes
-            axes object
+            axes object, returned if ax is None
+        sc : scatter handle
+            scatter plot handle, returned if ax is not None
         """
 
         if ax is None:
+            return_scatter = False
             fig, ax = plt.subplots(figsize=figsize)
         else:
+            return_scatter = True
             fig = ax.figure
 
         # set default size and marker if not passed
@@ -727,7 +808,7 @@ class Maps:
 
         sc = ax.scatter(df[x], df[y], marker=marker, s=s, c=c, **kwargs)
         # add colorbar
-        if column:
+        if column and colorbar:
             divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="3%", pad=0.05)
             cbar = fig.colorbar(sc, ax=ax, cax=cax)
@@ -742,8 +823,10 @@ class Maps:
             label.set_verticalalignment("center")
 
         fig.tight_layout()
-
-        return ax
+        if return_scatter:
+            return sc
+        else:
+            return ax
 
     def model(self, ml, label=True, metadata_source="model", offset=0.0):
         """Plot oseries and stresses from one model on a map.
@@ -814,13 +897,19 @@ class Maps:
             xm = float(ml.oseries.metadata["x"])
             ym = float(ml.oseries.metadata["y"])
         elif metadata_source == "store":
-            ometa = self.pstore.get_metadata("oseries", ml.oseries.name, as_frame=False)
+            ometa = self.pstore.get_metadata(
+                "oseries", ml.oseries.name, as_frame=False
+            )
             xm = float(ometa.pop("x", np.nan))
             ym = float(ometa.pop("y", np.nan))
         else:
-            raise ValueError("metadata_source must be either " "'model' or 'store'!")
+            raise ValueError(
+                "metadata_source must be either " "'model' or 'store'!"
+            )
 
-        po = ax.scatter(xm, ym, s=osize, marker="o", label=oserieslabel, color="k")
+        po = ax.scatter(
+            xm, ym, s=osize, marker="o", label=oserieslabel, color="k"
+        )
         legend_list = [po]
 
         # add stresses
@@ -864,7 +953,9 @@ class Maps:
             legend_list.append(h)
 
         # add legend
-        ax.legend(legend_list, [i.get_label() for i in legend_list], loc="best")
+        ax.legend(
+            legend_list, [i.get_label() for i in legend_list], loc="best"
+        )
 
         # set axes properties
         ax.set_xlabel("x")
@@ -946,7 +1037,9 @@ class Maps:
             m_idx = self.pstore.search(libname="models", s=model_names)
         else:
             m_idx = self.pstore.model_names
-        struct = self.pstore.get_model_timeseries_names(progressbar=False).loc[m_idx]
+        struct = self.pstore.get_model_timeseries_names(progressbar=False).loc[
+            m_idx
+        ]
 
         oseries = self.pstore.oseries
         stresses = self.pstore.stresses
@@ -982,7 +1075,9 @@ class Maps:
                     stused = np.append(stused, s)
 
         if labels:
-            self.add_labels(oseries.loc[struct["oseries"].unique()], ax, adjust=adjust)
+            self.add_labels(
+                oseries.loc[struct["oseries"].unique()], ax, adjust=adjust
+            )
             self.add_labels(stresses.loc[np.unique(stused)], ax, adjust=adjust)
 
         ax.scatter(
@@ -991,7 +1086,9 @@ class Maps:
             color=segment_colors,
         )
         ax.add_collection(
-            LineCollection(segments, colors=segment_colors, linewidths=0.5, alpha=alpha)
+            LineCollection(
+                segments, colors=segment_colors, linewidths=0.5, alpha=alpha
+            )
         )
 
         if legend:
@@ -1074,7 +1171,9 @@ class Maps:
             proj = pyproj.Proj(proj)
 
         providers = Maps._list_contextily_providers()
-        ctx.add_basemap(ax, source=providers[map_provider], crs=proj.srs, **kwargs)
+        ctx.add_basemap(
+            ax, source=providers[map_provider], crs=proj.srs, **kwargs
+        )
 
     @staticmethod
     def add_labels(df, ax, adjust=False, **kwargs):
@@ -1101,13 +1200,21 @@ class Maps:
             texts = []
             for name, row in df.iterrows():
                 texts.append(
-                    ax.text(row["x"], row["y"], name, **{"path_effects": stroke})
+                    ax.text(
+                        row["x"], row["y"], name, **{"path_effects": stroke}
+                    )
                 )
 
             adjust_text(
                 texts,
                 force_text=0.05,
-                **{"arrowprops": {"arrowstyle": "-", "color": "k", "alpha": 0.5}},
+                **{
+                    "arrowprops": {
+                        "arrowstyle": "-",
+                        "color": "k",
+                        "alpha": 0.5,
+                    }
+                },
             )
 
         else:

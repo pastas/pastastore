@@ -40,7 +40,9 @@ def example_pastastore(conn="DictConnector"):
     # add data
 
     # oseries 1
-    o = pd.read_csv(os.path.join(datadir, "obs.csv"), index_col=0, parse_dates=True)
+    o = pd.read_csv(
+        os.path.join(datadir, "obs.csv"), index_col=0, parse_dates=True
+    )
     pstore.add_oseries(o, "oseries1", metadata={"x": 165000, "y": 424000})
     # oseries 2
     o = pd.read_csv(
@@ -49,38 +51,58 @@ def example_pastastore(conn="DictConnector"):
     pstore.add_oseries(o, "oseries2", metadata={"x": 164000, "y": 423000})
 
     # oseries 3
-    o = pd.read_csv(os.path.join(datadir, "gw_obs.csv"), index_col=0, parse_dates=True)
+    o = pd.read_csv(
+        os.path.join(datadir, "gw_obs.csv"), index_col=0, parse_dates=True
+    )
     pstore.add_oseries(o, "oseries3", metadata={"x": 165554, "y": 422685})
 
     # prec 1
-    s = pd.read_csv(os.path.join(datadir, "rain.csv"), index_col=0, parse_dates=True)
-    pstore.add_stress(s, "prec1", kind="prec", metadata={"x": 165050, "y": 424050})
+    s = pd.read_csv(
+        os.path.join(datadir, "rain.csv"), index_col=0, parse_dates=True
+    )
+    pstore.add_stress(
+        s, "prec1", kind="prec", metadata={"x": 165050, "y": 424050}
+    )
 
     # prec 2
     s = pd.read_csv(
         os.path.join(datadir, "rain_nb1.csv"), index_col=0, parse_dates=True
     )
-    pstore.add_stress(s, "prec2", kind="prec", metadata={"x": 164010, "y": 423000})
+    pstore.add_stress(
+        s, "prec2", kind="prec", metadata={"x": 164010, "y": 423000}
+    )
 
     # evap 1
-    s = pd.read_csv(os.path.join(datadir, "evap.csv"), index_col=0, parse_dates=True)
-    pstore.add_stress(s, "evap1", kind="evap", metadata={"x": 164500, "y": 424000})
+    s = pd.read_csv(
+        os.path.join(datadir, "evap.csv"), index_col=0, parse_dates=True
+    )
+    pstore.add_stress(
+        s, "evap1", kind="evap", metadata={"x": 164500, "y": 424000}
+    )
 
     # evap 2
     s = pd.read_csv(
         os.path.join(datadir, "evap_nb1.csv"), index_col=0, parse_dates=True
     )
-    pstore.add_stress(s, "evap2", kind="evap", metadata={"x": 164000, "y": 423030})
+    pstore.add_stress(
+        s, "evap2", kind="evap", metadata={"x": 164000, "y": 423030}
+    )
 
     # well 1
-    s = pd.read_csv(os.path.join(datadir, "well.csv"), index_col=0, parse_dates=True)
-    pstore.add_stress(s, "well1", kind="well", metadata={"x": 164691, "y": 423579})
+    s = pd.read_csv(
+        os.path.join(datadir, "well.csv"), index_col=0, parse_dates=True
+    )
+    pstore.add_stress(
+        s, "well1", kind="well", metadata={"x": 164691, "y": 423579}
+    )
 
     # river notebook data (nb5)
     oseries = pd.read_csv(
         os.path.join(datadir, "nb5_head.csv"), parse_dates=True, index_col=0
     ).squeeze("columns")
-    pstore.add_oseries(oseries, "head_nb5", metadata={"x": 200_000, "y": 450_000.0})
+    pstore.add_oseries(
+        oseries, "head_nb5", metadata={"x": 200_000, "y": 450_000.0}
+    )
 
     rain = pd.read_csv(
         os.path.join(datadir, "nb5_prec.csv"), parse_dates=True, index_col=0
@@ -98,7 +120,10 @@ def example_pastastore(conn="DictConnector"):
         os.path.join(datadir, "nb5_riv.csv"), parse_dates=True, index_col=0
     ).squeeze("columns")
     pstore.add_stress(
-        waterlevel, "riv_nb5", kind="riv", metadata={"x": 200_000, "y": 450_000.0}
+        waterlevel,
+        "riv_nb5",
+        kind="riv",
+        metadata={"x": 200_000, "y": 450_000.0},
     )
 
     # multiwell notebook data

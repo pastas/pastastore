@@ -111,7 +111,9 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         lib = self._get_library(libname)
         lib.write(name, item, metadata=metadata)
 
-    def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
+    def _get_item(
+        self, libname: str, name: str
+    ) -> Union[FrameorSeriesUnion, Dict]:
         """Internal method to retrieve item from library.
 
         Parameters
@@ -290,7 +292,9 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             is_type = "series"
         elif isinstance(item, dict):
             s = pd.DataFrame()  # empty DataFrame as placeholder
-            jsondict = json.loads(json.dumps(item, cls=PastasEncoder, indent=4))
+            jsondict = json.loads(
+                json.dumps(item, cls=PastasEncoder, indent=4)
+            )
             metadata = jsondict  # model dict is stored in metadata
             is_type = "series"
         elif isinstance(item, list):
@@ -309,7 +313,9 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         lib = self._get_library(libname)
         lib.write(name, s, metadata=metadata, overwrite=overwrite)
 
-    def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
+    def _get_item(
+        self, libname: str, name: str
+    ) -> Union[FrameorSeriesUnion, Dict]:
         """Internal method to retrieve item from pystore library.
 
         Parameters
@@ -484,7 +490,9 @@ class DictConnector(BaseConnector, ConnectorUtil):
         else:
             lib[name] = (metadata, item)
 
-    def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
+    def _get_item(
+        self, libname: str, name: str
+    ) -> Union[FrameorSeriesUnion, Dict]:
         """Internal method to retrieve item from pystore library.
 
         Parameters
@@ -666,7 +674,9 @@ class PasConnector(BaseConnector, ConnectorUtil):
             with open(fname, "w") as fm:
                 fm.write(jsondict)
 
-    def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
+    def _get_item(
+        self, libname: str, name: str
+    ) -> Union[FrameorSeriesUnion, Dict]:
         """Internal method to retrieve item.
 
         Parameters

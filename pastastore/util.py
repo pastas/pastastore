@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Union
 import numpy as np
 import pandas as pd
 from numpy.lib._iotools import NameValidator
+from pandas.testing import assert_series_equal
 from pastas.stats.tests import runs_test, stoffer_toloi
 from tqdm import tqdm
 
@@ -260,18 +261,21 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
             df.loc["oseries: series_series", f"model {i}"] = True
         elif i == 1:
             try:
-                compare_oso = oso.equals(ml.oseries.series_original)
-            except ValueError:
+                assert_series_equal(oso, ml.oseries.series_original)
+                compare_oso = True
+            except (ValueError, AssertionError):
                 # series are not identical in length or index does not match
                 compare_oso = False
             try:
-                compare_osv = osv.equals(ml.oseries.series_validated)
-            except ValueError:
+                assert_series_equal(osv, ml.oseries.series_validated)
+                compare_osv = True
+            except (ValueError, AssertionError):
                 # series are not identical in length or index does not match
                 compare_osv = False
             try:
-                compare_oss = oss.equals(ml.oseries.series)
-            except ValueError:
+                assert_series_equal(oss, ml.oseries.series)
+                compare_oss = True
+            except (ValueError, AssertionError):
                 # series are not identical in length or index does not match
                 compare_oss = False
 
@@ -308,16 +312,19 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                     # ValueError if series cannot be compared,
                     # set result to False
                     try:
-                        compare_so1 = so1[counter].equals(ts.series_original)
-                    except ValueError:
+                        assert_series_equal(so1[counter], ts.series_original)
+                        compare_so1 = True
+                    except (ValueError, AssertionError):
                         compare_so1 = False
                     try:
-                        compare_sv1 = sv1[counter].equals(ts.series_validated)
-                    except ValueError:
+                        assert_series_equal(sv1[counter], ts.series_validated)
+                        compare_sv1 = True
+                    except (ValueError, AssertionError):
                         compare_sv1 = False
                     try:
-                        compare_ss1 = ss1[counter].equals(ts.series)
-                    except ValueError:
+                        assert_series_equal(ss1[counter], ts.series)
+                        compare_ss1 = True
+                    except (ValueError, AssertionError):
                         compare_ss1 = False
                     df.loc[f"  - {ts.name}: series_original"] = compare_so1
                     df.loc[f"  - {ts.name}: series_validated"] = compare_sv1
@@ -498,11 +505,10 @@ def frontiers_checks(
 
     References
     ----------
-    .. [bra_2022] Brakenhoff, D.A., Vonk M.A., Collenteur, R.A.,
-    van Baar, M., Bakker, M.: Application of Time Series Analysis
-    to Estimate Drawdown From Multiple Well Fields.
-    Front. Earth Sci., 14 June 2022 doi:10.3389/feart.2022.907609
-    """
+    .. [bra_2022]
+    Brakenhoff, D.A., Vonk M.A., Collenteur, R.A., van Baar, M., Bakker, M.:
+    Application of Time Series Analysis to Estimate Drawdown From Multiple Well
+    Fields. Front. Earth Sci., 14 June 2022 doi:10.3389/feart.2022.907609"""
 
     df = pd.DataFrame(columns=["all_checks_passed"])
 
@@ -543,9 +549,14 @@ def frontiers_checks(
 
         # Check 2 - Autocorrelation Noise
         if check2_autocor:
-            noise = ml.noise().iloc[1:]
+            noise = ml.noise()
+            if noise is None:
+                noise = ml.residuals()
+                print(
+                    "Warning! Checking autocorrelation on the residuals not the noise!"
+                )
             if check2_test == "runs" or check2_test == "both":
-                _, p_runs = runs_test(noise)
+                _, p_runs = runs_test(noise.iloc[1:])
                 if p_runs > check2_pvalue:  # No autocorrelation
                     check_runs_acf_passed = True
                 else:  # Significant autocorrelation
@@ -557,7 +568,9 @@ def frontiers_checks(
                     check_runs_acf_passed,
                 )
             if check2_test == "stoffer" or check2_test == "both":
-                _, p_stoffer = stoffer_toloi(noise, snap_to_equidistant_timestamps=True)
+                _, p_stoffer = stoffer_toloi(
+                    noise.iloc[1:], snap_to_equidistant_timestamps=True
+                )
                 if p_stoffer > check2_pvalue:
                     check_st_acf_passed = True
                 else:
@@ -574,18 +587,6 @@ def frontiers_checks(
             len_oseries_calib = (ml.settings["tmax"] - ml.settings["tmin"]).days
             for sm_name, sm in ml.stressmodels.items():
                 if sm_name.startswith("wells"):
-                    p = ml.get_parameters(sm_name)
-                    t = sm.rfunc.get_t(p, dt=1, cutoff=0.999)
-                    step = sm.rfunc.step(p, cutoff=0.999) / sm.rfunc.gain(p)
-                    tmem = np.interp(check3_cutoff, step, t)
-                    check_tmem_passed = tmem < len_oseries_calib / 2
-                    idxlbl = f"calib_period > 2*t_mem_95%: {sm_name} (r=1)"
-                    checks.loc[idxlbl, :] = (
-                        tmem,
-                        len_oseries_calib,
-                        "days",
-                        check_tmem_passed,
-                    )
                     nwells = sm.distances.index.size
                     for iw in range(nwells):
                         p = sm.get_parameters(model=ml, istress=iw)
@@ -593,7 +594,10 @@ def frontiers_checks(
                         step = sm.rfunc.step(p, cutoff=0.999) / sm.rfunc.gain(p)
                         tmem = np.interp(check3_cutoff, step, t)
                         check_tmem_passed = tmem < len_oseries_calib / 2
-                        idxlbl = f"calib_period > 2*t_mem_95%: " f"{sm_name}-{iw:02g}"
+                        idxlbl = (
+                            f"calib_period > 2*t_mem_95%: "
+                            f"{sm_name}-{iw:02g} ({sm.distances.index[iw]})"
+                        )
                         checks.loc[idxlbl, :] = (
                             tmem,
                             len_oseries_calib,
@@ -631,13 +635,6 @@ def frontiers_checks(
                         check_gain_passed = pd.NA
                     else:
                         check_gain_passed = np.abs(gain) > 2 * gain_std
-                    checks.loc[f"gain > 2*std: {sm_name} (r=1)"] = (
-                        gain,
-                        2 * gain_std,
-                        "(unit head)/(unit well stress)",
-                        check_gain_passed,
-                    )
-
                     for iw in range(sm.distances.index.size):
                         p = sm.get_parameters(model=ml, istress=iw)
                         gain = sm.rfunc.gain(p)
@@ -649,7 +646,9 @@ def frontiers_checks(
                             check_gain_passed = pd.NA
                         else:
                             check_gain_passed = np.abs(gain) > 2 * gain_std
-                        checks.loc[f"gain > 2*std: {sm_name}-{iw:02g}"] = (
+                        checks.loc[
+                            f"gain > 2*std: {sm_name}-{iw:02g} ({sm.distances.index[iw]})"
+                        ] = (
                             gain,
                             2 * gain_std,
                             "(unit head)/(unit well stress)",
@@ -690,8 +689,8 @@ def frontiers_checks(
                     b,
                 )
 
-        df.loc[ml.name, "all_checks_passed"] = checks["check_passed"].all()
-        df.loc[ml.name, checks.index] = checks.loc[:, "check_passed"]
+        df.loc[mlnam, "all_checks_passed"] = checks["check_passed"].all()
+        df.loc[mlnam, checks.index] = checks.loc[:, "check_passed"]
 
         if csv_dir:
             checks.to_csv(f"{csv_dir}/checks_{ml.name}.csv", na_rep="NaN")
@@ -753,7 +752,7 @@ def frontiers_aic_select(
         :, ["oseries"]
     ]
     # AIC of models
-    aic = pstore.get_statistics(["aic"], modelnames)
+    aic = pstore.get_statistics(["aic"], modelnames, progressbar=True)
     if full_output:
         # group models per location and obtain the AIC identify model
         # with lowest AIC per location
