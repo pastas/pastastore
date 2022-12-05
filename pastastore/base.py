@@ -1446,7 +1446,7 @@ class ConnectorUtil:
                 else:
                     stresses = sm.stress
                 for s in stresses:
-                    if s.name not in self.stresses.index:
+                    if str(s.name) not in self.stresses.index:
                         msg = (
                             f"Cannot add model because stress '{s.name}' "
                             "is not contained in store."
@@ -1466,7 +1466,7 @@ class ConnectorUtil:
                 else:
                     stresses = sm["stress"]
                 for s in stresses:
-                    if s["name"] not in self.stresses.index:
+                    if str(s["name"]) not in self.stresses.index:
                         msg = (
                             f"Cannot add model because stress '{s['name']}' "
                             "is not contained in store."
@@ -1730,3 +1730,7 @@ class ModelAccessor:
         of models
         """
         return self.conn.n_models
+
+    def random(self):
+        from random import choice
+        return self.conn.get_models(choice(self.conn._modelnames_cache))
