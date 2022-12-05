@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Union
 import numpy as np
 import pandas as pd
 from numpy.lib._iotools import NameValidator
+from pandas.testing import assert_series_equal
 from pastas.stats.tests import runs_test, stoffer_toloi
 from tqdm import tqdm
 
@@ -260,18 +261,21 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
             df.loc["oseries: series_series", f"model {i}"] = True
         elif i == 1:
             try:
-                compare_oso = oso.equals(ml.oseries.series_original)
-            except ValueError:
+                assert_series_equal(oso, ml.oseries.series_original)
+                compare_oso = True
+            except (ValueError, AssertionError):
                 # series are not identical in length or index does not match
                 compare_oso = False
             try:
-                compare_osv = osv.equals(ml.oseries.series_validated)
-            except ValueError:
+                assert_series_equal(osv, ml.oseries.series_validated)
+                compare_osv = True
+            except (ValueError, AssertionError):
                 # series are not identical in length or index does not match
                 compare_osv = False
             try:
-                compare_oss = oss.equals(ml.oseries.series)
-            except ValueError:
+                assert_series_equal(oss, ml.oseries.series)
+                compare_oss = True
+            except (ValueError, AssertionError):
                 # series are not identical in length or index does not match
                 compare_oss = False
 
@@ -308,16 +312,19 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                     # ValueError if series cannot be compared,
                     # set result to False
                     try:
-                        compare_so1 = so1[counter].equals(ts.series_original)
-                    except ValueError:
+                        assert_series_equal(so1[counter], ts.series_original)
+                        compare_so1 = True
+                    except (ValueError, AssertionError):
                         compare_so1 = False
                     try:
-                        compare_sv1 = sv1[counter].equals(ts.series_validated)
-                    except ValueError:
+                        assert_series_equal(sv1[counter], ts.series_validated)
+                        compare_sv1 = True
+                    except (ValueError, AssertionError):
                         compare_sv1 = False
                     try:
-                        compare_ss1 = ss1[counter].equals(ts.series)
-                    except ValueError:
+                        assert_series_equal(ss1[counter], ts.series)
+                        compare_ss1 = True
+                    except (ValueError, AssertionError):
                         compare_ss1 = False
                     df.loc[f"  - {ts.name}: series_original"] = compare_so1
                     df.loc[f"  - {ts.name}: series_validated"] = compare_sv1
@@ -682,8 +689,8 @@ def frontiers_checks(
                     b,
                 )
 
-        df.loc[ml.name, "all_checks_passed"] = checks["check_passed"].all()
-        df.loc[ml.name, checks.index] = checks.loc[:, "check_passed"]
+        df.loc[mlnam, "all_checks_passed"] = checks["check_passed"].all()
+        df.loc[mlnam, checks.index] = checks.loc[:, "check_passed"]
 
         if csv_dir:
             checks.to_csv(f"{csv_dir}/checks_{ml.name}.csv", na_rep="NaN")
@@ -745,7 +752,7 @@ def frontiers_aic_select(
         :, ["oseries"]
     ]
     # AIC of models
-    aic = pstore.get_statistics(["aic"], modelnames)
+    aic = pstore.get_statistics(["aic"], modelnames, progressbar=True)
     if full_output:
         # group models per location and obtain the AIC identify model
         # with lowest AIC per location
