@@ -86,9 +86,7 @@ def test_write_load_compare_yaml(request, pstore):
     ml1 = pstore.models["my_first_model"]
     ml2 = pstore.yaml.load("my_first_model.yaml")[0]
     assert (
-        pst.util.compare_models(ml1, ml2, detailed_comparison=True)
-        .iloc[1:, -1]
-        .all()
+        pst.util.compare_models(ml1, ml2, detailed_comparison=True).iloc[1:, -1].all()
     )
     os.remove("my_first_model.yaml")
     return

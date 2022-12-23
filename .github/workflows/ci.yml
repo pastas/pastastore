@@ -34,12 +34,12 @@ jobs:
           sudo apt-get install libsnappy-dev
       - name: Install dependencies
         run: |
-          pip install --upgrade pip==22.2.2
+          pip install --upgrade pip
           pip install flake8 pytest wheel
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install git+https://github.com/manahl/arctic.git@refs/pull/928/head
-          pip install numpy --upgrade
-          pip install pandas --upgrade
+          # pip install --use-pep517 git+https://github.com/manahl/arctic.git@refs/pull/928/head
+          # pip install numpy --upgrade
+          # pip install pandas --upgrade
           pip install codecov
           pip install pytest-cov
           pip install pytest-dependency

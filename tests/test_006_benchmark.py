@@ -97,27 +97,19 @@ def build_model(conn):
 
     # oseries nb1
     if "oseries_nb1" not in store.oseries.index:
-        o = pd.read_csv(
-            "./tests/data/head_nb1.csv", index_col=0, parse_dates=True
-        )
-        store.add_oseries(
-            o, "oseries_nb1", metadata={"x": 100300, "y": 400400}
-        )
+        o = pd.read_csv("./tests/data/head_nb1.csv", index_col=0, parse_dates=True)
+        store.add_oseries(o, "oseries_nb1", metadata={"x": 100300, "y": 400400})
 
     # prec nb1
     if "prec_nb1" not in store.stresses.index:
-        s = pd.read_csv(
-            "./tests/data/rain_nb1.csv", index_col=0, parse_dates=True
-        )
+        s = pd.read_csv("./tests/data/rain_nb1.csv", index_col=0, parse_dates=True)
         store.add_stress(
             s, "prec_nb1", kind="prec", metadata={"x": 100300, "y": 400400}
         )
 
     # evap nb1
     if "evap_nb1" not in store.stresses.index:
-        s = pd.read_csv(
-            "./tests/data/evap_nb1.csv", index_col=0, parse_dates=True
-        )
+        s = pd.read_csv("./tests/data/evap_nb1.csv", index_col=0, parse_dates=True)
         store.add_stress(
             s, "evap_nb1", kind="evap", metadata={"x": 100300, "y": 400400}
         )

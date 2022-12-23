@@ -19,9 +19,7 @@ def test_plot_stresses(pstore):
 
 
 def test_plot_stresses_availability(pstore):
-    ax = pstore.plots.data_availability(
-        "stresses", kind="prec", set_yticks=True
-    )
+    ax = pstore.plots.data_availability("stresses", kind="prec", set_yticks=True)
     plt.close(ax.figure)
     return
 
@@ -36,6 +34,7 @@ def test_map_oseries_w_bgmap(pstore):
         pstore.maps.add_background_map(ax)
     plt.close(ax.figure)
     return
+
 
 @requires_pkg("adjustText")
 def test_map_stresses(pstore):

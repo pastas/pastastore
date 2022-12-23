@@ -7,7 +7,7 @@ import pytest
 
 import pastastore as pst
 
-params = ["arctic", "pystore", "dict", "pas"]
+params = ["pystore", "dict", "pas"]  # "arctic", removed for now for ci
 # params = ["pas"]
 
 
