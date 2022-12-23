@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import pytest
+from conftest import requires_pkg
 from pytest_dependency import depends
 
 # %% plots
@@ -36,7 +37,7 @@ def test_map_oseries_w_bgmap(pstore):
     plt.close(ax.figure)
     return
 
-
+@requires_pkg("adjustText")
 def test_map_stresses(pstore):
     ax = pstore.maps.stresses(kind="prec", adjust=True)
     plt.close(ax.figure)
