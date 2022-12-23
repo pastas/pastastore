@@ -1623,7 +1623,7 @@ class ConnectorUtil:
         s : pd.DataFrame
             DataFrame containing timeseries
         """
-        s = pd.read_json(fjson, orient="columns")
+        s = pd.read_json(fjson, orient="columns", precise_float=True)
         if not isinstance(s.index, pd.DatetimeIndex):
             s.index = pd.to_datetime(s.index, unit="ms")
         s = s.sort_index()  # needed for some reason ...
