@@ -380,7 +380,7 @@ class Plots:
             norm = LogNorm(vmin=bounds[0], vmax=bounds[-1])
         else:
             norm = BoundaryNorm(boundaries=bounds, ncolors=256)
-        cmap = plt.cm.get_cmap(cmap, 256)
+        cmap = plt.get_cmap(cmap, 256)
         cmap.set_over((1.0, 1.0, 1.0))
 
         for i, s in enumerate(series):
