@@ -1,7 +1,11 @@
+import importlib
+
 import pandas as pd
-import pastastore as pst
+import pkg_resources
 import pystore
 import pytest
+
+import pastastore as pst
 
 params = ["arctic", "pystore", "dict", "pas"]
 # params = ["pas"]
@@ -107,3 +111,36 @@ def delete_arctic_test_db():
     connector = pst.ArcticConnector(name, connstr)
     pst.util.delete_arctic_connector(connector)
     print("ArcticConnector 'test_project' deleted.")
+
+
+_has_pkg_cache = {}
+
+def has_pkg(pkg):
+    """
+    Determines if the given Python package is installed.
+
+    Originally written by Mike Toews (mwtoews@gmail.com) for FloPy.
+    """
+    if pkg not in _has_pkg_cache:
+
+        # for some dependencies, package name and import name are different
+        # (e.g. pyshp/shapefile, mfpymake/pymake, python-dateutil/dateutil)
+        # pkg_resources expects package name, importlib expects import name
+        try:
+            _has_pkg_cache[pkg] = bool(importlib.import_module(pkg))
+        except (ImportError, ModuleNotFoundError):
+            try:
+                _has_pkg_cache[pkg] = bool(pkg_resources.get_distribution(pkg))
+            except pkg_resources.DistributionNotFound:
+                _has_pkg_cache[pkg] = False
+
+    return _has_pkg_cache[pkg]
+
+
+def requires_pkg(*pkgs):
+    missing = {pkg for pkg in pkgs if not has_pkg(pkg)}
+    return pytest.mark.skipif(
+        missing,
+        reason=f"missing package{'s' if len(missing) != 1 else ''}: "
+        + ", ".join(missing),
+    )
