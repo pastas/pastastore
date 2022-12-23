@@ -1,7 +1,7 @@
 import os
 
 import pandas as pd
-import pastas as ps
+import hydropandas as hpd
 
 import pastastore as pst
 from pastastore.base import BaseConnector
@@ -128,38 +128,48 @@ def example_pastastore(conn="DictConnector"):
 
     # multiwell notebook data
     fname = os.path.join(datadir, "MenyanthesTest.men")
-    meny = ps.read.MenyData(fname)
+    # meny = ps.read.MenyData(fname)
+    meny = hpd.ObsCollection.from_menyanthes(fname, hpd.Obs)
 
-    oseries = meny.H["Obsevation well"]["values"].dropna()
+    oseries = meny.loc["Obsevation well", "obs"]
     ometa = {
-        "x": meny.H["Obsevation well"]["xcoord"],
-        "y": meny.H["Obsevation well"]["ycoord"],
+        "x": oseries.meta["x"],
+        "y": oseries.meta["y"],
     }
-    pstore.add_oseries(oseries, "head_mw", metadata=ometa)
+    pstore.add_oseries(oseries.dropna(), "head_mw", metadata=ometa)
 
-    prec = meny.IN["Precipitation"]["values"]
+    prec = meny.loc["Precipitation", "obs"]
     prec.index = prec.index.round("D")
     prec.name = "prec"
     pmeta = {
-        "x": meny.IN["Precipitation"]["xcoord"],
-        "y": meny.IN["Precipitation"]["ycoord"],
+        "x": prec.meta["x"],
+        "y": prec.meta["y"],
     }
     pstore.add_stress(prec, "prec_mw", kind="prec", metadata=pmeta)
-    evap = meny.IN["Evaporation"]["values"]
+    evap = meny.loc["Evaporation", "obs"]
     evap.index = evap.index.round("D")
     evap.name = "evap"
     emeta = {
-        "x": meny.IN["Evaporation"]["xcoord"],
-        "y": meny.IN["Evaporation"]["ycoord"],
+        "x": evap.meta["x"],
+        "y": evap.meta["y"],
     }
     pstore.add_stress(evap, "evap_mw", kind="evap", metadata=emeta)
 
-    extraction_names = ["Extraction 2", "Extraction 3"]
+    pressure = meny.loc["Air Pressure", "obs"]
+    pressure.index = pressure.index.round("D")
+    pressure.name = "pressure"
+    pres_meta = {
+        "x": pressure.meta["x"],
+        "y": pressure.meta["y"],
+    }
+    pstore.add_stress(pressure, "pressure_mw", kind="pressure", metadata=pres_meta)
+
+    extraction_names = ["Extraction 1", "Extraction 2", "Extraction 3", "Extraction 4"]
     for extr in extraction_names:
-        wmeta = {"x": meny.IN[extr]["xcoord"], "y": meny.IN[extr]["ycoord"]}
+        ts = meny.loc[extr, "obs"]
+        wmeta = {"x": ts.meta["x"], "y": ts.meta["y"]}
         # replace spaces in names for Pastas
         name = extr.replace(" ", "_").lower()
-        ts = meny.IN[extr]["values"]
         pstore.add_stress(ts, name, kind="well", metadata=wmeta)
 
     return pstore
@@ -190,5 +200,5 @@ def _default_connector(conntype: str):
     elif Conn.conn_type == "pas":
         conn = Conn("my_db", "./pas_db")
     else:
-        raise ValueError("Unrecognized parameter!")
+        raise ValueError(f"Unrecognized connector type! '{conntype}'")
     return conn

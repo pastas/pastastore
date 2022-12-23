@@ -9,3 +9,4 @@ fsspec>=0.3.3
 python-snappy
 dask[dataframe]<=2022.4.1
 pystore
+git+https://github.com/ArtesiaWater/hydropandas.git@dev
