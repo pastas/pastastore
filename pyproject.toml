@@ -1,0 +1,81 @@
+[build-system]
+# Minimum requirements for the build system to execute
+requires = ["setuptools>45"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pastastore"
+version = "0.10b.0"
+description = "Tools for managing Pastas time series models."
+license = { file = "LICENSE" }
+readme = "readme.md"
+authors = [{ name = "D.A. Brakenhoff" }]
+maintainers = [
+    { name = "D.A. Brakenhoff", email = "d.brakenhoff@artesia-water.nl" },
+    { name = "R. Calje", email = "r.calje@artesia-water.nl" },
+    { name = "M.A. Vonk", email = "m.vonk@artesia-water.nl" },
+]
+requires-python = ">= 3.7"
+dependencies = ["pastas>=0.13", "tqdm>=4.36", "pyyaml"]
+
+keywords = ["hydrology", "groundwater", "time series", "analysis", "database"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Other Audience",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX",
+    "Operating System :: Unix",
+    "Operating System :: MacOS",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering :: Hydrology",
+]
+
+[project.urls]
+homepage = "https://github.com/pastas/pastastore"
+repository = "https://github.com/pastas/pastastore"
+documentation = "https://pastastore.readthedocs.io/en/latest/"
+
+[project.optional-dependencies]
+lint = ["black", "flake8", "isort", "pylint"]
+optional = ["contextily", "pyproj", "adjustText"]
+test = [
+    "pastastore[lint,optional]",
+    "coverage",
+    "codecov",
+    "pytest",
+    "pytest-cov",
+    "pytest-dependency",
+    "pytest-benchmark",
+    "codacy-coverage",
+]
+pystore = ["fsspec>=0.3.3", "python-snappy", "dask[dataframe]"]
+arctic = [
+    "arctic", # will not work as releases not uploaded to PyPI
+]
+docs = [
+    "pastastore[optional]",
+    "sphinx_rtd_theme",
+    "Ipython",
+    "ipykernel",
+    "nbsphinx",
+    "nbsphinx_link",
+]
+
+[tool.setuptools]
+packages = ["pastastore"]
+
+[tool.black]
+line-length = 88
+
+[tool.isort]
+profile = "black"
+src_paths = ["pastastore"]
+line_length = 88
