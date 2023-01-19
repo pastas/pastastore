@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         python-version: [3.8, 3.9, "3.10"]
-        pastas-version: ["0.22.0", "git+https://github.com/pastas/pastas.git@dev#egg=pastas"]
+        pastas-version: ["git+https://github.com/pastas/pastas.git@master#egg=pastas", "git+https://github.com/pastas/pastas.git@dev#egg=pastas"]
 
     steps:
       - uses: actions/checkout@v3
@@ -31,7 +31,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install pastas==${{ matrix.pastas-version }} --upgrade
+          pip install ${{ matrix.pastas-version }}
           pip install -e .[test]
       
       - name: Lint with flake8
