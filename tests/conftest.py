@@ -1,10 +1,9 @@
 import importlib
 
 import pandas as pd
-import pkg_resources
-import pystore
-import pytest
 import pastas as ps
+import pkg_resources
+import pytest
 
 import pastastore as pst
 
@@ -83,6 +82,7 @@ def pstore(request):
     elif request.param == "pystore":
         name = "test_project"
         path = "./tests/data/pystore"
+        import pystore
         pystore.set_path(path)
         connector = pst.PystoreConnector(name, path)
     elif request.param == "dict":

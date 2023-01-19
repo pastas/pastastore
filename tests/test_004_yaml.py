@@ -2,9 +2,10 @@ import os
 import tempfile
 from contextlib import contextmanager
 
-import pastastore as pst
 import pytest
 from pytest_dependency import depends
+
+import pastastore as pst
 
 
 @contextmanager
