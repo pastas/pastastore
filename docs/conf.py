@@ -188,7 +188,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'pastastore', 'pastastore Documentation',
-     author, 'pastastore', 'Tools for managing timeseries and Pastas models',
+     author, 'pastastore', 'Tools for managing time series and Pastas models',
      'Miscellaneous'),
 ]
 
