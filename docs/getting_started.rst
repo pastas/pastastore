@@ -16,9 +16,6 @@ Install the module by typing::
   
     pip install pastastore
 
-Please note that the `pystore` and `arctic` modules are not automatically 
-installed (see `Dependencies`_ section below)!
-
 _For installing in development mode, clone the repository and install by
 typing `pip install -e .` from the module root directory._
 
@@ -32,16 +29,16 @@ Start Python and import the module::
 
 See the :ref:`examples` section for some quick examples on how to get started.
 
-Dependencies
-------------
-This module has several optional dependencies. These are required for storing 
-time series and models in a database using compression. Without these, only 
+External dependencies
+---------------------
+This module has several external optional dependencies. These are required for storing 
+time series and models in external databases using compression. Without these, only 
 the in-memory option (DictConnector) and storing data on disk without 
-compression (PasConnector) are available.
+compression (PasConnector) are available, which should be good enough for most users.
 
-It is up to the user to determine which dependencies they want to install. 
-Both the `PystoreConnector` and `ArcticConnector` are dependent on external 
-software. It is recommended but not required to install these dependencies.
+
+If you do need more performance of compression, both the `PystoreConnector` and
+`ArcticConnector` are dependent on external software.
 
 * Using Pystore requires Snappy:
    * `Snappy <http://google.github.io/snappy/>`_ is a fast and efficient
@@ -57,6 +54,10 @@ software. It is recommended but not required to install these dependencies.
    * Alternatively, get MongoDB by installing the Community edition
      (`Windows <https://fastdl.mongodb.org/win32/mongodb-win32-x86_64-2012plus-4.2.1-signed.msi>`_,
      `MacOS <https://fastdl.mongodb.org/osx/mongodb-macos-x86_64-4.2.1.tgz>`_).
+   * Additionally, install arctic by typing `pip install git+https://github.com/man-group/arctic.git`
+     in a terminal. Note that the current version of arctic is not compatible with pandas>1.1,
+     and a version will have to be installed that fixes that. Install arctic from a Pull Request 
+     that fixes this particular issue to bypass this problem. If you need help, feel free to get in touch.
 
 Running MongoDB from docker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^

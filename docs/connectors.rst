@@ -16,7 +16,7 @@ The :ref:`DictConnector` is a very simple object that stores all
 data and models in dictionaries. The data is stored in-memory and not on disk
 and is therefore not persistent, i.e. you cannot pick up where you left off
 last time. Once you exit Python your data is lost. For small projects, this
-connector can be useful as it is extremely simple.
+connector can be useful as it is extremely simple and fast.
 
 Pas-files
 ---------
@@ -43,6 +43,8 @@ the other directories when the model is loaded from the database.
 
 Arctic
 ------
+Note: this Connector is not actively tested!
+
 The :ref:`ArcticConnector` is an object that creates a
 connection with a MongoDB database. This can be an existing or a new database.
 For each of the datasets a collection or library is created. These are named
@@ -63,6 +65,8 @@ the other libraries when the model is loaded from the database.
 
 Pystore
 -------
+Note: this Connector is not actively tested!
+
 The :ref:`PystoreConnector` is an object that links
 to a location on disk. This can either be an existing or a new Pystore. A new
 store is created with collections (or libraries) that hold the different 
@@ -87,9 +91,6 @@ time series) in the metadata file belonging to an item. The actual data in the
 item is an empty DataFrame serving as a placeholder. This slightly 'hacky'
 design allows the models to be saved in a PyStore. The time series are picked
 up from their respective stores when the model is loaded from disk.
-
-PyStore supports so-called snapshots (which store the current state of the
-store) but this has not been actively implemented in this module.
 
 Custom Connectors
 -----------------

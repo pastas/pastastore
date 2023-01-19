@@ -526,11 +526,21 @@ class Maps:
         """
         self.pstore = pstore
 
-    def stresses(self, kind=None, labels=True, adjust=False, figsize=(10, 8), **kwargs):
+    def stresses(
+        self,
+        names=None,
+        kind=None,
+        labels=True,
+        adjust=False,
+        figsize=(10, 8),
+        **kwargs,
+    ):
         """Plot stresses locations on map.
 
         Parameters
         ----------
+        names : list of str, optional
+            list of names to plot
         kind: str, optional
             if passed, only plot stresses of a specific kind, default is None
             which plots all stresses.
@@ -550,12 +560,16 @@ class Maps:
         --------
         self.add_background_map
         """
+        if names is not None:
+            df = self.pstore.stresses.loc[names]
+        else:
+            df = self.pstore.stresses
 
         if kind is not None:
-            mask = self.pstore.stresses["kind"] == kind
-            stresses = self.pstore.stresses.loc[mask]
+            mask = df["kind"] == kind
+            stresses = df[mask]
         else:
-            stresses = self.pstore.stresses
+            stresses = df
 
         mask0 = (stresses["x"] != 0.0) | (stresses["y"] != 0.0)
 

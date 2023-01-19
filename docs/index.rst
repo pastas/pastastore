@@ -7,25 +7,21 @@ Welcome to pastastore's documentation!
 The module supports storing and managing data with a database or on disk.
 This gives the user a simple way to manage Pastas projects, and allows the user
 to pick up where they left off, without having to load all data into memory.
-For users who have used `pastas` before, this module is similar to
-`pastas.Project`, but much more extensive in terms of functionality.
 
-The connection to the data/database/disk is managed by a connector object.
-Currently, four connectors are included. The first connector `DictConnector`
-stores all data in-memory using dictionaries. The other three implementations
-`PasConnector`, `ArcticConnector` and `PystoreConnector` store data in a 
-database or on disk. The former is the simplest option for storing data on disk,
-and does not require external dependencies. The latter two implementations are 
-designed to have faster read/write operations, while also compressing the 
-stored data. These two connectors are implemented using the following two 
-modules:
+An small example using pastastore::
 
-* `Arctic <https://arctic.readthedocs.io/en/latest/>`_ is a time series/dataframe
-  database that sits atop `MongoDB <https://www.mongodb.com>`_. Arctic supports
-  pandas.DataFrames.
-* `PyStore <https://github.com/ranaroussi/pystore>`_ is a datastore (inspired
-  by Arctic) created for storing pandas dataframes (especially time series) on
-  disk. Data is stored using fastparquet and compressed with Snappy.
+  import pastastore as pst
+  import pandas as pd
+  
+  # initialize a connector and a pastastore
+  pstore = pst.PastaStore("my_store", pst.PasConnector("my_dbase", "./path_to_folder"))
+
+  # read some data
+  series = pd.read_csv("some.csv", index_col=[0], parse_dates=True)
+
+  # add data to store
+  pstore.add_oseries(series, "my_oseries", metadata={"x": 10., "y": 20.})
+
 
 See the table of contents to get started with `pastastore`.
 
