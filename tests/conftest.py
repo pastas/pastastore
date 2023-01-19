@@ -83,6 +83,7 @@ def pstore(request):
         name = "test_project"
         path = "./tests/data/pystore"
         import pystore
+
         pystore.set_path(path)
         connector = pst.PystoreConnector(name, path)
     elif request.param == "dict":
