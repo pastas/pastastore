@@ -150,7 +150,12 @@ def example_pastastore(conn="DictConnector"):
         }
         pstore.add_stress(pressure, "pressure_mw", kind="pressure", metadata=pres_meta)
 
-        extraction_names = ["Extraction 1", "Extraction 2", "Extraction 3", "Extraction 4"]
+        extraction_names = [
+            "Extraction 1",
+            "Extraction 2",
+            "Extraction 3",
+            "Extraction 4",
+        ]
         for extr in extraction_names:
             ts = meny.loc[extr, "obs"]
             wmeta = {"x": ts.meta["x"], "y": ts.meta["y"]}
