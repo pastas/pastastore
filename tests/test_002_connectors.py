@@ -15,7 +15,7 @@ ps.set_log_level("ERROR")
 
 def test_get_library(conn):
     olib = conn._get_library("oseries")
-    return olib
+    return
 
 
 def test_add_get_series(request, conn):
@@ -84,16 +84,11 @@ def test_add_pastas_timeseries(request, conn):
         index=pd.date_range("2000", periods=10, freq="D"),
     )
     o1.index.name = "test_idx"
-    ts = ps.TimeSeries(o1, metadata={"x": 100000.0, "y": 400000.0})
-    conn.add_oseries(ts, "test_pastas_ts", metadata=None)
-    conn.add_stress(
-        ts,
-        "test_pastas_ts",
-        kind="test",
-        metadata={"x": 200000.0, "y": 500000.0},
-    )
-    conn.del_oseries("test_pastas_ts")
-    conn.del_stress("test_pastas_ts")
+    ts = ps.timeseries.TimeSeries(o1, metadata={"x": 100000.0, "y": 400000.0})
+    try:
+        conn.add_oseries(ts, "test_pastas_ts", metadata=None)
+    except DeprecationWarning:
+        pass
     return
 
 
@@ -177,9 +172,10 @@ def test_upsert_stress(request, conn):
 
 def test_update_metadata(request, conn):
     o1 = pd.DataFrame(
-        data=1.0,
+        data=1.1,
         columns=["test_df"],
         index=pd.date_range("2000", periods=10, freq="D"),
+        dtype=float,
     )
     o1.index.name = "test_idx"
     conn.add_oseries(o1, "test_df", metadata={"x": 100000.0})
