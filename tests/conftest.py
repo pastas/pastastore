@@ -4,11 +4,11 @@ import pandas as pd
 import pkg_resources
 import pystore
 import pytest
+import pastas as ps
 
 import pastastore as pst
 
-params = ["pystore", "dict", "pas"]  # "arctic", removed for now for ci
-# params = ["pas"]
+params = ["dict", "pas"]  # "arctic" and "pystore" removed for CI, can be tested locally
 
 
 def initialize_project(conn):
@@ -18,6 +18,7 @@ def initialize_project(conn):
     # oseries 1
     o = pd.read_csv("./tests/data/obs.csv", index_col=0, parse_dates=True)
     pstore.add_oseries(o, "oseries1", metadata={"x": 165000, "y": 424000})
+
     # oseries 2
     o = pd.read_csv("./tests/data/head_nb1.csv", index_col=0, parse_dates=True)
     pstore.add_oseries(o, "oseries2", metadata={"x": 164000, "y": 423000})
@@ -28,33 +29,26 @@ def initialize_project(conn):
 
     # prec 1
     s = pd.read_csv("./tests/data/rain.csv", index_col=0, parse_dates=True)
-    pstore.add_stress(
-        s, "prec1", kind="prec", metadata={"x": 165050, "y": 424050}
-    )
+    pstore.add_stress(s, "prec1", kind="prec", metadata={"x": 165050, "y": 424050})
 
     # prec 2
     s = pd.read_csv("./tests/data/rain_nb1.csv", index_col=0, parse_dates=True)
-    pstore.add_stress(
-        s, "prec2", kind="prec", metadata={"x": 164010, "y": 423000}
-    )
+    pstore.add_stress(s, "prec2", kind="prec", metadata={"x": 164010, "y": 423000})
 
     # evap 1
     s = pd.read_csv("./tests/data/evap.csv", index_col=0, parse_dates=True)
-    pstore.add_stress(
-        s, "evap1", kind="evap", metadata={"x": 164500, "y": 424000}
-    )
+    pstore.add_stress(s, "evap1", kind="evap", metadata={"x": 164500, "y": 424000})
 
     # evap 2
     s = pd.read_csv("./tests/data/evap_nb1.csv", index_col=0, parse_dates=True)
-    pstore.add_stress(
-        s, "evap2", kind="evap", metadata={"x": 164000, "y": 423030}
-    )
+    pstore.add_stress(s, "evap2", kind="evap", metadata={"x": 164000, "y": 423030})
 
     # well 1
     s = pd.read_csv("./tests/data/well.csv", index_col=0, parse_dates=True)
-    pstore.add_stress(
-        s, "well1", kind="well", metadata={"x": 164691, "y": 423579}
+    s = ps.ts.timestep_weighted_resample(
+        s, pd.date_range(s.index[0], s.index[-1], freq="D")
     )
+    pstore.add_stress(s, "well1", kind="well", metadata={"x": 164691, "y": 423579})
 
     return pstore
 
@@ -114,6 +108,7 @@ def delete_arctic_test_db():
 
 
 _has_pkg_cache = {}
+
 
 def has_pkg(pkg):
     """
