@@ -18,45 +18,42 @@ jobs:
     strategy:
       matrix:
         python-version: [3.8, 3.9, "3.10"]
-    services:
-      mongodb:
-        image: mongo:latest
-        ports:
-          - 27017:27017
+        pastas-version: ["0.22.0", "git+https://github.com/pastas/pastas.git@dev#egg=pastas"]
+
     steps:
       - uses: actions/checkout@v3
+      
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install external dependencies
-        run: |
-          sudo apt-get install libsnappy-dev
+      
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install flake8 pytest wheel
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          # pip install --use-pep517 git+https://github.com/manahl/arctic.git@refs/pull/928/head
-          # pip install numpy --upgrade
-          # pip install pandas --upgrade
-          pip install codecov
-          pip install pytest-cov
-          pip install pytest-dependency
-          pip install pytest-benchmark
-          pip install codacy-coverage
-          pip install -e .
+          pip install pastas==${{ matrix.pastas-version }} --upgrade
+          pip install -e .[test]
+      
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=80 --statistics
+      
+      - name: Lint with black
+        uses: psf/black@stable
+        with:
+          options: "--check"
+          jupyter: true
+
       - name: Run pytest
         run: |
           pytest
+      
       - name: Run codacy-coverage-reporter
         uses: codacy/codacy-coverage-reporter-action@master
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
           coverage-reports: coverage.xml
+
