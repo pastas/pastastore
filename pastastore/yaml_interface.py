@@ -40,15 +40,15 @@ def _convert_dict_dtypes_for_yaml(d: Dict):
 
 
 def replace_ts_with_name(d, nearest=False):
-    """Replace timeseries dict with its name in pastas model dict.
+    """Replace time series dict with its name in pastas model dict.
 
     Parameters
     ----------
     d : dict
         pastas model dictionary
     nearest : bool, optional
-        replace timeseries with "nearest" option. Warning, this does not
-        check whether the timeseries are actually the nearest ones!
+        replace time series with "nearest" option. Warning, this does not
+        check whether the time series are actually the nearest ones!
     """
     for k, v in d.items():
         if k in ["oseries", "prec", "evap", "stress"]:
@@ -124,7 +124,7 @@ class PastastoreYAML:
     comparison to Pastas default .pas (JSON) files. The goal is to provide
     users with a simple mini-language to quickly build/test different model
     structures. A PastaStore is required as input, which contains existing
-    models or timeseries required to build new models. This
+    models or time series required to build new models. This
     class also introduces some shortcuts to simplify building models.
     Shortcuts include the option to pass 'nearest' as the name of a stress,
     which will automatically select the closest stress of a particular type.
@@ -167,13 +167,11 @@ class PastastoreYAML:
         ----------
         pstore : pastastore.PastaStore
             PastaStore object containing models to be exported as YAML files
-            or containing timeseries that are referenced in YAML files.
+            or containing time series that are referenced in YAML files.
         """
         self.pstore = pstore
 
-    def _parse_rechargemodel_dict(
-        self, d: Dict, onam: Optional[str] = None
-    ) -> Dict:
+    def _parse_rechargemodel_dict(self, d: Dict, onam: Optional[str] = None) -> Dict:
         """Internal method to parse RechargeModel dictionary.
 
         Note: supports 'nearest' as input to 'prec' and 'evap',
@@ -200,8 +198,9 @@ class PastastoreYAML:
         prec_val = d.get("prec", "nearest")
         if isinstance(prec_val, dict):
             pnam = prec_val["name"]
-            prec = self.pstore.get_stresses(pnam)
-            prec = ps.TimeSeries(prec, **prec_val)
+            p = self.pstore.get_stresses(pnam)
+            prec_val["series"] = p
+            prec = prec_val
         elif prec_val.startswith("nearest"):
             if onam is None:
                 raise ValueError("Provide oseries name when using nearest!")
@@ -210,27 +209,34 @@ class PastastoreYAML:
             else:
                 kind = "prec"
             pnam = self.pstore.get_nearest_stresses(onam, kind=kind).iloc[0, 0]
-            logger.info(
-                f"  | using nearest timeseries with kind='{kind}': '{pnam}'"
-            )
-            prec, pmeta = self.pstore.get_stresses(pnam, return_metadata=True)
-            prec = ps.TimeSeries(prec, pnam, settings="prec", metadata=pmeta)
+            logger.info(f"  | using nearest stress with kind='{kind}': '{pnam}'")
+            p, pmeta = self.pstore.get_stresses(pnam, return_metadata=True)
+            prec = {
+                "name": pnam,
+                "settings": "prec",
+                "metadata": pmeta,
+                "series": p,
+            }
         elif isinstance(prec_val, str):
             pnam = d["prec"]
-            prec, pmeta = self.pstore.get_stresses(pnam, return_metadata=True)
-            prec = ps.TimeSeries(prec, pnam, settings="prec", metadata=pmeta)
+            p, pmeta = self.pstore.get_stresses(pnam, return_metadata=True)
+            prec = {
+                "name": pnam,
+                "settings": "prec",
+                "metadata": pmeta,
+                "series": p,
+            }
         else:
-            raise NotImplementedError(
-                f"Could not parse prec value: '{prec_val}'"
-            )
-        d["prec"] = prec.to_dict()
+            raise NotImplementedError(f"Could not parse prec value: '{prec_val}'")
+        d["prec"] = prec
 
         # evaporation
         evap_val = d.get("evap", "nearest")
         if isinstance(evap_val, dict):
             enam = evap_val["name"]
-            evap = self.pstore.get_stresses(enam)
-            evap = ps.TimeSeries(evap, **evap_val)
+            e = self.pstore.get_stresses(enam)
+            evap_val["series"] = e
+            evap = evap_val
         elif evap_val.startswith("nearest"):
             if onam is None:
                 raise ValueError("Provide oseries name when using nearest!")
@@ -239,20 +245,26 @@ class PastastoreYAML:
             else:
                 kind = "evap"
             enam = self.pstore.get_nearest_stresses(onam, kind=kind).iloc[0, 0]
-            logger.info(
-                f"  | using nearest timeseries with kind='{kind}': '{enam}'"
-            )
-            evap, emeta = self.pstore.get_stresses(enam, return_metadata=True)
-            evap = ps.TimeSeries(evap, enam, metadata=emeta, settings="evap")
+            logger.info(f"  | using nearest stress with kind='{kind}': '{enam}'")
+            e, emeta = self.pstore.get_stresses(enam, return_metadata=True)
+            evap = {
+                "name": enam,
+                "settings": "evap",
+                "metadata": emeta,
+                "series": e,
+            }
         elif isinstance(evap_val, str):
             enam = d["evap"]
-            evap, emeta = self.pstore.get_stresses(enam, return_metadata=True)
-            evap = ps.TimeSeries(evap, enam, metadata=emeta, settings="evap")
+            e, emeta = self.pstore.get_stresses(enam, return_metadata=True)
+            evap = {
+                "name": enam,
+                "settings": "evap",
+                "metadata": emeta,
+                "series": e,
+            }
         else:
-            raise NotImplementedError(
-                f"Could not parse evap value: '{evap_val}'"
-            )
-        d["evap"] = evap.to_dict()
+            raise NotImplementedError(f"Could not parse evap value: '{evap_val}'")
+        d["evap"] = evap
 
         # rfunc
         if "rfunc" not in d:
@@ -286,9 +298,7 @@ class PastastoreYAML:
 
         return d
 
-    def _parse_stressmodel_dict(
-        self, d: Dict, onam: Optional[str] = None
-    ) -> Dict:
+    def _parse_stressmodel_dict(self, d: Dict, onam: Optional[str] = None) -> Dict:
         """Internal method to parse StressModel dictionary.
 
         Note: supports 'nearest' or 'nearest <kind>' as input to 'stress',
@@ -324,19 +334,20 @@ class PastastoreYAML:
                 kind = snam.split()[-1]
             else:
                 kind = None
-            logger.info(f"  | using nearest stress with kind='{kind}'")
             if kind == "oseries":
                 snam = self.pstore.get_nearest_oseries(onam).iloc[0, 0]
             else:
-                snam = self.pstore.get_nearest_stresses(onam, kind=kind).iloc[
-                    0, 0
-                ]
+                snam = self.pstore.get_nearest_stresses(onam, kind=kind).iloc[0, 0]
+            logger.info(f"  | using nearest stress with kind='{kind}': {snam}")
 
         s, smeta = self.pstore.get_stresses(snam, return_metadata=True)
-        s = ps.TimeSeries(
-            s, snam, settings=d.pop("settings", None), metadata=smeta
-        )
-        d["stress"] = [s.to_dict()]
+        s = {
+            "name": snam,
+            "settings": d.pop("settings", None),
+            "metadata": smeta,
+            "series": s,
+        }
+        d["stress"] = [s]
 
         # use stress name if not provided
         if "name" not in d:
@@ -349,9 +360,7 @@ class PastastoreYAML:
 
         return d
 
-    def _parse_wellmodel_dict(
-        self, d: Dict, onam: Optional[str] = None
-    ) -> Dict:
+    def _parse_wellmodel_dict(self, d: Dict, onam: Optional[str] = None) -> Dict:
         """Internal method to parse WellModel dictionary.
 
         Note: supports 'nearest' or 'nearest <number> <kind>' as input to
@@ -403,21 +412,22 @@ class PastastoreYAML:
                     .values
                 )
                 logger.info(
-                    f"  | using {n} nearest stress(es) with kind='{kind}': "
-                    f"{snames}"
+                    f"  | using {n} nearest stress(es) with kind='{kind}': " f"{snames}"
                 )
             else:
                 snames = [snames]
 
-        # get timeseries
+        # get time series
         slist = []
         for snam in snames:
             s, smeta = self.pstore.get_stresses(snam, return_metadata=True)
-            slist.append(
-                ps.TimeSeries(
-                    s, snam, settings="well", metadata=smeta
-                ).to_dict()
-            )
+            sdict = {
+                "name": snam,
+                "settings": "well",
+                "metadata": smeta,
+                "series": s,
+            }
+            slist.append(sdict)
         d["stress"] = slist
 
         # get distances
@@ -489,8 +499,7 @@ class PastastoreYAML:
             o, ometa = self.pstore.get_oseries(onam, return_metadata=True)
 
             # create model to obtain default model settings
-            o_ts = ps.TimeSeries(o, metadata=ometa, settings=settings)
-            ml = ps.Model(o_ts, name=mlnam, metadata=ometa)
+            ml = ps.Model(o, name=mlnam, metadata=ometa)
             mldict = ml.to_dict(series=True)
 
             # update with stored model settings
@@ -518,12 +527,9 @@ class PastastoreYAML:
 
                 # check if RechargeModel based on name if smtyp not defined
                 if (
-                    smnam.lower()
-                    in ["rch", "rech", "recharge", "rechargemodel"]
+                    smnam.lower() in ["rch", "rech", "recharge", "rechargemodel"]
                 ) and not smtyp:
-                    logger.info(
-                        "| assuming RechargeModel based on stressmodel name."
-                    )
+                    logger.info("| assuming RechargeModel based on stressmodel name.")
                     # check if stressmodel dictionary is empty, create (nearly
                     # empty) dict so defaults are used
                     if smyml is None:
@@ -537,16 +543,14 @@ class PastastoreYAML:
                     # cannot make any assumptions for non-RechargeModels
                     if smyml is None:
                         raise ValueError(
-                            "Insufficient information "
-                            f"for stressmodel '{name}'!"
+                            "Insufficient information " f"for stressmodel '{name}'!"
                         )
                     # get stressmodel type, with default StressModel
                     if "stressmodel" in smyml:
                         smtyp = smyml["stressmodel"]
                     else:
                         logger.info(
-                            "| no 'stressmodel' type provided, "
-                            "using 'StressModel'"
+                            "| no 'stressmodel' type provided, " "using 'StressModel'"
                         )
                         smtyp = "StressModel"
 
@@ -620,9 +624,9 @@ class PastastoreYAML:
             option does not guarantee the same model will be constructed
             as the one that was exported! Default is False.
         use_nearest : bool, optional
-            if True, replaces timeseries with "nearest <kind>", filling in
+            if True, replaces time series with "nearest <kind>", filling in
             kind where possible. Warning! This does not check whether
-            the timeseries are actually the nearest ones! Only used
+            the time series are actually the nearest ones! Only used
             when minimal_yaml=True. Default is False.
         """
 
@@ -683,9 +687,9 @@ class PastastoreYAML:
             option does not guarantee the same model will be constructed
             as the one that was exported! Default is False.
         use_nearest : bool, optional
-            if True, replaces timeseries with "nearest <kind>", filling in
+            if True, replaces time series with "nearest <kind>", filling in
             kind where possible. Warning! This does not check whether
-            the timeseries are actually the nearest ones! Only used
+            the time series are actually the nearest ones! Only used
             when minimal_yaml=True. Default is False.
         split : bool, optional
             if True, split into separate yaml files, otherwise store all
@@ -743,9 +747,9 @@ class PastastoreYAML:
             option does not guarantee the same model will be constructed
             as the one that was exported! Default is False.
         use_nearest : bool, optional
-            if True, replaces timeseries with "nearest <kind>", filling in
+            if True, replaces time series with "nearest <kind>", filling in
             kind where possible. Warning! This does not check whether
-            the timeseries are actually the nearest ones! Only used
+            the time series are actually the nearest ones! Only used
             when minimal_yaml=True. Default is False.
         """
         if isinstance(ml, dict):
