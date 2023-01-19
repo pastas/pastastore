@@ -48,6 +48,7 @@ lint = ["black", "flake8", "isort", "pylint"]
 optional = ["contextily", "pyproj", "adjustText"]
 test = [
     "pastastore[lint,optional]",
+    "hydropandas",
     "coverage",
     "codecov",
     "pytest",
