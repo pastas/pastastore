@@ -8,6 +8,8 @@ from pandas.testing import assert_series_equal
 from pastas.stats.tests import runs_test, stoffer_toloi
 from tqdm import tqdm
 
+from .version import PASTAS_LEQ_021
+
 
 def _custom_warning(message, category=UserWarning, filename="", lineno=-1, *args):
     print(f"{filename}:{lineno}: {category.__name__}: {message}")
@@ -253,25 +255,41 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
             df.loc[f"- settings: {k}", f"model {i}"] = ml.settings.get(k)
 
         if i == 0:
-            oso = ml.oseries.series_original
-            osv = ml.oseries.series_validated
-            oss = ml.oseries.series
+            oso = (
+                ml.oseries.series_original
+                if PASTAS_LEQ_021
+                else ml.oseries._series_original
+            )
             df.loc["oseries: series_original", f"model {i}"] = True
-            df.loc["oseries: series_validated", f"model {i}"] = True
+
+            if PASTAS_LEQ_021:
+                osv = ml.oseries.series_validated
+                df.loc["oseries: series_validated", f"model {i}"] = True
+
+            oss = ml.oseries.series
             df.loc["oseries: series_series", f"model {i}"] = True
+
         elif i == 1:
             try:
-                assert_series_equal(oso, ml.oseries.series_original)
+                assert_series_equal(
+                    oso,
+                    ml.oseries.series_original
+                    if PASTAS_LEQ_021
+                    else ml.oseries._series_original,
+                )
                 compare_oso = True
             except (ValueError, AssertionError):
                 # series are not identical in length or index does not match
                 compare_oso = False
-            try:
-                assert_series_equal(osv, ml.oseries.series_validated)
-                compare_osv = True
-            except (ValueError, AssertionError):
-                # series are not identical in length or index does not match
-                compare_osv = False
+
+            if PASTAS_LEQ_021:
+                try:
+                    assert_series_equal(osv, ml.oseries.series_validated)
+                    compare_osv = True
+                except (ValueError, AssertionError):
+                    # series are not identical in length or index does not match
+                    compare_osv = False
+
             try:
                 assert_series_equal(oss, ml.oseries.series)
                 compare_oss = True
@@ -280,7 +298,10 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                 compare_oss = False
 
             df.loc["oseries: series_original", f"model {i}"] = compare_oso
-            df.loc["oseries: series_validated", f"model {i}"] = compare_osv
+
+            if PASTAS_LEQ_021:
+                df.loc["oseries: series_validated", f"model {i}"] = compare_osv
+
             df.loc["oseries: series_series", f"model {i}"] = compare_oss
 
         for sm_name, sm in ml.stressmodels.items():
@@ -301,33 +322,49 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                     ] = ts.settings[tsk]
 
                 if i == 0:
-                    so1.append(ts.series_original.copy())
-                    sv1.append(ts.series_validated.copy())
+                    if PASTAS_LEQ_021:
+                        so1.append(ts.series_original.copy())
+                        sv1.append(ts.series_validated.copy())
+                    else:
+                        so1.append(ts._series_original.copy())
+
                     ss1.append(ts.series.copy())
+
+                    if PASTAS_LEQ_021:
+                        df.loc[f"  - {ts.name}: series_validated"] = True
+
                     df.loc[f"  - {ts.name}: series_original"] = True
-                    df.loc[f"  - {ts.name}: series_validated"] = True
                     df.loc[f"  - {ts.name}: series"] = True
 
                 elif i == 1:
                     # ValueError if series cannot be compared,
                     # set result to False
                     try:
-                        assert_series_equal(so1[counter], ts.series_original)
+                        assert_series_equal(
+                            so1[counter],
+                            ts.series_original
+                            if PASTAS_LEQ_021
+                            else ts._series_original,
+                        )
                         compare_so1 = True
                     except (ValueError, AssertionError):
                         compare_so1 = False
-                    try:
-                        assert_series_equal(sv1[counter], ts.series_validated)
-                        compare_sv1 = True
-                    except (ValueError, AssertionError):
-                        compare_sv1 = False
+
+                    if PASTAS_LEQ_021:
+                        try:
+                            assert_series_equal(sv1[counter], ts.series_validated)
+                            compare_sv1 = True
+                        except (ValueError, AssertionError):
+                            compare_sv1 = False
+
                     try:
                         assert_series_equal(ss1[counter], ts.series)
                         compare_ss1 = True
                     except (ValueError, AssertionError):
                         compare_ss1 = False
                     df.loc[f"  - {ts.name}: series_original"] = compare_so1
-                    df.loc[f"  - {ts.name}: series_validated"] = compare_sv1
+                    if PASTAS_LEQ_021:
+                        df.loc[f"  - {ts.name}: series_validated"] = compare_sv1
                     df.loc[f"  - {ts.name}: series"] = compare_ss1
 
                 counter += 1
