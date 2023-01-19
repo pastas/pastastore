@@ -7,10 +7,10 @@
 # pastastore
 
 This module stores 
-[Pastas](https://pastas.readthedocs.io/en/latest/) timeseries and models in a
+[Pastas](https://pastas.readthedocs.io/en/latest/) time series and models in a
 database.
 
-Storing timeseries and models in a database allows the user to manage time
+Storing time series and models in a database allows the user to manage time
 series and Pastas models on disk, which allows the user to pick up where they
 left off without having to reload everything.
 
