@@ -44,9 +44,13 @@ def initialize_project(conn):
 
     # well 1
     s = pd.read_csv("./tests/data/well.csv", index_col=0, parse_dates=True)
-    s = ps.ts.timestep_weighted_resample(
-        s, pd.date_range(s.index[0], s.index[-1], freq="D")
-    )
+    try:
+        s = ps.ts.timestep_weighted_resample(
+            s, pd.date_range(s.index[0], s.index[-1], freq="D")
+        )
+    except AttributeError:
+        # pastas<=0.22.0
+        pass
     pstore.add_stress(s, "well1", kind="well", metadata={"x": 164691, "y": 423579})
 
     return pstore
