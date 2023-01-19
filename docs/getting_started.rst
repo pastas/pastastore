@@ -35,7 +35,7 @@ See the :ref:`examples` section for some quick examples on how to get started.
 Dependencies
 ------------
 This module has several optional dependencies. These are required for storing 
-timeseries and models in a database using compression. Without these, only 
+time series and models in a database using compression. Without these, only 
 the in-memory option (DictConnector) and storing data on disk without 
 compression (PasConnector) are available.
 

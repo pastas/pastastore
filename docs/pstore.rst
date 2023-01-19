@@ -2,14 +2,14 @@
 PastaStore object
 =================
 
-The `PastaStore` object is essentially a class for working with timeseries and
+The `PastaStore` object is essentially a class for working with time series and
 pastas Models. A Connector has to be passed to the object which manages the
 retrieval and storage of data.
 
 Methods are available for the following tasks:
 
-* Calculating distances between locations of timeseries, i.e. getting the
-  nearest timeseries to a location::
+* Calculating distances between locations of time series, i.e. getting the
+  nearest time series to a location::
 
     # get 3 nearest oseries
     store.get_nearest_oseries("my_oseries", n=3)
