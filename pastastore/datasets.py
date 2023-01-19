@@ -2,7 +2,11 @@ import os
 
 import hydropandas as hpd
 import pandas as pd
-from pastas.timeseries_utils import timestep_weighted_resample
+
+try:
+    from pastas.timeseries_utils import timestep_weighted_resample
+except ModuleNotFoundError:
+    from pastas.utils import timestep_weighted_resample
 
 import pastastore as pst
 from pastastore.base import BaseConnector

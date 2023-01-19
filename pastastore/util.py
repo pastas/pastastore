@@ -8,7 +8,7 @@ from pandas.testing import assert_series_equal
 from pastas.stats.tests import runs_test, stoffer_toloi
 from tqdm import tqdm
 
-from .version import PASTAS_LEQ_021
+from .version import PASTAS_LEQ_022
 
 
 def _custom_warning(message, category=UserWarning, filename="", lineno=-1, *args):
@@ -257,12 +257,12 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
         if i == 0:
             oso = (
                 ml.oseries.series_original
-                if PASTAS_LEQ_021
+                if PASTAS_LEQ_022
                 else ml.oseries._series_original
             )
             df.loc["oseries: series_original", f"model {i}"] = True
 
-            if PASTAS_LEQ_021:
+            if PASTAS_LEQ_022:
                 osv = ml.oseries.series_validated
                 df.loc["oseries: series_validated", f"model {i}"] = True
 
@@ -274,7 +274,7 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                 assert_series_equal(
                     oso,
                     ml.oseries.series_original
-                    if PASTAS_LEQ_021
+                    if PASTAS_LEQ_022
                     else ml.oseries._series_original,
                 )
                 compare_oso = True
@@ -282,7 +282,7 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                 # series are not identical in length or index does not match
                 compare_oso = False
 
-            if PASTAS_LEQ_021:
+            if PASTAS_LEQ_022:
                 try:
                     assert_series_equal(osv, ml.oseries.series_validated)
                     compare_osv = True
@@ -299,7 +299,7 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
 
             df.loc["oseries: series_original", f"model {i}"] = compare_oso
 
-            if PASTAS_LEQ_021:
+            if PASTAS_LEQ_022:
                 df.loc["oseries: series_validated", f"model {i}"] = compare_osv
 
             df.loc["oseries: series_series", f"model {i}"] = compare_oss
@@ -322,7 +322,7 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                     ] = ts.settings[tsk]
 
                 if i == 0:
-                    if PASTAS_LEQ_021:
+                    if PASTAS_LEQ_022:
                         so1.append(ts.series_original.copy())
                         sv1.append(ts.series_validated.copy())
                     else:
@@ -330,7 +330,7 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
 
                     ss1.append(ts.series.copy())
 
-                    if PASTAS_LEQ_021:
+                    if PASTAS_LEQ_022:
                         df.loc[f"  - {ts.name}: series_validated"] = True
 
                     df.loc[f"  - {ts.name}: series_original"] = True
@@ -343,14 +343,14 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                         assert_series_equal(
                             so1[counter],
                             ts.series_original
-                            if PASTAS_LEQ_021
+                            if PASTAS_LEQ_022
                             else ts._series_original,
                         )
                         compare_so1 = True
                     except (ValueError, AssertionError):
                         compare_so1 = False
 
-                    if PASTAS_LEQ_021:
+                    if PASTAS_LEQ_022:
                         try:
                             assert_series_equal(sv1[counter], ts.series_validated)
                             compare_sv1 = True
@@ -363,7 +363,7 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                     except (ValueError, AssertionError):
                         compare_ss1 = False
                     df.loc[f"  - {ts.name}: series_original"] = compare_so1
-                    if PASTAS_LEQ_021:
+                    if PASTAS_LEQ_022:
                         df.loc[f"  - {ts.name}: series_validated"] = compare_sv1
                     df.loc[f"  - {ts.name}: series"] = compare_ss1
 

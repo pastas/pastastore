@@ -13,7 +13,7 @@ from pastas.io.pas import PastasEncoder
 from tqdm import tqdm
 
 from .util import ItemInLibraryException, _custom_warning, validate_names
-from .version import PASTAS_LEQ_021
+from .version import PASTAS_LEQ_022
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning
@@ -40,7 +40,7 @@ class BaseConnector(ABC):
 
     # whether to validate time series according to pastas rules
     # True for pastas>=0.23.0 and False for pastas<=0.22.0
-    USE_PASTAS_VALIDATE_SERIES = False if PASTAS_LEQ_021 else True
+    USE_PASTAS_VALIDATE_SERIES = False if PASTAS_LEQ_022 else True
 
     def __repr__(self):
         """Representation string of the object."""
@@ -1459,7 +1459,7 @@ class ConnectorUtil:
         # expensive check
         if self.CHECK_MODEL_SERIES_VALUES and isinstance(ml, ps.Model):
             s_org = self.get_oseries(name).squeeze().dropna()
-            if PASTAS_LEQ_021:
+            if PASTAS_LEQ_022:
                 so = ml.oseries.series_original
             else:
                 so = ml.oseries._series_original
@@ -1494,7 +1494,7 @@ class ConnectorUtil:
                         raise LookupError(msg)
                     if self.CHECK_MODEL_SERIES_VALUES:
                         s_org = self.get_stresses(s.name).squeeze()
-                        if PASTAS_LEQ_021:
+                        if PASTAS_LEQ_022:
                             so = s.series_original
                         else:
                             so = s._series_original
