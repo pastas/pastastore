@@ -32,7 +32,7 @@ def example_pastastore(conn="DictConnector"):
     datadir = os.path.join(os.path.dirname(__file__), "../tests/data")
     if not os.path.exists(datadir):
         raise FileNotFoundError(
-            "Test datasets not available! " "Clone repository from GitHub."
+            "Test datasets not available! Clone repository from GitHub."
         )
 
     # initialize default connector if conn is str
