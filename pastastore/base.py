@@ -1284,15 +1284,37 @@ class ConnectorUtil:
         # StressModel, WellModel
         for ts in mdict["stressmodels"].values():
             if "stress" in ts.keys():
-                for stress in ts["stress"]:
-                    if "series" not in stress:
-                        name = str(stress["name"])
-                        if name in self.stresses.index:
-                            stress["series"] = self.get_stresses(name)
-                            # update tmin/tmax from timeseries
-                            if update_ts_settings:
-                                stress["settings"]["tmin"] = stress["series"].index[0]
-                                stress["settings"]["tmax"] = stress["series"].index[-1]
+                # WellModel
+                classkey = "stressmodel" if PASTAS_LEQ_022 else "class"
+                if ts[classkey] == "WellModel":
+                    for stress in ts["stress"]:
+                        if "series" not in stress:
+                            name = str(stress["name"])
+                            if name in self.stresses.index:
+                                stress["series"] = self.get_stresses(name)
+                                # update tmin/tmax from timeseries
+                                if update_ts_settings:
+                                    stress["settings"]["tmin"] = stress["series"].index[
+                                        0
+                                    ]
+                                    stress["settings"]["tmax"] = stress["series"].index[
+                                        -1
+                                    ]
+                # StressModel
+                else:
+                    for stress in ts["stress"] if PASTAS_LEQ_022 else [ts["stress"]]:
+                        if "series" not in stress:
+                            name = str(stress["name"])
+                            if name in self.stresses.index:
+                                stress["series"] = self.get_stresses(name)
+                                # update tmin/tmax from timeseries
+                                if update_ts_settings:
+                                    stress["settings"]["tmin"] = stress["series"].index[
+                                        0
+                                    ]
+                                    stress["settings"]["tmax"] = stress["series"].index[
+                                        -1
+                                    ]
 
             # RechargeModel, TarsoModel
             if ("prec" in ts.keys()) and ("evap" in ts.keys()):
@@ -1380,7 +1402,8 @@ class ConnectorUtil:
         if isinstance(ml, ps.Model):
             smtyps = [sm._name for sm in ml.stressmodels.values()]
         elif isinstance(ml, dict):
-            smtyps = [sm["stressmodel"] for sm in ml["stressmodels"].values()]
+            classkey = "stressmodel" if PASTAS_LEQ_022 else "class"
+            smtyps = [sm[classkey] for sm in ml["stressmodels"].values()]
         check = isin(smtyps, supported_stressmodels)
         if not all(check):
             unsupported = set(smtyps) - set(supported_stressmodels)
@@ -1392,41 +1415,55 @@ class ConnectorUtil:
     @staticmethod
     def _check_model_series_names_for_store(ml):
         prec_evap_model = ["RechargeModel", "TarsoModel"]
+
         if isinstance(ml, ps.Model):
-            # non RechargeModel nor Tarsomodel stressmodels
             series_names = [
                 istress.series.name
                 for sm in ml.stressmodels.values()
-                if sm._name not in prec_evap_model
                 for istress in sm.stress
             ]
-            # RechargeModel, TarsoModel
-            if isin(prec_evap_model, [i._name for i in ml.stressmodels.values()]).any():
-                series_names += [
-                    istress.series.name
-                    for sm in ml.stressmodels.values()
-                    if sm._name in prec_evap_model
-                    for istress in sm.stress
-                ]
+
         elif isinstance(ml, dict):
-            # non RechargeModel nor Tarsomodel stressmodels
-            series_names = [
-                istress["name"]
-                for sm in ml["stressmodels"].values()
-                if sm["stressmodel"] not in prec_evap_model
-                for istress in sm["stress"]
-            ]
-            # RechargeModel, TarsoModel
+            # non RechargeModel, Tarsomodel, WellModel stressmodels
+            classkey = "stressmodel" if PASTAS_LEQ_022 else "class"
+            if PASTAS_LEQ_022:
+                series_names = [
+                    istress["name"]
+                    for sm in ml["stressmodels"].values()
+                    if sm[classkey] not in (prec_evap_model + ["WellModel"])
+                    for istress in sm["stress"]
+                ]
+            else:
+                series_names = [
+                    sm["stress"]["name"]
+                    for sm in ml["stressmodels"].values()
+                    if sm[classkey] not in (prec_evap_model + ["WellModel"])
+                ]
+
+            # WellModel
             if isin(
-                prec_evap_model,
-                [i["stressmodel"] for i in ml["stressmodels"].values()],
+                ["WellModel"],
+                [i[classkey] for i in ml["stressmodels"].values()],
             ).any():
                 series_names += [
                     istress["name"]
                     for sm in ml["stressmodels"].values()
-                    if sm["stressmodel"] in prec_evap_model
+                    if sm[classkey] in ["WellModel"]
+                    for istress in sm["stress"]
+                ]
+
+            # RechargeModel, TarsoModel
+            if isin(
+                prec_evap_model,
+                [i[classkey] for i in ml["stressmodels"].values()],
+            ).any():
+                series_names += [
+                    istress["name"]
+                    for sm in ml["stressmodels"].values()
+                    if sm[classkey] in prec_evap_model
                     for istress in [sm["prec"], sm["evap"]]
                 ]
+
         else:
             raise TypeError("Expected pastas.Model or dict!")
         if len(series_names) - len(set(series_names)) > 0:
@@ -1505,10 +1542,13 @@ class ConnectorUtil:
                             )
         elif isinstance(ml, dict):
             for sm in ml["stressmodels"].values():
-                if sm["stressmodel"] in prec_evap_model:
+                classkey = "stressmodel" if PASTAS_LEQ_022 else "class"
+                if sm[classkey] in prec_evap_model:
                     stresses = [sm["prec"], sm["evap"]]
-                else:
+                elif sm[classkey] in ["WellModel"]:
                     stresses = sm["stress"]
+                else:
+                    stresses = sm["stress"] if PASTAS_LEQ_022 else [sm["stress"]]
                 for s in stresses:
                     if str(s["name"]) not in self.stresses.index:
                         msg = (

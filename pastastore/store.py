@@ -12,6 +12,7 @@ from tqdm import tqdm
 from .plotting import Maps, Plots
 from .util import _custom_warning
 from .yaml_interface import PastastoreYAML
+from .version import PASTAS_LEQ_022
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning
@@ -953,7 +954,8 @@ class PastaStore:
             structure.loc[mlnam, "oseries"] = iml["oseries"]["name"]
 
             for sm in iml["stressmodels"].values():
-                if sm["stressmodel"] == "RechargeModel":
+                class_key = "stressmodel" if PASTAS_LEQ_022 else "class"
+                if sm[class_key] == "RechargeModel":
                     pnam = sm["prec"]["name"]
                     enam = sm["evap"]["name"]
                     structure.loc[mlnam, pnam] = 1

@@ -8,6 +8,8 @@ import pandas as pd
 import pastas as ps
 import yaml
 
+from .version import PASTAS_LEQ_022
+
 ps.logger.setLevel("ERROR")
 
 logging.basicConfig(level="INFO")
@@ -100,7 +102,7 @@ def reduce_to_minimal_dict(d, keys=None):
             "stress",
             "prec",
             "evap",
-            "stressmodel",
+            "stressmodel" if PASTAS_LEQ_022 else "class",
         ]
 
     # also keep stressmodels by adding names to keys list
@@ -269,17 +271,24 @@ class PastastoreYAML:
         # rfunc
         if "rfunc" not in d:
             logger.info("  | no 'rfunc' provided, using 'Exponential'")
+        # for pastas >= 0.23.0, convert rfunc value to dictionary with 'class' key
+        elif not isinstance(d["rfunc"], dict) and not PASTAS_LEQ_022:
+            d["rfunc"] = {"class": d["rfunc"]}
 
         # stressmodel
-        if "stressmodel" not in d:
-            d["stressmodel"] = "RechargeModel"
+        classkey = "stressmodel" if PASTAS_LEQ_022 else "class"
+        if classkey not in d:
+            d[classkey] = "RechargeModel"
 
         # recharge type (i.e. Linear, FlexModel, etc.)
-        if ("recharge" not in d) and (d["stressmodel"] == "RechargeModel"):
+        if ("recharge" not in d) and (d[classkey] == "RechargeModel"):
             logger.info("  | no 'recharge' type provided, using 'Linear'")
+        # if pastas >= 0.23.0, recharge value must be dict with class key
+        elif not isinstance(d["recharge"], dict) and not PASTAS_LEQ_022:
+            d["recharge"] = {"class": d["recharge"]}
 
         # tarsomodel logic
-        if d["stressmodel"] == "TarsoModel":
+        if d[classkey] == "TarsoModel":
             dmin = d.get("dmin", None)
             dmax = d.get("dmin", None)
             oseries = d.get("oseries", None)
@@ -347,7 +356,7 @@ class PastastoreYAML:
             "metadata": smeta,
             "series": s,
         }
-        d["stress"] = [s]
+        d["stress"] = [s] if PASTAS_LEQ_022 else s
 
         # use stress name if not provided
         if "name" not in d:
@@ -356,7 +365,10 @@ class PastastoreYAML:
         # rfunc
         if "rfunc" not in d:
             logger.info("  | no 'rfunc' provided, using 'Gamma'")
-            d["rfunc"] = "Gamma"
+            d["rfunc"] = "Gamma" if PASTAS_LEQ_022 else {"class": "Gamma"}
+        # for pastas >= 0.23.0, convert rfunc value to dictionary with 'class' key
+        elif not isinstance(d["rfunc"], dict) and not PASTAS_LEQ_022:
+            d["rfunc"] = {"class": d["rfunc"]}
 
         return d
 
@@ -443,7 +455,12 @@ class PastastoreYAML:
         # rfunc
         if "rfunc" not in d:
             logger.info("  | no 'rfunc' provided, using 'HantushWellModel'")
-            d["rfunc"] = "HantushWellModel"
+            d["rfunc"] = (
+                "HantushWellModel" if PASTAS_LEQ_022 else {"class": "HantushWellModel"}
+            )
+        # for pastas >= 0.23.0, convert rfunc value to dictionary with 'class' key
+        elif not isinstance(d["rfunc"], dict) and not PASTAS_LEQ_022:
+            d["rfunc"] = {"class": d["rfunc"]}
 
         if "up" not in d:
             logger.info(
@@ -517,8 +534,9 @@ class PastastoreYAML:
                 logger.info(f"| parsing stressmodel: '{name}'")
 
                 # check whether smtyp is defined
+                classkey = "stressmodel" if PASTAS_LEQ_022 else "class"
                 if smyml is not None:
-                    if "stressmodel" in smyml:
+                    if classkey in smyml:
                         smtyp = True
                     else:
                         smtyp = False
@@ -537,7 +555,7 @@ class PastastoreYAML:
                         smyml = mlyml["stressmodels"][smnam]
                     if "name" not in smyml:
                         smyml["name"] = smnam
-                    smtyp = smyml.get("stressmodel", "RechargeModel")
+                    smtyp = smyml.get(classkey, "RechargeModel")
                 else:
                     # if no info is provided, raise error,
                     # cannot make any assumptions for non-RechargeModels
@@ -546,11 +564,12 @@ class PastastoreYAML:
                             "Insufficient information " f"for stressmodel '{name}'!"
                         )
                     # get stressmodel type, with default StressModel
-                    if "stressmodel" in smyml:
-                        smtyp = smyml["stressmodel"]
+                    if classkey in smyml:
+                        smtyp = smyml[classkey]
                     else:
                         logger.info(
-                            "| no 'stressmodel' type provided, " "using 'StressModel'"
+                            "| no stressmodel class type provided, "
+                            "using 'StressModel'"
                         )
                         smtyp = "StressModel"
 
