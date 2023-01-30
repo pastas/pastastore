@@ -536,6 +536,9 @@ class PastastoreYAML:
                 # check whether smtyp is defined
                 classkey = "stressmodel" if PASTAS_LEQ_022 else "class"
                 if smyml is not None:
+                    if PASTAS_LEQ_022:
+                        if "class" in smyml:
+                            smyml["stressmodel"] = smyml.pop("class")
                     if classkey in smyml:
                         smtyp = True
                     else:
