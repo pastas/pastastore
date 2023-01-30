@@ -37,6 +37,8 @@ def _convert_dict_dtypes_for_yaml(d: Dict):
             d[k] = v.to_timedelta64().__str__()
         elif isinstance(v, np.int64):
             d[k] = int(v)
+        elif isinstance(v, np.float64):
+            d[k] = float(v)
         elif isinstance(v, pd.DataFrame):
             d[k] = v.reset_index().to_dict(orient="records")
 
