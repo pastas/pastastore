@@ -502,7 +502,6 @@ class PastastoreYAML:
         models = []
 
         for mlnam in yml.keys():
-
             mlyml = yml[mlnam]
 
             # get oseries + metadata
@@ -527,7 +526,6 @@ class PastastoreYAML:
 
             # stressmodels
             for smnam, smyml in mlyml["stressmodels"].items():
-
                 # set name if not provided
                 if smyml is not None:
                     name = smyml.get("name", smnam)

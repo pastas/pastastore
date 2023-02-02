@@ -247,7 +247,6 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
     ss1 = []  # for storing series
 
     for i, ml in enumerate([ml1, ml2]):
-
         counter = 0  # for counting stress timeseries
         df.loc["name:", f"model {i}"] = ml.name
 
@@ -305,7 +304,6 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
             df.loc["oseries: series_series", f"model {i}"] = compare_oss
 
         for sm_name, sm in ml.stressmodels.items():
-
             df.loc[f"stressmodel: '{sm_name}'"] = sm_name
             df.loc["- rfunc"] = sm.rfunc._name if sm.rfunc is not None else "NA"
 
@@ -564,7 +562,6 @@ def frontiers_checks(
         models = pstore.model_names
 
     for mlnam in tqdm(models, desc="Running model diagnostics"):
-
         ml = pstore.get_models(mlnam)
 
         if ml.parameters["optimal"].hasnans:

@@ -11,7 +11,6 @@ params = ["dict", "pas"]  # "arctic" and "pystore" removed for CI, can be tested
 
 
 def initialize_project(conn):
-
     pstore = pst.PastaStore("test_project", conn)
 
     # oseries 1
@@ -122,7 +121,6 @@ def has_pkg(pkg):
     Originally written by Mike Toews (mwtoews@gmail.com) for FloPy.
     """
     if pkg not in _has_pkg_cache:
-
         # for some dependencies, package name and import name are different
         # (e.g. pyshp/shapefile, mfpymake/pymake, python-dateutil/dateutil)
         # pkg_resources expects package name, importlib expects import name

@@ -911,7 +911,7 @@ class BaseConnector(ABC):
             data = self._get_item("models", n)
             if return_dict:
                 ml = data
-            else:               
+            else:
                 ml = self._parse_model_dict(data, update_ts_settings=update_ts_settings)
             models.append(ml)
         if len(models) == 1 and squeeze:
@@ -1266,8 +1266,10 @@ class ConnectorUtil:
         ml : pastas.Model
             timeseries analysis model
         """
-        PASFILE_LEQ_022 = (parse_version(mdict["file_info"]["pastas_version"]) <= parse_version("0.22.0"))
-        
+        PASFILE_LEQ_022 = parse_version(
+            mdict["file_info"]["pastas_version"]
+        ) <= parse_version("0.22.0")
+
         # oseries
         if "series" not in mdict["oseries"]:
             name = str(mdict["oseries"]["name"])

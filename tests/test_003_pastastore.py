@@ -48,7 +48,6 @@ def test_create_model(pstore):
 
 @pytest.mark.dependency()
 def test_properties(pstore):
-
     pstore.add_oseries(pd.Series(dtype=np.float64), "deleteme", validate=False)
     pstore.add_stress(
         pd.Series(dtype=np.float64), "deleteme", kind="useless", validate=False

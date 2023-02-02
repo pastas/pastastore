@@ -860,7 +860,6 @@ class Maps:
         count = 0
         for name, sm in ml.stressmodels.items():
             for istress in sm.stress:
-
                 if metadata_source == "model":
                     xi = istress.metadata["x"]
                     yi = istress.metadata["y"]

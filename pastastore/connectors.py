@@ -16,7 +16,6 @@ warnings.showwarning = _custom_warning
 
 
 class ArcticConnector(BaseConnector, ConnectorUtil):
-
     conn_type = "arctic"
 
     def __init__(self, name: str, connstr: str):
@@ -200,7 +199,6 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
 
 
 class PystoreConnector(BaseConnector, ConnectorUtil):
-
     conn_type = "pystore"
 
     def __init__(self, name: str, path: str):
@@ -421,7 +419,6 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
 
 
 class DictConnector(BaseConnector, ConnectorUtil):
-
     conn_type = "dict"
 
     def __init__(self, name: str):
@@ -564,7 +561,6 @@ class DictConnector(BaseConnector, ConnectorUtil):
 
 
 class PasConnector(BaseConnector, ConnectorUtil):
-
     conn_type = "pas"
 
     def __init__(self, name: str, path: str):

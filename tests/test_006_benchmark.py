@@ -92,7 +92,6 @@ def test_benchmark_read_series_arctic(benchmark):
 
 
 def build_model(conn):
-
     store = pst.PastaStore("test", conn)
 
     # oseries nb1
