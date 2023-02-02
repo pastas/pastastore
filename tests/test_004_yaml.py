@@ -1,4 +1,4 @@
-import os
+~import os
 import tempfile
 from contextlib import contextmanager
 
@@ -6,6 +6,7 @@ import pytest
 from pytest_dependency import depends
 
 import pastastore as pst
+from pastastore.version import PASTAS_LEQ_022
 
 
 @contextmanager
@@ -126,6 +127,7 @@ def test_write_yaml_minimal(request, pstore):
 
 
 @pytest.mark.dependency()
+@pytest.mark.xfail(condition=~PASTAS_LEQ_022, reason="pastas wellmodel settings bug")
 def test_write_yaml_minimal_nearest(request, pstore):
     depends(
         request,
