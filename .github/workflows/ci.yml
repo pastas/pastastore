@@ -13,7 +13,6 @@ on:
       - dev
 
 jobs:
-  
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -25,25 +24,25 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.9
-          cache: 'pip'
+          cache: "pip"
           cache-dependency-path: pyproject.toml
 
       - name: Install Python dependencies
         run: |
           pip install .
           pip install ".[lint]"
-      
+
       - name: Run black
         uses: psf/black@stable
         with:
           options: "--check --diff"
           jupyter: true
-      
-      - name : Run isort
+
+      - name: Run isort
         run: |
           isort --check --diff --profile=black ./pastastore
 
-      - name : Run flake8
+      - name: Run flake8
         run: |
           flake8 --count --show-source --exit-zero --max-line-length=88 ./pastastore
           flake8 --count --exit-zero --max-line-length=88 --statistics ./pastastore
@@ -55,31 +54,34 @@ jobs:
     strategy:
       matrix:
         python-version: [3.8, 3.9, "3.10"]
-        pastas-version: ["git+https://github.com/pastas/pastas.git@v0.22.0", "git+https://github.com/pastas/pastas.git@v0.23.0"]
+        pastas-version:
+          [
+            "git+https://github.com/pastas/pastas.git@v0.22.0",
+            "git+https://github.com/pastas/pastas.git@v0.23.0",
+          ]
 
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
           cache-dependency-path: pyproject.toml
-      
+
       - name: Install dependencies
         run: |
           pip install --upgrade pip
           pip install ${{ matrix.pastas-version }}
-          pip install -e .[test]   
+          pip install -e .[test]
 
       - name: Run pytest
         run: |
           pytest
-      
+
       - name: Run codacy-coverage-reporter
         uses: codacy/codacy-coverage-reporter-action@master
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
           coverage-reports: coverage.xml
-
