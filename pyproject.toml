@@ -1,11 +1,11 @@
 [build-system]
 # Minimum requirements for the build system to execute
-requires = ["setuptools>45"]
+requires = ["setuptools>64"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pastastore"
-version = "0.10.0"
+dynamic = ["version"]
 description = "Tools for managing Pastas time series models."
 license = { file = "LICENSE" }
 readme = "readme.md"
@@ -72,6 +72,9 @@ docs = [
 
 [tool.setuptools]
 packages = ["pastastore"]
+
+[tool.setuptools.dynamic]
+version = { attr = "pastastore.version.__version__" }
 
 [tool.black]
 line-length = 88
