@@ -44,7 +44,7 @@ repository = "https://github.com/pastas/pastastore"
 documentation = "https://pastastore.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
-lint = ["black", "flake8", "isort", "pylint"]
+lint = ["black", "flake8", "isort"]
 optional = ["contextily", "pyproj", "adjustText"]
 test = [
     "pastastore[lint,optional]",
