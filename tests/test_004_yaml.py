@@ -2,9 +2,11 @@ import os
 import tempfile
 from contextlib import contextmanager
 
-import pastastore as pst
 import pytest
 from pytest_dependency import depends
+
+import pastastore as pst
+from pastastore.version import PASTAS_LEQ_022
 
 
 @contextmanager
@@ -25,7 +27,7 @@ def test_load_yaml_rechargemodel(pstore):
       oseries: oseries2               # head timeseries name, obtained from pastastore
       stressmodels:                   # stressmodels dictionary
         recharge:                     # name of the recharge stressmodel
-          stressmodel: RechargeModel  # type of pastas StressModel
+          class: RechargeModel        # type of pastas StressModel
           prec: prec2                 # name of precipitation stress, obtained from pastastore
           evap: evap2                 # name of evaporation stress, obtained from pastastore
           recharge: Linear            # pastas recharge type
@@ -44,7 +46,7 @@ def test_load_yaml_stressmodel(pstore):
       oseries: oseries2               # head timeseries name, obtained from pastastore
       stressmodels:                   # stressmodels dictionary
         prec:                         # name of the recharge stressmodel
-          stressmodel: StressModel    # type of pastas StressModel
+          class: StressModel          # type of pastas StressModel
           stress: prec2               # name of precipitation stress, obtained from pastastore
           rfunc: Gamma                # response function
     """
@@ -61,7 +63,7 @@ def test_load_yaml_wellmodel(pstore):
       oseries: oseries1               # head timeseries name, obtained from pastastore
       stressmodels:                   # stressmodels dictionary
         well:                         # name of the recharge stressmodel
-          stressmodel: WellModel      # type of pastas StressModel
+          class: WellModel            # type of pastas StressModel
           stress: well1               # name of well stress, obtained from pastastore
           distances: [100]
 
@@ -125,6 +127,7 @@ def test_write_yaml_minimal(request, pstore):
 
 
 @pytest.mark.dependency()
+@pytest.mark.xfail(condition=~PASTAS_LEQ_022, reason="pastas wellmodel settings bug")
 def test_write_yaml_minimal_nearest(request, pstore):
     depends(
         request,
