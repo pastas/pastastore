@@ -11,8 +11,8 @@ from tqdm import tqdm
 
 from .plotting import Maps, Plots
 from .util import _custom_warning
-from .yaml_interface import PastastoreYAML
 from .version import PASTAS_LEQ_022
+from .yaml_interface import PastastoreYAML
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning

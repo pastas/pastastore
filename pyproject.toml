@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pastastore"
-version = "0.10b.0"
+version = "0.10.0"
 description = "Tools for managing Pastas time series models."
 license = { file = "LICENSE" }
 readme = "readme.md"

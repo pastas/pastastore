@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import pandas as pd
 import pastas as ps
 from numpy import isin
+from packaging.version import parse as parse_version
 from pastas.io.pas import PastasEncoder
 from tqdm import tqdm
 
@@ -910,7 +911,7 @@ class BaseConnector(ABC):
             data = self._get_item("models", n)
             if return_dict:
                 ml = data
-            else:
+            else:               
                 ml = self._parse_model_dict(data, update_ts_settings=update_ts_settings)
             models.append(ml)
         if len(models) == 1 and squeeze:
@@ -1265,6 +1266,8 @@ class ConnectorUtil:
         ml : pastas.Model
             timeseries analysis model
         """
+        PASFILE_LEQ_022 = (parse_version(mdict["file_info"]["pastas_version"]) <= parse_version("0.22.0"))
+        
         # oseries
         if "series" not in mdict["oseries"]:
             name = str(mdict["oseries"]["name"])
@@ -1285,7 +1288,7 @@ class ConnectorUtil:
         for ts in mdict["stressmodels"].values():
             if "stress" in ts.keys():
                 # WellModel
-                classkey = "stressmodel" if PASTAS_LEQ_022 else "class"
+                classkey = "stressmodel" if PASFILE_LEQ_022 else "class"
                 if ts[classkey] == "WellModel":
                     for stress in ts["stress"]:
                         if "series" not in stress:
@@ -1302,7 +1305,7 @@ class ConnectorUtil:
                                     ]
                 # StressModel
                 else:
-                    for stress in ts["stress"] if PASTAS_LEQ_022 else [ts["stress"]]:
+                    for stress in ts["stress"] if PASFILE_LEQ_022 else [ts["stress"]]:
                         if "series" not in stress:
                             name = str(stress["name"])
                             if name in self.stresses.index:
@@ -1336,6 +1339,20 @@ class ConnectorUtil:
                 pcov = mdict["fit"]["pcov"]
                 if pcov.dtypes.apply(lambda dtyp: isinstance(dtyp, object)).any():
                     mdict["fit"]["pcov"] = pcov.astype(float)
+
+        # check pastas version vs pas-file version
+        file_version = mdict["file_info"]["pastas_version"]
+
+        # check file version and pastas version
+        # if file<0.23  and pastas>=1.0 --> error
+        PASTAS_GT_023 = parse_version(ps.__version__) > parse_version("0.23.1")
+        if PASFILE_LEQ_022 and PASTAS_GT_023:
+            raise UserWarning(
+                f"This file was created with Pastas v{file_version} "
+                f"and cannot be loaded with Pastas v{ps.__version__} Please load and "
+                "save the file with Pastas 0.23 first to update the file "
+                "format."
+            )
 
         try:
             # pastas>=0.15.0

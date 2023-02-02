@@ -126,7 +126,6 @@ def test_write_yaml_minimal(request, pstore):
 
 
 @pytest.mark.dependency()
-@pytest.mark.xfail(reason="settings not parsed correctly in pastas")
 def test_write_yaml_minimal_nearest(request, pstore):
     depends(
         request,
