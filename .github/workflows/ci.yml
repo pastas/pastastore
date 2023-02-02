@@ -41,12 +41,12 @@ jobs:
       
       - name : Run isort
         run: |
-          isort --check --diff --profile=black ./pastas
+          isort --check --diff --profile=black ./pastastore
 
       - name : Run flake8
         run: |
-          flake8 --count --show-source --exit-zero --max-line-length=88 ./pastas
-          flake8 --count --exit-zero --max-line-length=88 --statistics ./pastas
+          flake8 --count --show-source --exit-zero --max-line-length=88 ./pastastore
+          flake8 --count --exit-zero --max-line-length=88 --statistics ./pastastore
 
   test:
     name: Tests
