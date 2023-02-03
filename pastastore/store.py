@@ -390,7 +390,7 @@ class PastaStore:
 
     def get_statistics(
         self,
-        statistics: List[str],
+        statistics: Union[str, List[str]],
         modelnames: Optional[List[str]] = None,
         progressbar: Optional[bool] = False,
         ignore_errors: Optional[bool] = False,
@@ -400,9 +400,9 @@ class PastaStore:
 
         Parameters
         ----------
-        statistics : list of str
-            list of statistics to calculate, e.g. ["evp", "rsq", "rmse"], for
-            a full list see `pastas.modelstats.Statistics.ops`.
+        statistics : str or list of str
+            statistic or list of statistics to calculate, e.g. ["evp", "rsq", "rmse"],
+            for a full list see `pastas.modelstats.Statistics.ops`.
         modelnames : list of str, optional
             modelnames to calculates statistics for, by default None, which
             uses all models in the store
@@ -424,6 +424,10 @@ class PastaStore:
 
         # create dataframe for results
         s = pd.DataFrame(index=modelnames, columns=statistics, data=np.nan)
+
+        # if statistics is str
+        if isinstance(statistics, str):
+            statistics = [statistics]
 
         # loop through model names
         desc = "Get model statistics"
