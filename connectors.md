@@ -29,7 +29,7 @@ storage container. All "stored" data will be lost if you restart the kernel.
 # requires a name
 conn = pst.DictConnector("my_temporary_db")
 ```
-    
+
 ## ArcticConnector
 
 Store data in MongoDB using Arctic. Only works if there is an instance of
@@ -72,7 +72,6 @@ If using `ArcticConnector`:
 - Arctic requires MongoDB, e.g. install the Community edition
     ([Windows](https://fastdl.mongodb.org/win32/mongodb-win32-x86_64-2012plus-4.2.1-signed.msi),
     [MacOS](https://fastdl.mongodb.org/osx/mongodb-macos-x86_64-4.2.1.tgz)).
-
 - OR, if you wish to use Docker for running MongoDB see the installation
     instructions [here](https://github.com/pastas/pastastore/tree/master/dockerfiles#running-mongodb-from-docker).
 
