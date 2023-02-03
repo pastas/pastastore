@@ -533,6 +533,7 @@ class Maps:
         labels=True,
         adjust=False,
         figsize=(10, 8),
+        backgroundmap=False,
         **kwargs,
     ):
         """Plot stresses locations on map.
@@ -552,6 +553,9 @@ class Maps:
             axes handle, if not provided a new figure is created.
         figsize: tuple, optional
             figure size, by default(10, 8)
+        backgroundmap: bool, optional
+            if True, add background map (default CRS is EPSG:28992) with default tiles
+            by OpenStreetMap.Mapnik. Default option is False.
 
         Returns
         -------
@@ -587,9 +591,20 @@ class Maps:
         if labels:
             self.add_labels(stresses, ax, adjust=adjust)
 
+        if backgroundmap:
+            self.add_background_map(ax)
+
         return ax
 
-    def oseries(self, names=None, labels=True, adjust=False, figsize=(10, 8), **kwargs):
+    def oseries(
+        self,
+        names=None,
+        labels=True,
+        adjust=False,
+        figsize=(10, 8),
+        backgroundmap=False,
+        **kwargs,
+    ):
         """Plot oseries locations on map.
 
         Parameters
@@ -602,6 +617,9 @@ class Maps:
             automated smart label placement using adjustText, by default False
         figsize: tuple, optional
             figure size, by default(10, 8)
+        backgroundmap: bool, optional
+            if True, add background map (default CRS is EPSG:28992) with default tiles
+            by OpenStreetMap.Mapnik. Default option is False.
 
         Returns
         -------
@@ -623,9 +641,15 @@ class Maps:
             ax = r
         if labels:
             self.add_labels(oseries, ax, adjust=adjust)
+
+        if backgroundmap:
+            self.add_background_map(ax)
+
         return ax
 
-    def models(self, labels=True, adjust=False, figsize=(10, 8), **kwargs):
+    def models(
+        self, labels=True, adjust=False, figsize=(10, 8), backgroundmap=False, **kwargs
+    ):
         """Plot model locations on map.
 
         Parameters
@@ -638,6 +662,9 @@ class Maps:
             axes handle, if not provided a new figure is created.
         figsize: tuple, optional
             figure size, by default(10, 8)
+        backgroundmap: bool, optional
+            if True, add background map (default CRS is EPSG:28992) with default tiles
+            by OpenStreetMap.Mapnik. Default option is False.
 
         Returns
         -------
@@ -666,6 +693,10 @@ class Maps:
             ax = r
         if labels:
             self.add_labels(models, ax, adjust=adjust)
+
+        if backgroundmap:
+            self.add_background_map(ax)
+
         return ax
 
     def modelstat(
@@ -678,6 +709,7 @@ class Maps:
         vmin=None,
         vmax=None,
         figsize=(10, 8),
+        backgroundmap=False,
         **kwargs,
     ):
         """Plot model statistic on map.
@@ -702,6 +734,9 @@ class Maps:
             axes handle, if not provided a new figure is created.
         figsize: tuple, optional
             figuresize, by default(10, 8)
+        backgroundmap: bool, optional
+            if True, add background map (default CRS is EPSG:28992) with default tiles
+            by OpenStreetMap.Mapnik. Default option is False.
 
         Returns
         -------
@@ -738,6 +773,10 @@ class Maps:
         if label:
             df.set_index("index", inplace=True)
             self.add_labels(df, ax, adjust=adjust)
+
+        if backgroundmap:
+            self.add_background_map(ax)
+
         return ax
 
     @staticmethod
@@ -832,7 +871,16 @@ class Maps:
         else:
             return ax
 
-    def model(self, ml, label=True, metadata_source="model", offset=0.0, ax=None):
+    def model(
+        self,
+        ml,
+        label=True,
+        metadata_source="model",
+        offset=0.0,
+        ax=None,
+        figsize=(10, 10),
+        backgroundmap=False,
+    ):
         """Plot oseries and stresses from one model on a map.
 
         Parameters
@@ -849,6 +897,11 @@ class Maps:
             for zooming out around models
         ax : matplotlib.Axes, optional
             axes handle, if not provided a new figure is created.
+        figsize: tuple, optional
+            figsize, default is (10, 10)
+        backgroundmap: bool, optional
+            if True, add background map (default CRS is EPSG:28992) with default tiles
+            by OpenStreetMap.Mapnik. Default option is False.
 
         Returns
         -------
@@ -893,7 +946,7 @@ class Maps:
 
         # create figure
         if ax is None:
-            fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+            fig, ax = plt.subplots(1, 1, figsize=figsize)
         else:
             fig = ax.figure
 
@@ -984,6 +1037,9 @@ class Maps:
                 )
                 txt.set_path_effects(stroke)
 
+        if backgroundmap:
+            self.add_background_map(ax)
+
         fig.tight_layout()
 
         return ax
@@ -999,6 +1055,7 @@ class Maps:
         legend=True,
         labels=False,
         adjust=False,
+        backgroundmap=False,
     ):
         """Create a map linking models with their stresses.
 
@@ -1027,6 +1084,9 @@ class Maps:
         adjust: bool, optional
             automated smart label placement using adjustText, by
             default False
+        backgroundmap: bool, optional
+            if True, add background map (default CRS is EPSG:28992) with default tiles
+            by OpenStreetMap.Mapnik. Default option is False.
 
         Returns
         -------
@@ -1119,6 +1179,9 @@ class Maps:
                     )
                 )
             ax.legend(handles=legend_elements)
+
+        if backgroundmap:
+            self.add_background_map(ax)
 
         return ax
 
