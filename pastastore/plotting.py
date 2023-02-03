@@ -548,6 +548,8 @@ class Maps:
             label models, by default True
         adjust: bool, optional
             automated smart label placement using adjustText, by default False
+        ax : matplotlib.Axes, optional
+            axes handle, if not provided a new figure is created.
         figsize: tuple, optional
             figure size, by default(10, 8)
 
@@ -632,6 +634,8 @@ class Maps:
             label models, by default True
         adjust: bool, optional
             automated smart label placement using adjustText, by default False
+        ax : matplotlib.Axes, optional
+            axes handle, if not provided a new figure is created.
         figsize: tuple, optional
             figure size, by default(10, 8)
 
@@ -694,6 +698,8 @@ class Maps:
             vmin for colorbar, by default None
         vmax: float, optional
             vmax for colorbar, by default None
+        ax : matplotlib.Axes, optional
+            axes handle, if not provided a new figure is created.
         figsize: tuple, optional
             figuresize, by default(10, 8)
 
@@ -826,7 +832,7 @@ class Maps:
         else:
             return ax
 
-    def model(self, ml, label=True, metadata_source="model", offset=0.0):
+    def model(self, ml, label=True, metadata_source="model", offset=0.0, ax=None):
         """Plot oseries and stresses from one model on a map.
 
         Parameters
@@ -841,6 +847,8 @@ class Maps:
         offset : float, optional
             add offset to current extent of model time series, useful
             for zooming out around models
+        ax : matplotlib.Axes, optional
+            axes handle, if not provided a new figure is created.
 
         Returns
         -------
@@ -884,7 +892,10 @@ class Maps:
             count += 1
 
         # create figure
-        fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+        if ax is None:
+            fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+        else:
+            fig = ax.figure
 
         # add oseries
         osize = 50
@@ -983,6 +994,7 @@ class Maps:
         model_names=None,
         color_lines=False,
         alpha=0.4,
+        ax=None,
         figsize=(10, 8),
         legend=True,
         labels=False,
@@ -992,27 +1004,30 @@ class Maps:
 
         Parameters
         ----------
-            kinds: list, optional
-                kinds of stresses to plot, defaults to None, which selects
-                all kinds.
-            model_names: list, optional
-                list of model names to plot, substrings of model names
-                are also accepted, defaults to None, which selects all
-                models.
-            color_lines: bool, optional
-                if True, connecting lines have the same colors as the stresses,
-                defaults to False, which uses a black line.
-            alpha: float, optional
-                alpha value for the connecting lines, defaults to 0.4.
-            figsize : tuple, optional
-                figure size, by default (10, 8)
-            legend: bool, optional
-                create a legend for all unique kinds, defaults to True.
-            labels: bool, optional
-                add labels for stresses and oseries, defaults to False.
-            adjust: bool, optional
-                automated smart label placement using adjustText, by
-                default False
+        kinds: list, optional
+            kinds of stresses to plot, defaults to None, which selects
+            all kinds.
+        model_names: list, optional
+            list of model names to plot, substrings of model names
+            are also accepted, defaults to None, which selects all
+            models.
+        color_lines: bool, optional
+            if True, connecting lines have the same colors as the stresses,
+            defaults to False, which uses a black line.
+        alpha: float, optional
+            alpha value for the connecting lines, defaults to 0.4.
+        ax : matplotlib.Axes, optional
+            axes handle, if not provided a new figure is created.
+        figsize : tuple, optional
+            figure size, by default (10, 8)
+        legend: bool, optional
+            create a legend for all unique kinds, defaults to True.
+        labels: bool, optional
+            add labels for stresses and oseries, defaults to False.
+        adjust: bool, optional
+            automated smart label placement using adjustText, by
+            default False
+
         Returns
         -------
         ax: axes object
@@ -1035,9 +1050,12 @@ class Maps:
         if kinds is None:
             kinds = skind
 
-        _, ax = plt.subplots(figsize=figsize)
+        if ax is None:
+            _, ax = plt.subplots(figsize=figsize)
+
         segments = []
         segment_colors = []
+        scatter_colors = []
         ax.scatter(
             oseries.loc[struct["oseries"], "x"],
             oseries.loc[struct["oseries"], "y"],
@@ -1058,6 +1076,7 @@ class Maps:
                         [[os["x"], os["y"]], [st.loc[s, "x"], st.loc[s, "y"]]]
                     )
                     segment_colors.append(color)
+                    scatter_colors.append(f"C{c[0]+1}")
 
                     stused = np.append(stused, s)
 
@@ -1068,7 +1087,7 @@ class Maps:
         ax.scatter(
             [x[1][0] for x in segments],
             [y[1][1] for y in segments],
-            color=segment_colors,
+            color=scatter_colors,
         )
         ax.add_collection(
             LineCollection(segments, colors=segment_colors, linewidths=0.5, alpha=alpha)
