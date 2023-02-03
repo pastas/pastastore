@@ -29,13 +29,13 @@ storage container. All "stored" data will be lost if you restart the kernel.
 # requires a name
 conn = pst.DictConnector("my_temporary_db")
 ```
-
+    
 ## ArcticConnector
 
 Store data in MongoDB using Arctic. Only works if there is an instance of
 MongoDB running and the `arctic` python package is installed. This Connector
 has the best performance, both in terms of read/write speeds and data
-compression. Currently, `arctic` does not work with pandas>1.1 because it 
+compression. Currently, `arctic` does not work with pandas>1.1 because it
 has reference to the deprecated `pandas.Panel` object. This can be fixed by
 installing a custom version of arctic in which this bug has been addressed.
 This can be done by cloning a Pull Request and installing that version of arctic.

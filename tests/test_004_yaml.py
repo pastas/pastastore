@@ -127,7 +127,6 @@ def test_write_yaml_minimal(request, pstore):
 
 
 @pytest.mark.dependency()
-@pytest.mark.xfail(condition=~PASTAS_LEQ_022, reason="pastas wellmodel settings bug")
 def test_write_yaml_minimal_nearest(request, pstore):
     depends(
         request,

@@ -507,11 +507,9 @@ class PastastoreYAML:
             # get oseries + metadata
             if isinstance(mlyml["oseries"], dict):
                 onam = str(mlyml["oseries"]["name"])
-                settings = mlyml["oseries"].pop("settings", "oseries")
                 _ = mlyml.pop("oseries")
             else:
                 onam = str(mlyml.pop("oseries"))
-                settings = "oseries"
 
             logger.info(f"Building model '{mlnam}' for oseries '{onam}'")
             o, ometa = self.pstore.get_oseries(onam, return_metadata=True)
