@@ -1,7 +1,9 @@
 import numpy as np
 import pandas as pd
-import pastastore as pst
 import pytest
+from conftest import requires_pkg
+
+import pastastore as pst
 
 # %% write
 
@@ -30,6 +32,7 @@ def test_benchmark_write_series_pas(benchmark):
 
 
 @pytest.mark.benchmark(group="write_series")
+@requires_pkg("pystore")
 def test_benchmark_write_series_pystore(benchmark):
     path = "./tests/data/pystore"
     conn = pst.PystoreConnector("test", path)
@@ -38,6 +41,7 @@ def test_benchmark_write_series_pystore(benchmark):
 
 
 @pytest.mark.benchmark(group="write_series")
+@requires_pkg("arctic")
 def test_benchmark_write_series_arctic(benchmark):
     connstr = "mongodb://localhost:27017/"
     conn = pst.ArcticConnector("test", connstr)
@@ -67,6 +71,7 @@ def test_benchmark_read_series_pas(benchmark):
 
 
 @pytest.mark.benchmark(group="read_series")
+@requires_pkg("pystore")
 def test_benchmark_read_series_pystore(benchmark):
     path = "./tests/data/pystore"
     conn = pst.PystoreConnector("test", path)
@@ -75,6 +80,7 @@ def test_benchmark_read_series_pystore(benchmark):
 
 
 @pytest.mark.benchmark(group="read_series")
+@requires_pkg("arctic")
 def test_benchmark_read_series_arctic(benchmark):
     connstr = "mongodb://localhost:27017/"
     conn = pst.ArcticConnector("test", connstr)
@@ -86,32 +92,23 @@ def test_benchmark_read_series_arctic(benchmark):
 
 
 def build_model(conn):
-
     store = pst.PastaStore("test", conn)
 
     # oseries nb1
     if "oseries_nb1" not in store.oseries.index:
-        o = pd.read_csv(
-            "./tests/data/head_nb1.csv", index_col=0, parse_dates=True
-        )
-        store.add_oseries(
-            o, "oseries_nb1", metadata={"x": 100300, "y": 400400}
-        )
+        o = pd.read_csv("./tests/data/head_nb1.csv", index_col=0, parse_dates=True)
+        store.add_oseries(o, "oseries_nb1", metadata={"x": 100300, "y": 400400})
 
     # prec nb1
     if "prec_nb1" not in store.stresses.index:
-        s = pd.read_csv(
-            "./tests/data/rain_nb1.csv", index_col=0, parse_dates=True
-        )
+        s = pd.read_csv("./tests/data/rain_nb1.csv", index_col=0, parse_dates=True)
         store.add_stress(
             s, "prec_nb1", kind="prec", metadata={"x": 100300, "y": 400400}
         )
 
     # evap nb1
     if "evap_nb1" not in store.stresses.index:
-        s = pd.read_csv(
-            "./tests/data/evap_nb1.csv", index_col=0, parse_dates=True
-        )
+        s = pd.read_csv("./tests/data/evap_nb1.csv", index_col=0, parse_dates=True)
         store.add_stress(
             s, "evap_nb1", kind="evap", metadata={"x": 100300, "y": 400400}
         )
@@ -142,6 +139,7 @@ def test_benchmark_write_model_pas(benchmark):
 
 
 @pytest.mark.benchmark(group="write_model")
+@requires_pkg("pystore")
 def test_benchmark_write_model_pystore(benchmark):
     path = "./tests/data/pystore"
     conn = pst.PystoreConnector("test", path)
@@ -151,6 +149,7 @@ def test_benchmark_write_model_pystore(benchmark):
 
 
 @pytest.mark.benchmark(group="write_model")
+@requires_pkg("arctic")
 def test_benchmark_write_model_arctic(benchmark):
     connstr = "mongodb://localhost:27017/"
     conn = pst.ArcticConnector("test", connstr)
@@ -176,6 +175,7 @@ def test_benchmark_write_model_nocheckts_pas(benchmark):
 
 
 @pytest.mark.benchmark(group="write_model")
+@requires_pkg("pystore")
 def test_benchmark_write_model_nocheckts_pystore(benchmark):
     path = "./tests/data/pystore"
     conn = pst.PystoreConnector("test", path)
@@ -185,6 +185,7 @@ def test_benchmark_write_model_nocheckts_pystore(benchmark):
 
 
 @pytest.mark.benchmark(group="write_model")
+@requires_pkg("arctic")
 def test_benchmark_write_model_nocheckts_arctic(benchmark):
     connstr = "mongodb://localhost:27017/"
     conn = pst.ArcticConnector("test", connstr)
@@ -217,6 +218,7 @@ def test_benchmark_read_model_pas(benchmark):
 
 
 @pytest.mark.benchmark(group="read_model")
+@requires_pkg("pystore")
 def test_benchmark_read_model_pystore(benchmark):
     path = "./tests/data/pystore"
     conn = pst.PystoreConnector("test", path)
@@ -226,6 +228,7 @@ def test_benchmark_read_model_pystore(benchmark):
 
 
 @pytest.mark.benchmark(group="read_model")
+@requires_pkg("arctic")
 def test_benchmark_read_model_arctic(benchmark):
     connstr = "mongodb://localhost:27017/"
     conn = pst.ArcticConnector("test", connstr)

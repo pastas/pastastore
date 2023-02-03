@@ -2,9 +2,11 @@ import os
 import tempfile
 from contextlib import contextmanager
 
-import pastastore as pst
 import pytest
 from pytest_dependency import depends
+
+import pastastore as pst
+from pastastore.version import PASTAS_LEQ_022
 
 
 @contextmanager
@@ -22,10 +24,10 @@ def tempyaml(yaml):
 def test_load_yaml_rechargemodel(pstore):
     yamlstr = """
     my_first_model:                   # model name
-      oseries: oseries2               # head timeseries name, obtained from pastastore
+      oseries: oseries2               # head time series name, obtained from pastastore
       stressmodels:                   # stressmodels dictionary
         recharge:                     # name of the recharge stressmodel
-          stressmodel: RechargeModel  # type of pastas StressModel
+          class: RechargeModel        # type of pastas StressModel
           prec: prec2                 # name of precipitation stress, obtained from pastastore
           evap: evap2                 # name of evaporation stress, obtained from pastastore
           recharge: Linear            # pastas recharge type
@@ -41,10 +43,10 @@ def test_load_yaml_rechargemodel(pstore):
 def test_load_yaml_stressmodel(pstore):
     yamlstr = """
     my_second_model:                  # model name
-      oseries: oseries2               # head timeseries name, obtained from pastastore
+      oseries: oseries2               # head time series name, obtained from pastastore
       stressmodels:                   # stressmodels dictionary
         prec:                         # name of the recharge stressmodel
-          stressmodel: StressModel    # type of pastas StressModel
+          class: StressModel          # type of pastas StressModel
           stress: prec2               # name of precipitation stress, obtained from pastastore
           rfunc: Gamma                # response function
     """
@@ -58,10 +60,10 @@ def test_load_yaml_stressmodel(pstore):
 def test_load_yaml_wellmodel(pstore):
     yamlstr = """
     my_third_model:                   # model name
-      oseries: oseries1               # head timeseries name, obtained from pastastore
+      oseries: oseries1               # head time series name, obtained from pastastore
       stressmodels:                   # stressmodels dictionary
         well:                         # name of the recharge stressmodel
-          stressmodel: WellModel      # type of pastas StressModel
+          class: WellModel            # type of pastas StressModel
           stress: well1               # name of well stress, obtained from pastastore
           distances: [100]
 
@@ -86,9 +88,7 @@ def test_write_load_compare_yaml(request, pstore):
     ml1 = pstore.models["my_first_model"]
     ml2 = pstore.yaml.load("my_first_model.yaml")[0]
     assert (
-        pst.util.compare_models(ml1, ml2, detailed_comparison=True)
-        .iloc[1:, -1]
-        .all()
+        pst.util.compare_models(ml1, ml2, detailed_comparison=True).iloc[1:, -1].all()
     )
     os.remove("my_first_model.yaml")
     return
@@ -127,6 +127,7 @@ def test_write_yaml_minimal(request, pstore):
 
 
 @pytest.mark.dependency()
+@pytest.mark.xfail(reason="wellmodel settings change only in 0.23.1 currently.")
 def test_write_yaml_minimal_nearest(request, pstore):
     depends(
         request,

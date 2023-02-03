@@ -7,13 +7,13 @@ Jupyter Notebooks. The following snippets show typical usage.
 The general idea is to first define the connector object. This object manages
 the communication between the user and the data store. The the next step is to
 pass that connector to the `PastaStore` to access all of the useful methods
-for building timeseries models.
+for building time series models.
 
 In-memory
 ---------
 
 The following snippet shows how to use PastaStore with in-memory storage of 
-timeseries and models. This is the simplest implementation because everything
+time series and models. This is the simplest implementation because everything
 is stored in-memory (in dictionaries)::
 
    import pastastore as pst
@@ -29,7 +29,7 @@ Using Pastas
 ------------
 
 The following snippet shows how to use PastaStore with storage of 
-timeseries and models on disk as pas-files. This is the simplest implementation 
+time series and models on disk as pas-files. This is the simplest implementation 
 that writes data to disk as no external dependencies are required::
 
    import pastastore as pst
@@ -78,24 +78,24 @@ The PastaStore object
 ---------------------
 
 The `PastaStore` object provides useful methods e.g. for creating models and
-determining which timeseries are closest to one another. The database 
+determining which time series are closest to one another. The database 
 read/write/delete methods can be accessed directly from the `PastaStore` 
 object::
 
-   # create a new timeseries
+   # create a new time series
    series = pd.Series(index=pd.date_range("2019", "2020", freq="D"), data=1.0)
    
-   # add an observation timeseries
+   # add an observation time series
    store.add_oseries(series, "my_oseries", metadata={"x": 100, "y": 200})
 
    # retrieve the oseries
    oseries = store.get_oseries("my_oseries")
 
-To create a Pastas timeseries model use `store.create_model()`. Note that this does
+To create a Pastas time series model use `store.create_model()`. Note that this does
 not automatically add the model to the database. To store the model, it has to
 be explicitly added to the database::
 
-   # create a timeseries model
+   # create a time series model
    ml = store.create_model("my_oseries", add_recharge=False)
 
    # add to the database

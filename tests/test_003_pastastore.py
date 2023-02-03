@@ -43,14 +43,15 @@ def test_search(pstore):
 @pytest.mark.dependency()
 def test_create_model(pstore):
     ml = pstore.create_model("oseries1")
-    return ml
+    return
 
 
 @pytest.mark.dependency()
 def test_properties(pstore):
-
-    pstore.add_oseries(pd.Series(dtype=np.float64), "deleteme")
-    pstore.add_stress(pd.Series(dtype=np.float64), "deleteme", kind="useless")
+    pstore.add_oseries(pd.Series(dtype=np.float64), "deleteme", validate=False)
+    pstore.add_stress(
+        pd.Series(dtype=np.float64), "deleteme", kind="useless", validate=False
+    )
 
     _ = pstore.oseries
     _ = pstore.stresses
@@ -69,7 +70,7 @@ def test_properties(pstore):
 @pytest.mark.dependency()
 def test_store_model(request, pstore):
     depends(request, [f"test_create_model[{pstore.type}]"])
-    ml = test_create_model(pstore)
+    ml = pstore.create_model("oseries1")
     pstore.conn.add_model(ml)
     return
 
@@ -125,7 +126,7 @@ def test_store_model_missing_series(request, pstore):
             f"test_store_model[{pstore.type}]",
         ],
     )
-    ml = test_create_model(pstore)
+    ml = pstore.create_model("oseries1")
     o = pstore.get_oseries("oseries1")
     meta = pstore.get_metadata("oseries", "oseries1", as_frame=False)
     pstore.del_models("oseries1")
@@ -149,7 +150,7 @@ def test_get_model(request, pstore):
         ],
     )
     ml = pstore.conn.get_models("oseries1")
-    return ml
+    return
 
 
 @pytest.mark.dependency()
@@ -173,7 +174,7 @@ def test_create_models(pstore):
         ["oseries1", "oseries2"], store=True, progressbar=False
     )
     _ = pstore.conn.models
-    return mls
+    return
 
 
 @pytest.mark.dependency()
@@ -182,7 +183,7 @@ def test_get_parameters(request, pstore):
     p = pstore.get_parameters(progressbar=False, param_value="initial")
     assert p.index.size == 2
     assert p.isna().sum().sum() == 0
-    return p
+    return
 
 
 @pytest.mark.dependency()
@@ -200,14 +201,14 @@ def test_solve_models_and_get_stats(request, pstore):
     )
     stats = pstore.get_statistics(["evp", "aic"], progressbar=False)
     assert stats.index.size == 2
-    return mls, stats
+    return
 
 
 @pytest.mark.dependency()
 def test_save_and_load_model(request, pstore):
     ml = pstore.create_model("oseries2")
     sm = ps.StressModel(
-        pstore.get_stresses("well1"), ps.Gamma, name="well1", settings="well"
+        pstore.get_stresses("well1"), ps.Gamma(), name="well1", settings="well"
     )
     ml.add_stressmodel(sm)
     ml.solve(tmin="1993-1-1")
@@ -217,7 +218,7 @@ def test_save_and_load_model(request, pstore):
     evp_ml2 = ml2.stats.evp()
     assert allclose(evp_ml, evp_ml2)
     assert pst.util.compare_models(ml, ml2)
-    return ml, ml2
+    return
 
 
 def test_update_ts_settings(request, pstore):
@@ -233,11 +234,11 @@ def test_update_ts_settings(request, pstore):
     rm = ps.RechargeModel(p.loc[:"2013"], e.loc[:"2013"])
     ml.add_stressmodel(rm)
     tmax = p.index.intersection(e.index).max()
+    ml.solve()
 
     p2 = pstore.get_stresses("prec1")
-    sm = ps.StressModel(p2.loc[:"2013"], ps.Exponential, "prec")
+    sm = ps.StressModel(p2.loc[:"2013"], ps.Exponential(), "prec")
     ml.add_stressmodel(sm)
-
     pstore.add_model(ml)
 
     ml2 = pstore.get_models(ml.name, update_ts_settings=True)
@@ -246,9 +247,7 @@ def test_update_ts_settings(request, pstore):
         assert ml2.oseries.settings["tmax"] == o.index[-1]
         assert ml2.stressmodels["recharge"].prec.settings["tmax"] == tmax
         assert ml2.stressmodels["recharge"].evap.settings["tmax"] == tmax
-        assert (
-            ml2.stressmodels["prec"].stress[0].settings["tmax"] == p2.index[-1]
-        )
+        assert ml2.stressmodels["prec"].stress[0].settings["tmax"] == p2.index[-1]
     except AssertionError:
         pstore.del_models("ml_oseries2")
         pstore.set_check_model_series_values(True)
@@ -270,14 +269,13 @@ def test_oseries_distances(pstore):
 
 
 def test_repr(pstore):
-    return pstore.__repr__()
+    pstore.__repr__()
+    return
 
 
 def test_copy_dbase(pstore):
     conn2 = pst.DictConnector("destination")
-    pst.util.copy_database(
-        pstore.conn, conn2, overwrite=False, progressbar=True
-    )
+    pst.util.copy_database(pstore.conn, conn2, overwrite=False, progressbar=True)
     return
 
 
@@ -290,7 +288,7 @@ def test_to_from_zip(pstore):
         assert not store.oseries.empty
     finally:
         os.remove(zipname)
-    return store
+    return
 
 
 def test_example_pastastore():

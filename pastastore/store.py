@@ -11,6 +11,7 @@ from tqdm import tqdm
 
 from .plotting import Maps, Plots
 from .util import _custom_warning
+from .version import PASTAS_LEQ_022
 from .yaml_interface import PastastoreYAML
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
@@ -18,7 +19,7 @@ warnings.showwarning = _custom_warning
 
 
 class PastaStore:
-    """Pastas project for managing pastas timeseries and models.
+    """Pastas project for managing pastas time series and models.
 
     Requires a Connector object to provide the interface to
     the database. Different Connectors are available, e.g.:
@@ -36,7 +37,7 @@ class PastaStore:
     """
 
     def __init__(self, name: str, connector):
-        """Initialize PastaStore for managing pastas timeseries and models.
+        """Initialize PastaStore for managing pastas time series and models.
 
         Parameters
         ----------
@@ -183,12 +184,7 @@ class PastaStore:
         data = pd.DataFrame(columns=np.arange(n))
 
         for series_name in distances.index:
-            others = (
-                distances.loc[series_name]
-                .dropna()
-                .sort_values()
-                .index.tolist()
-            )
+            others = distances.loc[series_name].dropna().sort_values().index.tolist()
             # remove self
             others.remove(series_name)
             series = pd.DataFrame(
@@ -299,23 +295,23 @@ class PastaStore:
         return data
 
     def get_tmin_tmax(self, libname, names=None, progressbar=False):
-        """Get tmin and tmax for timeseries.
+        """Get tmin and tmax for time series.
 
         Parameters
         ----------
         libname : str
-            name of the library containing the timeseries
+            name of the library containing the time series
             ('oseries' or 'stresses')
         names : str, list of str, or None, optional
-            names of the timeseries, by default None which
-            uses all the timeseries in the library
+            names of the time series, by default None which
+            uses all the time series in the library
         progressbar : bool, optional
             show progressbar, by default False
 
         Returns
         -------
         tmintmax : pd.dataframe
-            Dataframe containing tmin and tmax per timeseries
+            Dataframe containing tmin and tmax per time series
         """
 
         names = self.conn._parse_names(names, libname=libname)
@@ -372,13 +368,9 @@ class PastaStore:
 
         # loop through model names and store results
         desc = "Get model parameters"
-        for mlname in (
-            tqdm(modelnames, desc=desc) if progressbar else modelnames
-        ):
+        for mlname in tqdm(modelnames, desc=desc) if progressbar else modelnames:
             try:
-                mldict = self.get_models(
-                    mlname, return_dict=True, progressbar=False
-                )
+                mldict = self.get_models(mlname, return_dict=True, progressbar=False)
             except Exception as e:
                 if ignore_errors:
                     p.loc[mlname, :] = np.nan
@@ -398,7 +390,7 @@ class PastaStore:
 
     def get_statistics(
         self,
-        statistics: List[str],
+        statistics: Union[str, List[str]],
         modelnames: Optional[List[str]] = None,
         progressbar: Optional[bool] = False,
         ignore_errors: Optional[bool] = False,
@@ -408,9 +400,9 @@ class PastaStore:
 
         Parameters
         ----------
-        statistics : list of str
-            list of statistics to calculate, e.g. ["evp", "rsq", "rmse"], for
-            a full list see `pastas.modelstats.Statistics.ops`.
+        statistics : str or list of str
+            statistic or list of statistics to calculate, e.g. ["evp", "rsq", "rmse"],
+            for a full list see `pastas.modelstats.Statistics.ops`.
         modelnames : list of str, optional
             modelnames to calculates statistics for, by default None, which
             uses all models in the store
@@ -433,11 +425,13 @@ class PastaStore:
         # create dataframe for results
         s = pd.DataFrame(index=modelnames, columns=statistics, data=np.nan)
 
+        # if statistics is str
+        if isinstance(statistics, str):
+            statistics = [statistics]
+
         # loop through model names
         desc = "Get model statistics"
-        for mlname in (
-            tqdm(modelnames, desc=desc) if progressbar else modelnames
-        ):
+        for mlname in tqdm(modelnames, desc=desc) if progressbar else modelnames:
             try:
                 ml = self.get_models(mlname, progressbar=False)
             except Exception as e:
@@ -469,7 +463,7 @@ class PastaStore:
             name of the model, default is None, which uses oseries name
         add_recharge : bool, optional
             add recharge to the model by looking for the closest
-            precipitation and evaporation timeseries in the stresses
+            precipitation and evaporation time series in the stresses
             library, by default True
         recharge_name : str
             name of the RechargeModel
@@ -484,7 +478,7 @@ class PastaStore:
         KeyError
             if data is stored as dataframe and no column is provided
         ValueError
-            if timeseries is empty
+            if time series is empty
         """
         # get oseries metadata
         meta = self.conn.get_metadata("oseries", name, as_frame=False)
@@ -492,28 +486,23 @@ class PastaStore:
 
         # convert to Timeseries and create model
         if not ts.dropna().empty:
-            ts = ps.TimeSeries(
-                ts, name=name, settings="oseries", metadata=meta
-            )
             if modelname is None:
                 modelname = name
             ml = ps.Model(ts, name=modelname, metadata=meta)
-
             if add_recharge:
                 self.add_recharge(ml, recharge_name=recharge_name)
             return ml
         else:
-            raise ValueError("Empty timeseries!")
+            raise ValueError("Empty time series!")
 
     def create_models_bulk(
         self,
         oseries: Optional[Union[list, str]] = None,
         add_recharge: bool = True,
-        store: bool = True,
         solve: bool = False,
-        progressbar: bool = True,
-        return_models: bool = False,
+        store_models: bool = True,
         ignore_errors: bool = False,
+        progressbar: bool = True,
         **kwargs,
     ) -> Union[Tuple[dict, dict], dict]:
         """Bulk creation of pastas models.
@@ -525,17 +514,16 @@ class PastaStore:
             which creates models for all oseries
         add_recharge : bool, optional
             add recharge to the models based on closest
-            precipitation and evaporation timeseries, by default True
-        store : bool, optional
-            store the model, by default True
+            precipitation and evaporation time series, by default True
         solve : bool, optional
             solve the model, by default False
-        progressbar : bool, optional
-            show progressbar, by default True
-        return_models : bool, optional
-            if True, return a list of models, by default False
+        store_models : bool, optional
+            if False, return a list of models, by default True, which will
+            store the models in the database.
         ignore_errors : bool, optional
             ignore errors while creating models, by default False
+        progressbar : bool, optional
+            show progressbar, by default True
 
         Returns
         -------
@@ -563,27 +551,27 @@ class PastaStore:
                     raise e
             if solve:
                 iml.solve(**kwargs)
-            if store:
+            if store_models:
                 self.conn.add_model(iml, overwrite=True)
-            if return_models:
+            else:
                 models[o] = iml
         if len(errors) > 0:
             print("Warning! Errors occurred while creating models!")
-        if return_models:
-            return models, errors
-        else:
+        if store_models:
             return errors
+        else:
+            return models, errors
 
     def add_recharge(
         self,
         ml: ps.Model,
-        rfunc=ps.Gamma,
-        recharge=ps.rch.Linear(),
+        rfunc=None,
+        recharge=None,
         recharge_name: str = "recharge",
     ) -> None:
         """Add recharge to a pastas model.
 
-        Uses closest precipitation and evaporation timeseries in database.
+        Uses closest precipitation and evaporation time series in database.
         These are assumed to be labeled with kind = 'prec' or 'evap'.
 
         Parameters
@@ -591,54 +579,56 @@ class PastaStore:
         ml : pastas.Model
             pastas.Model object
         rfunc : pastas.rfunc, optional
-            response function to use for recharge in model,
-            by default ps.Gamma (for different response functions, see
-            pastas documentation)
+            response function to use for recharge in model, by default None
+            which uses ps.Exponential() (for different response functions, see pastas
+            documentation)
         recharge : ps.RechargeModel
             recharge model to use, default is ps.rch.Linear()
         recharge_name : str
             name of the RechargeModel
         """
         # get nearest prec and evap stns
+        if "prec" not in self.stresses.kind.values:
+            raise ValueError(
+                "No stresses with kind='prec' found in store. "
+                "add_recharge() requires stresses with kind='prec'!"
+            )
+        if "evap" not in self.stresses.kind.values:
+            raise ValueError(
+                "No stresses with kind='evap' found in store. "
+                "add_recharge() requires stresses with kind='evap'!"
+            )
         names = []
         for var in ("prec", "evap"):
             try:
-                name = self.get_nearest_stresses(
-                    ml.oseries.name, kind=var
-                ).iloc[0, 0]
+                name = self.get_nearest_stresses(ml.oseries.name, kind=var).iloc[0, 0]
             except AttributeError:
-                msg = "No precipitation or evaporation timeseries found!"
+                msg = "No precipitation or evaporation time series found!"
                 raise Exception(msg)
             if isinstance(name, float):
                 if np.isnan(name):
                     raise ValueError(
                         f"Unable to find nearest '{var}' stress! "
-                        "Check X and Y coordinates."
+                        "Check x and y coordinates."
                     )
             else:
                 names.append(name)
         if len(names) == 0:
-            msg = "No precipitation or evaporation timeseries found!"
+            msg = "No precipitation or evaporation time series found!"
             raise Exception(msg)
 
         # get data
         tsdict = self.conn.get_stresses(names)
-        stresses = []
-        for (k, s), setting in zip(tsdict.items(), ("prec", "evap")):
-            metadata = self.conn.get_metadata("stresses", k, as_frame=False)
-            stresses.append(
-                ps.TimeSeries(s, name=k, settings=setting, metadata=metadata)
-            )
-
+        metadata = self.conn.get_metadata("stresses", names, as_frame=False)
         # add recharge to model
         rch = ps.RechargeModel(
-            stresses[0],
-            stresses[1],
-            rfunc,
+            tsdict[names[0]],
+            tsdict[names[1]],
+            rfunc=rfunc,
             name=recharge_name,
             recharge=recharge,
             settings=("prec", "evap"),
-            metadata=[i.metadata for i in stresses],
+            metadata=metadata,
         )
         ml.add_stressmodel(rch)
 
@@ -732,9 +722,7 @@ class PastaStore:
         try:
             from art_tools import pastas_get_model_results
         except Exception:
-            raise ModuleNotFoundError(
-                "You need 'art_tools' to use this method!"
-            )
+            raise ModuleNotFoundError("You need 'art_tools' to use this method!")
 
         if mls is None:
             mls = self.conn.models
@@ -772,22 +760,16 @@ class PastaStore:
 
         if os.path.exists(fname) and not overwrite:
             raise FileExistsError(
-                "File already exists! "
-                "Use 'overwrite=True' to "
-                "force writing file."
+                "File already exists! " "Use 'overwrite=True' to " "force writing file."
             )
         elif os.path.exists(fname):
             warnings.warn(f"Overwriting file '{os.path.basename(fname)}'")
 
         with ZipFile(fname, "w", compression=ZIP_DEFLATED) as archive:
             # oseries
-            self.conn._series_to_archive(
-                archive, "oseries", progressbar=progressbar
-            )
+            self.conn._series_to_archive(archive, "oseries", progressbar=progressbar)
             # stresses
-            self.conn._series_to_archive(
-                archive, "stresses", progressbar=progressbar
-            )
+            self.conn._series_to_archive(archive, "stresses", progressbar=progressbar)
             # models
             self.conn._models_to_archive(archive, progressbar=progressbar)
 
@@ -797,7 +779,7 @@ class PastaStore:
         exportdir: str = ".",
         exportmeta: bool = True,
     ):  # pragma: no cover
-        """Export model timeseries to csv files.
+        """Export model time series to csv files.
 
         Parameters
         ----------
@@ -807,7 +789,7 @@ class PastaStore:
         exportdir : str, optional
             directory to export csv files to, default is current directory
         exportmeta : bool, optional
-            export metadata for all timeseries as csv file, default is True
+            export metadata for all time series as csv file, default is True
         """
         names = self.conn._parse_names(names, libname="models")
         for name in names:
@@ -821,17 +803,12 @@ class PastaStore:
                 metalist = [self.get_metadata("oseries", oname)]
 
             for sm in mldict["stressmodels"]:
-                if (
-                    mldict["stressmodels"][sm]["stressmodel"]
-                    == "RechargeModel"
-                ):
+                if mldict["stressmodels"][sm]["stressmodel"] == "RechargeModel":
                     for istress in ["prec", "evap"]:
                         istress = mldict["stressmodels"][sm][istress]
                         stress_name = istress["name"]
                         ts = self.get_stresses(stress_name)
-                        ts.to_csv(
-                            os.path.join(exportdir, f"{stress_name}.csv")
-                        )
+                        ts.to_csv(os.path.join(exportdir, f"{stress_name}.csv"))
                         if exportmeta:
                             tsmeta = self.get_metadata("stresses", stress_name)
                             metalist.append(tsmeta)
@@ -839,9 +816,7 @@ class PastaStore:
                     for istress in mldict["stressmodels"][sm]["stress"]:
                         stress_name = istress["name"]
                         ts = self.get_stresses(stress_name)
-                        ts.to_csv(
-                            os.path.join(exportdir, f"{stress_name}.csv")
-                        )
+                        ts.to_csv(os.path.join(exportdir, f"{stress_name}.csv"))
                         if exportmeta:
                             tsmeta = self.get_metadata("stresses", stress_name)
                             metalist.append(tsmeta)
@@ -882,25 +857,17 @@ class PastaStore:
 
         with ZipFile(fname, "r") as archive:
             namelist = [
-                fi
-                for fi in archive.namelist()
-                if not fi.endswith("_meta.json")
+                fi for fi in archive.namelist() if not fi.endswith("_meta.json")
             ]
-            for f in (
-                tqdm(namelist, desc="Reading zip") if progressbar else namelist
-            ):
+            for f in tqdm(namelist, desc="Reading zip") if progressbar else namelist:
                 libname, fjson = os.path.split(f)
                 if libname in ["stresses", "oseries"]:
                     s = pd.read_json(archive.open(f), orient="columns")
                     if not isinstance(s.index, pd.DatetimeIndex):
                         s.index = pd.to_datetime(s.index, unit="ms")
                     s = s.sort_index()
-                    meta = json.load(
-                        archive.open(f.replace(".json", "_meta.json"))
-                    )
-                    conn._add_series(
-                        libname, s, fjson.split(".")[0], metadata=meta
-                    )
+                    meta = json.load(archive.open(f.replace(".json", "_meta.json")))
+                    conn._add_series(libname, s, fjson.split(".")[0], metadata=meta)
                 elif libname in ["models"]:
                     ml = json.load(archive.open(f), object_hook=pastas_hook)
                     conn.add_model(ml)
@@ -914,7 +881,7 @@ class PastaStore:
         s: Optional[Union[list, str]] = None,
         case_sensitive: bool = True,
     ):
-        """Search for names of timeseries or models starting with s.
+        """Search for names of time series or models starting with s.
 
         Parameters
         ----------
@@ -938,9 +905,7 @@ class PastaStore:
         elif libname == "oseries":
             lib_names = getattr(self, "oseries_names")
         else:
-            raise ValueError(
-                "Provide valid libname: 'models', 'stresses' or 'oseries'"
-            )
+            raise ValueError("Provide valid libname: 'models', 'stresses' or 'oseries'")
 
         if isinstance(s, str):
             if case_sensitive:
@@ -953,9 +918,7 @@ class PastaStore:
                 if case_sensitive:
                     m = np.append(m, [n for n in lib_names if sub in n])
                 else:
-                    m = np.append(
-                        m, [n for n in lib_names if sub.lower() in n.lower()]
-                    )
+                    m = np.append(m, [n for n in lib_names if sub.lower() in n.lower()])
             matches = list(np.unique(m))
 
         return matches
@@ -966,12 +929,12 @@ class PastaStore:
         dropna: bool = True,
         progressbar: bool = True,
     ) -> FrameorSeriesUnion:
-        """Get timeseries names contained in model.
+        """Get time series names contained in model.
 
         Parameters
         ----------
         modelnames : Optional[Union[list, str]], optional
-            list or name of models to get timeseries names for,
+            list or name of models to get time series names for,
             by default None which will use all modelnames
         dropna : bool, optional
             drop stresses from table if stress is not included in any
@@ -983,7 +946,7 @@ class PastaStore:
         -------
         structure : pandas.DataFrame
             returns DataFrame with oseries name per model, and a flag
-            indicating whether a stress is contained within a timeseries
+            indicating whether a stress is contained within a time series
             model.
         """
 
@@ -993,7 +956,7 @@ class PastaStore:
         )
 
         for mlnam in (
-            tqdm(model_names, desc="Get model timeseries names")
+            tqdm(model_names, desc="Get model time series names")
             if progressbar
             else model_names
         ):
@@ -1003,7 +966,8 @@ class PastaStore:
             structure.loc[mlnam, "oseries"] = iml["oseries"]["name"]
 
             for sm in iml["stressmodels"].values():
-                if sm["stressmodel"] == "RechargeModel":
+                class_key = "stressmodel" if PASTAS_LEQ_022 else "class"
+                if sm[class_key] == "RechargeModel":
                     pnam = sm["prec"]["name"]
                     enam = sm["evap"]["name"]
                     structure.loc[mlnam, pnam] = 1

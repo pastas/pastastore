@@ -1,9 +1,9 @@
 """This module contains all the plotting methods for PastaStore.
 
 Pastastore comes with a number helpful plotting methods to quickly
-visualize timeseries or the locations of the timeseries contained in the
-store. Plotting timeseries or data availability is available through the
-`plots` attribute of the PastaStore object. Plotting locations of timeseries
+visualize time series or the locations of the time series contained in the
+store. Plotting time series or data availability is available through the
+`plots` attribute of the PastaStore object. Plotting locations of time series
 or model statistics on maps is available through the `maps` attribute.
 For example, if we have a :class:`pastastore.PastaStore` called `pstore`
 linking to an existing database, the plot and map methods are available as
@@ -29,7 +29,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 class Plots:
     """Plot class for Pastastore.
 
-    Allows plotting of timeseries and data availability.
+    Allows plotting of time series and data availability.
     """
 
     def __init__(self, pstore):
@@ -52,25 +52,25 @@ class Plots:
         progressbar=True,
         **kwargs,
     ):
-        """Internal method to plot timeseries from pastastore.
+        """Internal method to plot time series from pastastore.
 
         Parameters
         ----------
         libname : str
-            name of the library to obtain timeseries from (oseries
+            name of the library to obtain time series from (oseries
             or stresses)
         names : list of str, optional
-            list of timeseries names to plot, by default None
+            list of time series names to plot, by default None
         ax : matplotlib.Axes, optional
             pass axes object to plot on existing axes, by default None,
             which creates a new figure
         split : bool, optional
-            create a separate subplot for each timeseries, by default False.
-            A maximum of 20 timeseries is supported when split=True.
+            create a separate subplot for each time series, by default False.
+            A maximum of 20 time series is supported when split=True.
         figsize : tuple, optional
             figure size, by default (10, 5)
         progressbar : bool, optional
-            show progressbar when loading timeseries from store,
+            show progressbar when loading time series from store,
             by default True
 
         Returns
@@ -81,22 +81,20 @@ class Plots:
         Raises
         ------
         ValueError
-            split=True is only supported if there are less than 20 timeseries
+            split=True is only supported if there are less than 20 time series
             to plot.
         """
         names = self.pstore.conn._parse_names(names, libname)
 
         if len(names) > 20 and split:
             raise ValueError(
-                "More than 20 timeseries leads to too many "
+                "More than 20 time series leads to too many "
                 "subplots, set split=False."
             )
 
         if ax is None:
             if split:
-                fig, axes = plt.subplots(
-                    len(names), 1, sharex=True, figsize=figsize
-                )
+                fig, axes = plt.subplots(len(names), 1, sharex=True, figsize=figsize)
             else:
                 fig, axes = plt.subplots(1, 1, figsize=figsize)
         else:
@@ -122,9 +120,7 @@ class Plots:
         fig.tight_layout()
         return axes
 
-    def oseries(
-        self, names=None, ax=None, split=False, figsize=(10, 5), **kwargs
-    ):
+    def oseries(self, names=None, ax=None, split=False, figsize=(10, 5), **kwargs):
         """Plot oseries.
 
         Parameters
@@ -136,8 +132,8 @@ class Plots:
             pass axes object to plot oseries on existing figure,
             by default None, in which case a new figure is created
         split : bool, optional
-            create a separate subplot for each timeseries, by default False.
-            A maximum of 20 timeseries is supported when split=True.
+            create a separate subplot for each time series, by default False.
+            A maximum of 20 time series is supported when split=True.
         figsize : tuple, optional
             figure size, by default (10, 5)
 
@@ -178,8 +174,8 @@ class Plots:
             pass axes object to plot oseries on existing figure,
             by default None, in which case a new figure is created
         split : bool, optional
-            create a separate subplot for each timeseries, by default False.
-            A maximum of 20 timeseries is supported when split=True.
+            create a separate subplot for each time series, by default False.
+            A maximum of 20 time series is supported when split=True.
         figsize : tuple, optional
             figure size, by default (10, 5)
 
@@ -222,15 +218,15 @@ class Plots:
         dropna=True,
         **kwargs,
     ):
-        """Plot the data-availability for multiple timeseries in pastastore.
+        """Plot the data-availability for multiple time series in pastastore.
 
         Parameters
         ----------
         libname : str
-            name of library to get timeseries from (oseries or stresses)
+            name of library to get time series from (oseries or stresses)
         names : list, optional
             specify names in a list to plot data availability for certain
-            timeseries
+            time series
         kind : str, optional
             if library is stresses, kind can be specified to obtain only
             stresses of a specific kind
@@ -308,7 +304,7 @@ class Plots:
         dropna=True,
         **kwargs,
     ):
-        """Plot the data-availability for a list of timeseries.
+        """Plot the data-availability for a list of time series.
 
         Parameters
         ----------
@@ -380,7 +376,7 @@ class Plots:
             norm = LogNorm(vmin=bounds[0], vmax=bounds[-1])
         else:
             norm = BoundaryNorm(boundaries=bounds, ncolors=256)
-        cmap = plt.cm.get_cmap(cmap, 256)
+        cmap = plt.get_cmap(cmap, 256)
         cmap.set_over((1.0, 1.0, 1.0))
 
         for i, s in enumerate(series):
@@ -531,12 +527,21 @@ class Maps:
         self.pstore = pstore
 
     def stresses(
-        self, kind=None, labels=True, adjust=False, figsize=(10, 8), **kwargs
+        self,
+        names=None,
+        kind=None,
+        labels=True,
+        adjust=False,
+        figsize=(10, 8),
+        backgroundmap=False,
+        **kwargs,
     ):
         """Plot stresses locations on map.
 
         Parameters
         ----------
+        names : list of str, optional
+            list of names to plot
         kind: str, optional
             if passed, only plot stresses of a specific kind, default is None
             which plots all stresses.
@@ -544,8 +549,13 @@ class Maps:
             label models, by default True
         adjust: bool, optional
             automated smart label placement using adjustText, by default False
+        ax : matplotlib.Axes, optional
+            axes handle, if not provided a new figure is created.
         figsize: tuple, optional
             figure size, by default(10, 8)
+        backgroundmap: bool, optional
+            if True, add background map (default CRS is EPSG:28992) with default tiles
+            by OpenStreetMap.Mapnik. Default option is False.
 
         Returns
         -------
@@ -556,12 +566,16 @@ class Maps:
         --------
         self.add_background_map
         """
+        if names is not None:
+            df = self.pstore.stresses.loc[names]
+        else:
+            df = self.pstore.stresses
 
         if kind is not None:
-            mask = self.pstore.stresses["kind"] == kind
-            stresses = self.pstore.stresses.loc[mask]
+            mask = df["kind"] == kind
+            stresses = df[mask]
         else:
-            stresses = self.pstore.stresses
+            stresses = df
 
         mask0 = (stresses["x"] != 0.0) | (stresses["y"] != 0.0)
 
@@ -569,9 +583,7 @@ class Maps:
         kind_to_color = {k: f"C{i}" for i, k in enumerate(c.unique())}
         c = c.apply(lambda k: kind_to_color[k])
 
-        r = self._plotmap_dataframe(
-            stresses.loc[mask0], c=c, figsize=figsize, **kwargs
-        )
+        r = self._plotmap_dataframe(stresses.loc[mask0], c=c, figsize=figsize, **kwargs)
         if "ax" in kwargs:
             ax = kwargs["ax"]
         else:
@@ -579,10 +591,19 @@ class Maps:
         if labels:
             self.add_labels(stresses, ax, adjust=adjust)
 
+        if backgroundmap:
+            self.add_background_map(ax)
+
         return ax
 
     def oseries(
-        self, names=None, labels=True, adjust=False, figsize=(10, 8), **kwargs
+        self,
+        names=None,
+        labels=True,
+        adjust=False,
+        figsize=(10, 8),
+        backgroundmap=False,
+        **kwargs,
     ):
         """Plot oseries locations on map.
 
@@ -596,6 +617,9 @@ class Maps:
             automated smart label placement using adjustText, by default False
         figsize: tuple, optional
             figure size, by default(10, 8)
+        backgroundmap: bool, optional
+            if True, add background map (default CRS is EPSG:28992) with default tiles
+            by OpenStreetMap.Mapnik. Default option is False.
 
         Returns
         -------
@@ -610,18 +634,22 @@ class Maps:
         names = self.pstore.conn._parse_names(names, "oseries")
         oseries = self.pstore.oseries.loc[names]
         mask0 = (oseries["x"] != 0.0) | (oseries["y"] != 0.0)
-        r = self._plotmap_dataframe(
-            oseries.loc[mask0], figsize=figsize, **kwargs
-        )
+        r = self._plotmap_dataframe(oseries.loc[mask0], figsize=figsize, **kwargs)
         if "ax" in kwargs:
             ax = kwargs["ax"]
         else:
             ax = r
         if labels:
             self.add_labels(oseries, ax, adjust=adjust)
+
+        if backgroundmap:
+            self.add_background_map(ax)
+
         return ax
 
-    def models(self, labels=True, adjust=False, figsize=(10, 8), **kwargs):
+    def models(
+        self, labels=True, adjust=False, figsize=(10, 8), backgroundmap=False, **kwargs
+    ):
         """Plot model locations on map.
 
         Parameters
@@ -630,8 +658,13 @@ class Maps:
             label models, by default True
         adjust: bool, optional
             automated smart label placement using adjustText, by default False
+        ax : matplotlib.Axes, optional
+            axes handle, if not provided a new figure is created.
         figsize: tuple, optional
             figure size, by default(10, 8)
+        backgroundmap: bool, optional
+            if True, add background map (default CRS is EPSG:28992) with default tiles
+            by OpenStreetMap.Mapnik. Default option is False.
 
         Returns
         -------
@@ -653,15 +686,17 @@ class Maps:
 
         # mask out 0.0 coordinates
         mask0 = (models["x"] != 0.0) | (models["y"] != 0.0)
-        r = self._plotmap_dataframe(
-            models.loc[mask0], figsize=figsize, **kwargs
-        )
+        r = self._plotmap_dataframe(models.loc[mask0], figsize=figsize, **kwargs)
         if "ax" in kwargs:
             ax = kwargs["ax"]
         else:
             ax = r
         if labels:
             self.add_labels(models, ax, adjust=adjust)
+
+        if backgroundmap:
+            self.add_background_map(ax)
+
         return ax
 
     def modelstat(
@@ -674,6 +709,7 @@ class Maps:
         vmin=None,
         vmax=None,
         figsize=(10, 8),
+        backgroundmap=False,
         **kwargs,
     ):
         """Plot model statistic on map.
@@ -694,8 +730,13 @@ class Maps:
             vmin for colorbar, by default None
         vmax: float, optional
             vmax for colorbar, by default None
+        ax : matplotlib.Axes, optional
+            axes handle, if not provided a new figure is created.
         figsize: tuple, optional
             figuresize, by default(10, 8)
+        backgroundmap: bool, optional
+            if True, add background map (default CRS is EPSG:28992) with default tiles
+            by OpenStreetMap.Mapnik. Default option is False.
 
         Returns
         -------
@@ -706,9 +747,7 @@ class Maps:
         --------
         self.add_background_map
         """
-        statsdf = self.pstore.get_statistics(
-            [statistic], progressbar=False
-        ).to_frame()
+        statsdf = self.pstore.get_statistics([statistic], progressbar=False).to_frame()
 
         statsdf["oseries"] = [
             self.pstore.get_models(m, return_dict=True)["oseries"]["name"]
@@ -734,6 +773,10 @@ class Maps:
         if label:
             df.set_index("index", inplace=True)
             self.add_labels(df, ax, adjust=adjust)
+
+        if backgroundmap:
+            self.add_background_map(ax)
+
         return ax
 
     @staticmethod
@@ -828,7 +871,16 @@ class Maps:
         else:
             return ax
 
-    def model(self, ml, label=True, metadata_source="model", offset=0.0):
+    def model(
+        self,
+        ml,
+        label=True,
+        metadata_source="model",
+        offset=0.0,
+        ax=None,
+        figsize=(10, 10),
+        backgroundmap=False,
+    ):
         """Plot oseries and stresses from one model on a map.
 
         Parameters
@@ -841,8 +893,15 @@ class Maps:
             whether to obtain metadata from model Timeseries or from
             metadata in pastastore("store"), default is "model"
         offset : float, optional
-            add offset to current extent of model timeseries, useful
+            add offset to current extent of model time series, useful
             for zooming out around models
+        ax : matplotlib.Axes, optional
+            axes handle, if not provided a new figure is created.
+        figsize: tuple, optional
+            figsize, default is (10, 10)
+        backgroundmap: bool, optional
+            if True, add background map (default CRS is EPSG:28992) with default tiles
+            by OpenStreetMap.Mapnik. Default option is False.
 
         Returns
         -------
@@ -862,7 +921,6 @@ class Maps:
         count = 0
         for name, sm in ml.stressmodels.items():
             for istress in sm.stress:
-
                 if metadata_source == "model":
                     xi = istress.metadata["x"]
                     yi = istress.metadata["y"]
@@ -887,7 +945,10 @@ class Maps:
             count += 1
 
         # create figure
-        fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+        if ax is None:
+            fig, ax = plt.subplots(1, 1, figsize=figsize)
+        else:
+            fig = ax.figure
 
         # add oseries
         osize = 50
@@ -897,19 +958,13 @@ class Maps:
             xm = float(ml.oseries.metadata["x"])
             ym = float(ml.oseries.metadata["y"])
         elif metadata_source == "store":
-            ometa = self.pstore.get_metadata(
-                "oseries", ml.oseries.name, as_frame=False
-            )
+            ometa = self.pstore.get_metadata("oseries", ml.oseries.name, as_frame=False)
             xm = float(ometa.pop("x", np.nan))
             ym = float(ometa.pop("y", np.nan))
         else:
-            raise ValueError(
-                "metadata_source must be either " "'model' or 'store'!"
-            )
+            raise ValueError("metadata_source must be either " "'model' or 'store'!")
 
-        po = ax.scatter(
-            xm, ym, s=osize, marker="o", label=oserieslabel, color="k"
-        )
+        po = ax.scatter(xm, ym, s=osize, marker="o", label=oserieslabel, color="k")
         legend_list = [po]
 
         # add stresses
@@ -953,9 +1008,7 @@ class Maps:
             legend_list.append(h)
 
         # add legend
-        ax.legend(
-            legend_list, [i.get_label() for i in legend_list], loc="best"
-        )
+        ax.legend(legend_list, [i.get_label() for i in legend_list], loc="best")
 
         # set axes properties
         ax.set_xlabel("x")
@@ -984,6 +1037,9 @@ class Maps:
                 )
                 txt.set_path_effects(stroke)
 
+        if backgroundmap:
+            self.add_background_map(ax)
+
         fig.tight_layout()
 
         return ax
@@ -994,36 +1050,44 @@ class Maps:
         model_names=None,
         color_lines=False,
         alpha=0.4,
+        ax=None,
         figsize=(10, 8),
         legend=True,
         labels=False,
         adjust=False,
+        backgroundmap=False,
     ):
         """Create a map linking models with their stresses.
 
         Parameters
         ----------
-            kinds: list, optional
-                kinds of stresses to plot, defaults to None, which selects
-                all kinds.
-            model_names: list, optional
-                list of model names to plot, substrings of model names
-                are also accepted, defaults to None, which selects all
-                models.
-            color_lines: bool, optional
-                if True, connecting lines have the same colors as the stresses,
-                defaults to False, which uses a black line.
-            alpha: float, optional
-                alpha value for the connecting lines, defaults to 0.4.
-            figsize : tuple, optional
-                figure size, by default (10, 8)
-            legend: bool, optional
-                create a legend for all unique kinds, defaults to True.
-            labels: bool, optional
-                add labels for stresses and oseries, defaults to False.
-            adjust: bool, optional
-                automated smart label placement using adjustText, by
-                default False
+        kinds: list, optional
+            kinds of stresses to plot, defaults to None, which selects
+            all kinds.
+        model_names: list, optional
+            list of model names to plot, substrings of model names
+            are also accepted, defaults to None, which selects all
+            models.
+        color_lines: bool, optional
+            if True, connecting lines have the same colors as the stresses,
+            defaults to False, which uses a black line.
+        alpha: float, optional
+            alpha value for the connecting lines, defaults to 0.4.
+        ax : matplotlib.Axes, optional
+            axes handle, if not provided a new figure is created.
+        figsize : tuple, optional
+            figure size, by default (10, 8)
+        legend: bool, optional
+            create a legend for all unique kinds, defaults to True.
+        labels: bool, optional
+            add labels for stresses and oseries, defaults to False.
+        adjust: bool, optional
+            automated smart label placement using adjustText, by
+            default False
+        backgroundmap: bool, optional
+            if True, add background map (default CRS is EPSG:28992) with default tiles
+            by OpenStreetMap.Mapnik. Default option is False.
+
         Returns
         -------
         ax: axes object
@@ -1037,9 +1101,7 @@ class Maps:
             m_idx = self.pstore.search(libname="models", s=model_names)
         else:
             m_idx = self.pstore.model_names
-        struct = self.pstore.get_model_timeseries_names(progressbar=False).loc[
-            m_idx
-        ]
+        struct = self.pstore.get_model_timeseries_names(progressbar=False).loc[m_idx]
 
         oseries = self.pstore.oseries
         stresses = self.pstore.stresses
@@ -1048,9 +1110,12 @@ class Maps:
         if kinds is None:
             kinds = skind
 
-        _, ax = plt.subplots(figsize=figsize)
+        if ax is None:
+            _, ax = plt.subplots(figsize=figsize)
+
         segments = []
         segment_colors = []
+        scatter_colors = []
         ax.scatter(
             oseries.loc[struct["oseries"], "x"],
             oseries.loc[struct["oseries"], "y"],
@@ -1071,24 +1136,21 @@ class Maps:
                         [[os["x"], os["y"]], [st.loc[s, "x"], st.loc[s, "y"]]]
                     )
                     segment_colors.append(color)
+                    scatter_colors.append(f"C{c[0]+1}")
 
                     stused = np.append(stused, s)
 
         if labels:
-            self.add_labels(
-                oseries.loc[struct["oseries"].unique()], ax, adjust=adjust
-            )
+            self.add_labels(oseries.loc[struct["oseries"].unique()], ax, adjust=adjust)
             self.add_labels(stresses.loc[np.unique(stused)], ax, adjust=adjust)
 
         ax.scatter(
             [x[1][0] for x in segments],
             [y[1][1] for y in segments],
-            color=segment_colors,
+            color=scatter_colors,
         )
         ax.add_collection(
-            LineCollection(
-                segments, colors=segment_colors, linewidths=0.5, alpha=alpha
-            )
+            LineCollection(segments, colors=segment_colors, linewidths=0.5, alpha=alpha)
         )
 
         if legend:
@@ -1117,6 +1179,9 @@ class Maps:
                     )
                 )
             ax.legend(handles=legend_elements)
+
+        if backgroundmap:
+            self.add_background_map(ax)
 
         return ax
 
@@ -1171,9 +1236,7 @@ class Maps:
             proj = pyproj.Proj(proj)
 
         providers = Maps._list_contextily_providers()
-        ctx.add_basemap(
-            ax, source=providers[map_provider], crs=proj.srs, **kwargs
-        )
+        ctx.add_basemap(ax, source=providers[map_provider], crs=proj.srs, **kwargs)
 
     @staticmethod
     def add_labels(df, ax, adjust=False, **kwargs):
@@ -1200,9 +1263,7 @@ class Maps:
             texts = []
             for name, row in df.iterrows():
                 texts.append(
-                    ax.text(
-                        row["x"], row["y"], name, **{"path_effects": stroke}
-                    )
+                    ax.text(row["x"], row["y"], name, **{"path_effects": stroke})
                 )
 
             adjust_text(

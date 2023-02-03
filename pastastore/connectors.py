@@ -16,7 +16,6 @@ warnings.showwarning = _custom_warning
 
 
 class ArcticConnector(BaseConnector, ConnectorUtil):
-
     conn_type = "arctic"
 
     def __init__(self, name: str, connstr: str):
@@ -95,14 +94,14 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         metadata: Optional[Dict] = None,
         **_,
     ) -> None:
-        """Internal method to add item to library (timeseries or model).
+        """Internal method to add item to library (time series or model).
 
         Parameters
         ----------
         libname : str
             name of the library
         item : Union[FrameorSeriesUnion, Dict]
-            item to add, either timeseries or pastas.Model as dictionary
+            item to add, either time series or pastas.Model as dictionary
         name : str
             name of the item
         metadata : Optional[Dict], optional
@@ -111,9 +110,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         lib = self._get_library(libname)
         lib.write(name, item, metadata=metadata)
 
-    def _get_item(
-        self, libname: str, name: str
-    ) -> Union[FrameorSeriesUnion, Dict]:
+    def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
         """Internal method to retrieve item from library.
 
         Parameters
@@ -126,7 +123,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         Returns
         -------
         item : Union[FrameorSeriesUnion, Dict]
-            timeseries or model dictionary
+            time series or model dictionary
         """
         lib = self._get_library(libname)
         return lib.read(name).data
@@ -202,7 +199,6 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
 
 
 class PystoreConnector(BaseConnector, ConnectorUtil):
-
     conn_type = "pystore"
 
     def __init__(self, name: str, path: str):
@@ -270,14 +266,14 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         metadata: Optional[Dict] = None,
         overwrite: bool = False,
     ) -> None:
-        """Internal method to add item to library (timeseries or model).
+        """Internal method to add item to library (time series or model).
 
         Parameters
         ----------
         libname : str
             name of the library
         item : Union[FrameorSeriesUnion, Dict]
-            item to add, either timeseries or pastas.Model as dictionary
+            item to add, either time series or pastas.Model as dictionary
         name : str
             name of the item
         metadata : Optional[Dict], optional
@@ -292,9 +288,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
             is_type = "series"
         elif isinstance(item, dict):
             s = pd.DataFrame()  # empty DataFrame as placeholder
-            jsondict = json.loads(
-                json.dumps(item, cls=PastasEncoder, indent=4)
-            )
+            jsondict = json.loads(json.dumps(item, cls=PastasEncoder, indent=4))
             metadata = jsondict  # model dict is stored in metadata
             is_type = "series"
         elif isinstance(item, list):
@@ -313,9 +307,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         lib = self._get_library(libname)
         lib.write(name, s, metadata=metadata, overwrite=overwrite)
 
-    def _get_item(
-        self, libname: str, name: str
-    ) -> Union[FrameorSeriesUnion, Dict]:
+    def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
         """Internal method to retrieve item from pystore library.
 
         Parameters
@@ -328,7 +320,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         Returns
         -------
         item : Union[FrameorSeriesUnion, Dict]
-            timeseries or model dictionary
+            time series or model dictionary
         """
         load_mod = import_module("pastas.io.pas")  # type: ignore
         lib = self._get_library(libname)
@@ -427,7 +419,6 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
 
 
 class DictConnector(BaseConnector, ConnectorUtil):
-
     conn_type = "dict"
 
     def __init__(self, name: str):
@@ -471,7 +462,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         metadata: Optional[Dict] = None,
         **_,
     ) -> None:
-        """Internal method to add item (timeseries or models).
+        """Internal method to add item (time series or models).
 
         Parameters
         ----------
@@ -490,9 +481,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         else:
             lib[name] = (metadata, item)
 
-    def _get_item(
-        self, libname: str, name: str
-    ) -> Union[FrameorSeriesUnion, Dict]:
+    def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
         """Internal method to retrieve item from pystore library.
 
         Parameters
@@ -505,7 +494,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         Returns
         -------
         item : Union[FrameorSeriesUnion, Dict]
-            timeseries or model dictionary
+            time series or model dictionary
         """
         lib = self._get_library(libname)
         if libname in ["models", "oseries_models"]:
@@ -572,7 +561,6 @@ class DictConnector(BaseConnector, ConnectorUtil):
 
 
 class PasConnector(BaseConnector, ConnectorUtil):
-
     conn_type = "pas"
 
     def __init__(self, name: str, path: str):
@@ -633,7 +621,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         metadata: Optional[Dict] = None,
         **_,
     ) -> None:
-        """Internal method to add item (timeseries or models).
+        """Internal method to add item (time series or models).
 
         Parameters
         ----------
@@ -648,7 +636,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         """
         lib = self._get_library(libname)
 
-        # timeseries
+        # time series
         if isinstance(item, pd.Series):
             item = item.to_frame()
         if isinstance(item, pd.DataFrame):
@@ -674,9 +662,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
             with open(fname, "w") as fm:
                 fm.write(jsondict)
 
-    def _get_item(
-        self, libname: str, name: str
-    ) -> Union[FrameorSeriesUnion, Dict]:
+    def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
         """Internal method to retrieve item.
 
         Parameters
@@ -689,7 +675,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         Returns
         -------
         item : Union[FrameorSeriesUnion, Dict]
-            timeseries or model dictionary
+            time series or model dictionary
         """
         lib = self._get_library(libname)
         fjson = os.path.join(lib, f"{name}.pas")
@@ -704,7 +690,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         elif libname == "oseries_models":
             with open(fjson, "r") as f:
                 item = json.load(f)
-        # timeseries
+        # time series
         else:
             item = self._series_from_json(fjson)
         return item
@@ -721,7 +707,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         """
         lib = self._get_library(libname)
         os.remove(os.path.join(lib, f"{name}.pas"))
-        # remove metadata for timeseries
+        # remove metadata for time series
         if libname != "models":
             try:
                 os.remove(os.path.join(lib, f"{name}_meta.pas"))
