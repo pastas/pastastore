@@ -24,7 +24,7 @@ def tempyaml(yaml):
 def test_load_yaml_rechargemodel(pstore):
     yamlstr = """
     my_first_model:                   # model name
-      oseries: oseries2               # head timeseries name, obtained from pastastore
+      oseries: oseries2               # head time series name, obtained from pastastore
       stressmodels:                   # stressmodels dictionary
         recharge:                     # name of the recharge stressmodel
           class: RechargeModel        # type of pastas StressModel
@@ -43,7 +43,7 @@ def test_load_yaml_rechargemodel(pstore):
 def test_load_yaml_stressmodel(pstore):
     yamlstr = """
     my_second_model:                  # model name
-      oseries: oseries2               # head timeseries name, obtained from pastastore
+      oseries: oseries2               # head time series name, obtained from pastastore
       stressmodels:                   # stressmodels dictionary
         prec:                         # name of the recharge stressmodel
           class: StressModel          # type of pastas StressModel
@@ -60,7 +60,7 @@ def test_load_yaml_stressmodel(pstore):
 def test_load_yaml_wellmodel(pstore):
     yamlstr = """
     my_third_model:                   # model name
-      oseries: oseries1               # head timeseries name, obtained from pastastore
+      oseries: oseries1               # head time series name, obtained from pastastore
       stressmodels:                   # stressmodels dictionary
         well:                         # name of the recharge stressmodel
           class: WellModel            # type of pastas StressModel

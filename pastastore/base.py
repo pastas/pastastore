@@ -414,7 +414,7 @@ class BaseConnector(ABC):
         series : pandas.Series or pandas.DataFrame
             data to add
         name : str
-            name of the timeseries
+            name of the time series
         metadata : dict, optional
             dictionary containing metadata, by default None.
         validate : bool, optional
@@ -451,7 +451,7 @@ class BaseConnector(ABC):
             data to add, if pastas.Timeseries is passed, series_orignal
             and metadata is stored in database
         name : str
-            name of the timeseries
+            name of the time series
         kind : str
             category to identify type of stress, this label is added to the
             metadata dictionary.
@@ -550,7 +550,7 @@ class BaseConnector(ABC):
         Returns
         -------
         series, metadata : FrameorSeriesUnion, Optional[Dict]
-            timeseries as pandas.Series or DataFrame and optionally
+            time series as pandas.Series or DataFrame and optionally
             metadata dictionary
         """
         if isinstance(series, ps.timeseries.TimeSeries):
@@ -572,7 +572,7 @@ class BaseConnector(ABC):
         Parameters
         ----------
         series : FrameorSeriesUnion
-            timeseries to update stored oseries with
+            time series to update stored oseries with
         name : str
             name of the oseries to update
         metadata : Optional[dict], optional
@@ -593,7 +593,7 @@ class BaseConnector(ABC):
         Parameters
         ----------
         series : FrameorSeriesUnion
-            timeseries to update/insert
+            time series to update/insert
         name : str
             name of the oseries
         metadata : Optional[dict], optional
@@ -617,7 +617,7 @@ class BaseConnector(ABC):
         Parameters
         ----------
         series : FrameorSeriesUnion
-            timeseries to update stored stress with
+            time series to update stored stress with
         name : str
             name of the stress to update
         metadata : Optional[dict], optional
@@ -639,7 +639,7 @@ class BaseConnector(ABC):
         Parameters
         ----------
         series : FrameorSeriesUnion
-            timeseries to update/insert
+            time series to update/insert
         name : str
             name of the stress
         metadata : Optional[dict], optional
@@ -707,14 +707,14 @@ class BaseConnector(ABC):
         progressbar: bool = True,
         squeeze: bool = True,
     ) -> FrameorSeriesUnion:
-        """Internal method to get timeseries.
+        """Internal method to get time series.
 
         Parameters
         ----------
         libname : str
             name of the library
         names : str or list of str
-            names of the timeseries to load
+            names of the time series to load
         progressbar : bool, optional
             show progressbar, by default True
         squeeze : bool, optional
@@ -724,8 +724,8 @@ class BaseConnector(ABC):
         Returns
         -------
         pandas.DataFrame or dict of pandas.DataFrames
-            either returns timeseries as pandas.DataFrame or
-            dictionary containing the timeseries.
+            either returns time series as pandas.DataFrame or
+            dictionary containing the time series.
         """
         ts = {}
         names = self._parse_names(names, libname=libname)
@@ -807,7 +807,7 @@ class BaseConnector(ABC):
         Returns
         -------
         oseries : pandas.DataFrame or dict of DataFrames
-            returns timeseries as DataFrame or dictionary of DataFrames if
+            returns time series as DataFrame or dictionary of DataFrames if
             multiple names were passed
         metadata : dict or list of dict
             metadata for each oseries, only returned if return_metadata=True
@@ -852,7 +852,7 @@ class BaseConnector(ABC):
         Returns
         -------
         stresses : pandas.DataFrame or dict of DataFrames
-            returns timeseries as DataFrame or dictionary of DataFrames if
+            returns time series as DataFrame or dictionary of DataFrames if
             multiple names were passed
         metadata : dict or list of dict
             metadata for each stress, only returned if return_metadata=True
@@ -895,7 +895,7 @@ class BaseConnector(ABC):
             if True return Model instead of list of Models
             for single entry
         update_ts_settings : bool, optional
-            update timeseries settings based on timeseries in store.
+            update time series settings based on time series in store.
             overwrites stored tmin/tmax in model.
 
         Returns
@@ -951,7 +951,7 @@ class BaseConnector(ABC):
         print(f"Emptied library {libname} in {self.name}: " f"{self.__class__}")
 
     def _iter_series(self, libname: str, names: Optional[List[str]] = None):
-        """Internal method iterate over timeseries in library.
+        """Internal method iterate over time series in library.
 
         Parameters
         ----------
@@ -965,7 +965,7 @@ class BaseConnector(ABC):
         Yields
         -------
         pandas.Series or pandas.DataFrame
-            timeseries contained in library
+            time series contained in library
         """
         names = self._parse_names(names, libname)
         for nam in names:
@@ -1022,7 +1022,7 @@ class BaseConnector(ABC):
         Yields
         -------
         pastas.Model or dict
-            timeseries model
+            time series model
         """
 
         modelnames = self._parse_names(modelnames, "models")
@@ -1258,13 +1258,13 @@ class ConnectorUtil:
         mdict : dict
             dictionary describing pastas.Model
         update_ts_settings : bool, optional
-            update stored tmin and tmax in timeseries settings
-            based on timeseries loaded from store.
+            update stored tmin and tmax in time series settings
+            based on time series loaded from store.
 
         Returns
         -------
         ml : pastas.Model
-            timeseries analysis model
+            time series analysis model
         """
         PASFILE_LEQ_022 = parse_version(
             mdict["file_info"]["pastas_version"]
@@ -1277,7 +1277,7 @@ class ConnectorUtil:
                 msg = "oseries {} not present in project".format(name)
                 raise LookupError(msg)
             mdict["oseries"]["series"] = self.get_oseries(name)
-            # update tmin/tmax from timeseries
+            # update tmin/tmax from time series
             if update_ts_settings:
                 mdict["oseries"]["settings"]["tmin"] = mdict["oseries"]["series"].index[
                     0
@@ -1297,7 +1297,7 @@ class ConnectorUtil:
                             name = str(stress["name"])
                             if name in self.stresses.index:
                                 stress["series"] = self.get_stresses(name)
-                                # update tmin/tmax from timeseries
+                                # update tmin/tmax from time series
                                 if update_ts_settings:
                                     stress["settings"]["tmin"] = stress["series"].index[
                                         0
@@ -1312,7 +1312,7 @@ class ConnectorUtil:
                             name = str(stress["name"])
                             if name in self.stresses.index:
                                 stress["series"] = self.get_stresses(name)
-                                # update tmin/tmax from timeseries
+                                # update tmin/tmax from time series
                                 if update_ts_settings:
                                     stress["settings"]["tmin"] = stress["series"].index[
                                         0
@@ -1328,7 +1328,7 @@ class ConnectorUtil:
                         name = str(stress["name"])
                         if name in self.stresses.index:
                             stress["series"] = self.get_stresses(name)
-                            # update tmin/tmax from timeseries
+                            # update tmin/tmax from time series
                             if update_ts_settings:
                                 stress["settings"]["tmin"] = stress["series"].index[0]
                                 stress["settings"]["tmax"] = stress["series"].index[-1]
@@ -1391,9 +1391,9 @@ class ConnectorUtil:
         Parameters
         ----------
         series : pandas.Series or pandas.DataFrame
-            set name for this timeseries
+            set name for this time series
         name : str
-            name of the timeseries (used in the pastastore)
+            name of the time series (used in the pastastore)
         """
         if isinstance(series, pd.Series):
             series.name = name
@@ -1404,6 +1404,10 @@ class ConnectorUtil:
 
         if isinstance(series, pd.DataFrame):
             series.columns = [name]
+            # check for hydropandas objects which are instances of DataFrame but
+            # do have a name attribute
+            if hasattr(series, "name"):
+                series.name = name
         return series
 
     @staticmethod
@@ -1526,7 +1530,7 @@ class ConnectorUtil:
                 )
 
     def _check_stresses_in_store(self, ml: Union[ps.Model, dict]):
-        """Internal method, check if stresses timeseries are contained in
+        """Internal method, check if stresses time series are contained in
         PastaStore.
 
         Parameters
@@ -1677,8 +1681,8 @@ class ConnectorUtil:
         libname : str
             name of the library to write to zipfile
         names : str or list of str, optional
-            names of the timeseries to write to archive, by default None,
-            which writes all timeseries to archive
+            names of the time series to write to archive, by default None,
+            which writes all time series to archive
         progressbar : bool, optional
             show progressbar, by default True
         """
@@ -1714,7 +1718,7 @@ class ConnectorUtil:
 
     @staticmethod
     def _series_from_json(fjson: str):
-        """Load timeseries from JSON.
+        """Load time series from JSON.
 
         Parameters
         ----------
@@ -1724,7 +1728,7 @@ class ConnectorUtil:
         Returns
         -------
         s : pd.DataFrame
-            DataFrame containing timeseries
+            DataFrame containing time series
         """
         s = pd.read_json(fjson, orient="columns", precise_float=True)
         if not isinstance(s.index, pd.DatetimeIndex):

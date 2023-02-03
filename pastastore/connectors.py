@@ -94,14 +94,14 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         metadata: Optional[Dict] = None,
         **_,
     ) -> None:
-        """Internal method to add item to library (timeseries or model).
+        """Internal method to add item to library (time series or model).
 
         Parameters
         ----------
         libname : str
             name of the library
         item : Union[FrameorSeriesUnion, Dict]
-            item to add, either timeseries or pastas.Model as dictionary
+            item to add, either time series or pastas.Model as dictionary
         name : str
             name of the item
         metadata : Optional[Dict], optional
@@ -123,7 +123,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         Returns
         -------
         item : Union[FrameorSeriesUnion, Dict]
-            timeseries or model dictionary
+            time series or model dictionary
         """
         lib = self._get_library(libname)
         return lib.read(name).data
@@ -266,14 +266,14 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         metadata: Optional[Dict] = None,
         overwrite: bool = False,
     ) -> None:
-        """Internal method to add item to library (timeseries or model).
+        """Internal method to add item to library (time series or model).
 
         Parameters
         ----------
         libname : str
             name of the library
         item : Union[FrameorSeriesUnion, Dict]
-            item to add, either timeseries or pastas.Model as dictionary
+            item to add, either time series or pastas.Model as dictionary
         name : str
             name of the item
         metadata : Optional[Dict], optional
@@ -320,7 +320,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
         Returns
         -------
         item : Union[FrameorSeriesUnion, Dict]
-            timeseries or model dictionary
+            time series or model dictionary
         """
         load_mod = import_module("pastas.io.pas")  # type: ignore
         lib = self._get_library(libname)
@@ -462,7 +462,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         metadata: Optional[Dict] = None,
         **_,
     ) -> None:
-        """Internal method to add item (timeseries or models).
+        """Internal method to add item (time series or models).
 
         Parameters
         ----------
@@ -494,7 +494,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         Returns
         -------
         item : Union[FrameorSeriesUnion, Dict]
-            timeseries or model dictionary
+            time series or model dictionary
         """
         lib = self._get_library(libname)
         if libname in ["models", "oseries_models"]:
@@ -621,7 +621,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         metadata: Optional[Dict] = None,
         **_,
     ) -> None:
-        """Internal method to add item (timeseries or models).
+        """Internal method to add item (time series or models).
 
         Parameters
         ----------
@@ -636,7 +636,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         """
         lib = self._get_library(libname)
 
-        # timeseries
+        # time series
         if isinstance(item, pd.Series):
             item = item.to_frame()
         if isinstance(item, pd.DataFrame):
@@ -675,7 +675,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         Returns
         -------
         item : Union[FrameorSeriesUnion, Dict]
-            timeseries or model dictionary
+            time series or model dictionary
         """
         lib = self._get_library(libname)
         fjson = os.path.join(lib, f"{name}.pas")
@@ -690,7 +690,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         elif libname == "oseries_models":
             with open(fjson, "r") as f:
                 item = json.load(f)
-        # timeseries
+        # time series
         else:
             item = self._series_from_json(fjson)
         return item
@@ -707,7 +707,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         """
         lib = self._get_library(libname)
         os.remove(os.path.join(lib, f"{name}.pas"))
-        # remove metadata for timeseries
+        # remove metadata for time series
         if libname != "models":
             try:
                 os.remove(os.path.join(lib, f"{name}_meta.pas"))

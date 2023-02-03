@@ -1,9 +1,9 @@
 """This module contains all the plotting methods for PastaStore.
 
 Pastastore comes with a number helpful plotting methods to quickly
-visualize timeseries or the locations of the timeseries contained in the
-store. Plotting timeseries or data availability is available through the
-`plots` attribute of the PastaStore object. Plotting locations of timeseries
+visualize time series or the locations of the time series contained in the
+store. Plotting time series or data availability is available through the
+`plots` attribute of the PastaStore object. Plotting locations of time series
 or model statistics on maps is available through the `maps` attribute.
 For example, if we have a :class:`pastastore.PastaStore` called `pstore`
 linking to an existing database, the plot and map methods are available as
@@ -29,7 +29,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 class Plots:
     """Plot class for Pastastore.
 
-    Allows plotting of timeseries and data availability.
+    Allows plotting of time series and data availability.
     """
 
     def __init__(self, pstore):
@@ -52,25 +52,25 @@ class Plots:
         progressbar=True,
         **kwargs,
     ):
-        """Internal method to plot timeseries from pastastore.
+        """Internal method to plot time series from pastastore.
 
         Parameters
         ----------
         libname : str
-            name of the library to obtain timeseries from (oseries
+            name of the library to obtain time series from (oseries
             or stresses)
         names : list of str, optional
-            list of timeseries names to plot, by default None
+            list of time series names to plot, by default None
         ax : matplotlib.Axes, optional
             pass axes object to plot on existing axes, by default None,
             which creates a new figure
         split : bool, optional
-            create a separate subplot for each timeseries, by default False.
-            A maximum of 20 timeseries is supported when split=True.
+            create a separate subplot for each time series, by default False.
+            A maximum of 20 time series is supported when split=True.
         figsize : tuple, optional
             figure size, by default (10, 5)
         progressbar : bool, optional
-            show progressbar when loading timeseries from store,
+            show progressbar when loading time series from store,
             by default True
 
         Returns
@@ -81,14 +81,14 @@ class Plots:
         Raises
         ------
         ValueError
-            split=True is only supported if there are less than 20 timeseries
+            split=True is only supported if there are less than 20 time series
             to plot.
         """
         names = self.pstore.conn._parse_names(names, libname)
 
         if len(names) > 20 and split:
             raise ValueError(
-                "More than 20 timeseries leads to too many "
+                "More than 20 time series leads to too many "
                 "subplots, set split=False."
             )
 
@@ -132,8 +132,8 @@ class Plots:
             pass axes object to plot oseries on existing figure,
             by default None, in which case a new figure is created
         split : bool, optional
-            create a separate subplot for each timeseries, by default False.
-            A maximum of 20 timeseries is supported when split=True.
+            create a separate subplot for each time series, by default False.
+            A maximum of 20 time series is supported when split=True.
         figsize : tuple, optional
             figure size, by default (10, 5)
 
@@ -174,8 +174,8 @@ class Plots:
             pass axes object to plot oseries on existing figure,
             by default None, in which case a new figure is created
         split : bool, optional
-            create a separate subplot for each timeseries, by default False.
-            A maximum of 20 timeseries is supported when split=True.
+            create a separate subplot for each time series, by default False.
+            A maximum of 20 time series is supported when split=True.
         figsize : tuple, optional
             figure size, by default (10, 5)
 
@@ -218,15 +218,15 @@ class Plots:
         dropna=True,
         **kwargs,
     ):
-        """Plot the data-availability for multiple timeseries in pastastore.
+        """Plot the data-availability for multiple time series in pastastore.
 
         Parameters
         ----------
         libname : str
-            name of library to get timeseries from (oseries or stresses)
+            name of library to get time series from (oseries or stresses)
         names : list, optional
             specify names in a list to plot data availability for certain
-            timeseries
+            time series
         kind : str, optional
             if library is stresses, kind can be specified to obtain only
             stresses of a specific kind
@@ -304,7 +304,7 @@ class Plots:
         dropna=True,
         **kwargs,
     ):
-        """Plot the data-availability for a list of timeseries.
+        """Plot the data-availability for a list of time series.
 
         Parameters
         ----------
@@ -839,7 +839,7 @@ class Maps:
             whether to obtain metadata from model Timeseries or from
             metadata in pastastore("store"), default is "model"
         offset : float, optional
-            add offset to current extent of model timeseries, useful
+            add offset to current extent of model time series, useful
             for zooming out around models
 
         Returns

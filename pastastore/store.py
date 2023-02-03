@@ -19,7 +19,7 @@ warnings.showwarning = _custom_warning
 
 
 class PastaStore:
-    """Pastas project for managing pastas timeseries and models.
+    """Pastas project for managing pastas time series and models.
 
     Requires a Connector object to provide the interface to
     the database. Different Connectors are available, e.g.:
@@ -37,7 +37,7 @@ class PastaStore:
     """
 
     def __init__(self, name: str, connector):
-        """Initialize PastaStore for managing pastas timeseries and models.
+        """Initialize PastaStore for managing pastas time series and models.
 
         Parameters
         ----------
@@ -295,23 +295,23 @@ class PastaStore:
         return data
 
     def get_tmin_tmax(self, libname, names=None, progressbar=False):
-        """Get tmin and tmax for timeseries.
+        """Get tmin and tmax for time series.
 
         Parameters
         ----------
         libname : str
-            name of the library containing the timeseries
+            name of the library containing the time series
             ('oseries' or 'stresses')
         names : str, list of str, or None, optional
-            names of the timeseries, by default None which
-            uses all the timeseries in the library
+            names of the time series, by default None which
+            uses all the time series in the library
         progressbar : bool, optional
             show progressbar, by default False
 
         Returns
         -------
         tmintmax : pd.dataframe
-            Dataframe containing tmin and tmax per timeseries
+            Dataframe containing tmin and tmax per time series
         """
 
         names = self.conn._parse_names(names, libname=libname)
@@ -459,7 +459,7 @@ class PastaStore:
             name of the model, default is None, which uses oseries name
         add_recharge : bool, optional
             add recharge to the model by looking for the closest
-            precipitation and evaporation timeseries in the stresses
+            precipitation and evaporation time series in the stresses
             library, by default True
         recharge_name : str
             name of the RechargeModel
@@ -474,7 +474,7 @@ class PastaStore:
         KeyError
             if data is stored as dataframe and no column is provided
         ValueError
-            if timeseries is empty
+            if time series is empty
         """
         # get oseries metadata
         meta = self.conn.get_metadata("oseries", name, as_frame=False)
@@ -489,17 +489,16 @@ class PastaStore:
                 self.add_recharge(ml, recharge_name=recharge_name)
             return ml
         else:
-            raise ValueError("Empty timeseries!")
+            raise ValueError("Empty time series!")
 
     def create_models_bulk(
         self,
         oseries: Optional[Union[list, str]] = None,
         add_recharge: bool = True,
-        store: bool = True,
         solve: bool = False,
-        progressbar: bool = True,
-        return_models: bool = False,
+        store_models: bool = True,
         ignore_errors: bool = False,
+        progressbar: bool = True,
         **kwargs,
     ) -> Union[Tuple[dict, dict], dict]:
         """Bulk creation of pastas models.
@@ -511,17 +510,16 @@ class PastaStore:
             which creates models for all oseries
         add_recharge : bool, optional
             add recharge to the models based on closest
-            precipitation and evaporation timeseries, by default True
-        store : bool, optional
-            store the model, by default True
+            precipitation and evaporation time series, by default True
         solve : bool, optional
             solve the model, by default False
-        progressbar : bool, optional
-            show progressbar, by default True
-        return_models : bool, optional
-            if True, return a list of models, by default False
+        store_models : bool, optional
+            if False, return a list of models, by default True, which will
+            store the models in the database.
         ignore_errors : bool, optional
             ignore errors while creating models, by default False
+        progressbar : bool, optional
+            show progressbar, by default True
 
         Returns
         -------
@@ -549,16 +547,16 @@ class PastaStore:
                     raise e
             if solve:
                 iml.solve(**kwargs)
-            if store:
+            if store_models:
                 self.conn.add_model(iml, overwrite=True)
-            if return_models:
+            else:
                 models[o] = iml
         if len(errors) > 0:
             print("Warning! Errors occurred while creating models!")
-        if return_models:
-            return models, errors
-        else:
+        if store_models:
             return errors
+        else:
+            return models, errors
 
     def add_recharge(
         self,
@@ -569,7 +567,7 @@ class PastaStore:
     ) -> None:
         """Add recharge to a pastas model.
 
-        Uses closest precipitation and evaporation timeseries in database.
+        Uses closest precipitation and evaporation time series in database.
         These are assumed to be labeled with kind = 'prec' or 'evap'.
 
         Parameters
@@ -586,23 +584,33 @@ class PastaStore:
             name of the RechargeModel
         """
         # get nearest prec and evap stns
+        if "prec" not in self.stresses.kind.values:
+            raise ValueError(
+                "No stresses with kind='prec' found in store. "
+                "add_recharge() requires stresses with kind='prec'!"
+            )
+        if "evap" not in self.stresses.kind.values:
+            raise ValueError(
+                "No stresses with kind='evap' found in store. "
+                "add_recharge() requires stresses with kind='evap'!"
+            )
         names = []
         for var in ("prec", "evap"):
             try:
                 name = self.get_nearest_stresses(ml.oseries.name, kind=var).iloc[0, 0]
             except AttributeError:
-                msg = "No precipitation or evaporation timeseries found!"
+                msg = "No precipitation or evaporation time series found!"
                 raise Exception(msg)
             if isinstance(name, float):
                 if np.isnan(name):
                     raise ValueError(
                         f"Unable to find nearest '{var}' stress! "
-                        "Check X and Y coordinates."
+                        "Check x and y coordinates."
                     )
             else:
                 names.append(name)
         if len(names) == 0:
-            msg = "No precipitation or evaporation timeseries found!"
+            msg = "No precipitation or evaporation time series found!"
             raise Exception(msg)
 
         # get data
@@ -767,7 +775,7 @@ class PastaStore:
         exportdir: str = ".",
         exportmeta: bool = True,
     ):  # pragma: no cover
-        """Export model timeseries to csv files.
+        """Export model time series to csv files.
 
         Parameters
         ----------
@@ -777,7 +785,7 @@ class PastaStore:
         exportdir : str, optional
             directory to export csv files to, default is current directory
         exportmeta : bool, optional
-            export metadata for all timeseries as csv file, default is True
+            export metadata for all time series as csv file, default is True
         """
         names = self.conn._parse_names(names, libname="models")
         for name in names:
@@ -869,7 +877,7 @@ class PastaStore:
         s: Optional[Union[list, str]] = None,
         case_sensitive: bool = True,
     ):
-        """Search for names of timeseries or models starting with s.
+        """Search for names of time series or models starting with s.
 
         Parameters
         ----------
@@ -917,12 +925,12 @@ class PastaStore:
         dropna: bool = True,
         progressbar: bool = True,
     ) -> FrameorSeriesUnion:
-        """Get timeseries names contained in model.
+        """Get time series names contained in model.
 
         Parameters
         ----------
         modelnames : Optional[Union[list, str]], optional
-            list or name of models to get timeseries names for,
+            list or name of models to get time series names for,
             by default None which will use all modelnames
         dropna : bool, optional
             drop stresses from table if stress is not included in any
@@ -934,7 +942,7 @@ class PastaStore:
         -------
         structure : pandas.DataFrame
             returns DataFrame with oseries name per model, and a flag
-            indicating whether a stress is contained within a timeseries
+            indicating whether a stress is contained within a time series
             model.
         """
 
@@ -944,7 +952,7 @@ class PastaStore:
         )
 
         for mlnam in (
-            tqdm(model_names, desc="Get model timeseries names")
+            tqdm(model_names, desc="Get model time series names")
             if progressbar
             else model_names
         ):

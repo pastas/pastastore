@@ -247,7 +247,7 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
     ss1 = []  # for storing series
 
     for i, ml in enumerate([ml1, ml2]):
-        counter = 0  # for counting stress timeseries
+        counter = 0  # for counting stress time series
         df.loc["name:", f"model {i}"] = ml.name
 
         for k in ml.settings.keys():
@@ -313,7 +313,7 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                 stresses = sm.stress
 
             for ts in stresses:
-                df.loc[f"- timeseries: '{ts.name}'"] = ts.name
+                df.loc[f"- time series: '{ts.name}'"] = ts.name
                 for tsk in ts.settings.keys():
                     df.loc[
                         f"  - {ts.name} settings: {tsk}", f"model {i}"
@@ -543,7 +543,8 @@ def frontiers_checks(
     .. [bra_2022]
     Brakenhoff, D.A., Vonk M.A., Collenteur, R.A., van Baar, M., Bakker, M.:
     Application of Time Series Analysis to Estimate Drawdown From Multiple Well
-    Fields. Front. Earth Sci., 14 June 2022 doi:10.3389/feart.2022.907609"""
+    Fields. Front. Earth Sci., 14 June 2022 doi:10.3389/feart.2022.907609
+    """
 
     df = pd.DataFrame(columns=["all_checks_passed"])
 
