@@ -15,6 +15,8 @@ follows::
     pstore.maps.add_background_map(ax)  # for adding a background map
 """
 
+from collections.abc import Iterable
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -99,6 +101,10 @@ class Plots:
                 fig, axes = plt.subplots(1, 1, figsize=figsize)
         else:
             axes = ax
+            if isinstance(axes, Iterable):
+                fig = axes[0].figure
+            else:
+                fig = axes.figure
 
         tsdict = self.pstore.conn._get_series(
             libname, names, progressbar=progressbar, squeeze=False
@@ -572,7 +578,9 @@ class Maps:
             df = self.pstore.stresses
 
         if kind is not None:
-            mask = df["kind"] == kind
+            if isinstance(kind, str):
+                kind = [kind]
+            mask = df["kind"].isin(kind)
             stresses = df[mask]
         else:
             stresses = df
@@ -1165,7 +1173,7 @@ class Maps:
                     markersize=10,
                 )
             ]
-            for kind in skind:
+            for kind in kinds:
                 (c,) = np.where(skind == kind)
                 legend_elements.append(
                     Line2D(
