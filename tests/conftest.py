@@ -11,7 +11,7 @@ params = ["dict", "pas"]  # "arctic" and "pystore" removed for CI, can be tested
 
 
 def initialize_project(conn):
-    pstore = pst.PastaStore("test_project", conn)
+    pstore = pst.PastaStore(conn, "test_project")
 
     # oseries 1
     o = pd.read_csv("./tests/data/obs.csv", index_col=0, parse_dates=True)
