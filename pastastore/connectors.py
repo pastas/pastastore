@@ -15,7 +15,7 @@ FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning
 
 
-class ArcticConnector(BaseConnector, ConnectorUtil):
+class ArcticConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
     conn_type = "arctic"
 
     def __init__(self, name: str, connstr: str):
@@ -24,10 +24,10 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
 
         Parameters
         ----------
+        name : str
+            name of the database
         connstr : str
             connection string (e.g. 'mongodb://localhost:27017/')
-        name : str
-            name of the project
         """
         try:
             import arctic
@@ -198,7 +198,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):
         return self._get_library("oseries_models").list_symbols()
 
 
-class PystoreConnector(BaseConnector, ConnectorUtil):
+class PystoreConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
     conn_type = "pystore"
 
     def __init__(self, name: str, path: str):
