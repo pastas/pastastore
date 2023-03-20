@@ -6,12 +6,12 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 import pastas as ps
+from packaging.version import parse as parse_version
 from pastas.io.pas import pastas_hook
 from tqdm import tqdm
 
 from .plotting import Maps, Plots
 from .util import _custom_warning
-from .version import PASTAS_LEQ_022
 from .yaml_interface import PastastoreYAML
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
@@ -19,36 +19,42 @@ warnings.showwarning = _custom_warning
 
 
 class PastaStore:
-    """Pastas project for managing pastas time series and models.
+    """PastaStore object for managing pastas time series and models.
 
     Requires a Connector object to provide the interface to
     the database. Different Connectors are available, e.g.:
 
+    - PasConnector for storing all data as .pas (JSON) files on disk (recommended)
+    - DictConenctor for storing all data in dictionaries (in-memory)
     - ArcticConnector for saving data to MongoDB using the Arctic module
     - PystoreConnector for saving data to disk using the Pystore module
 
     Parameters
     ----------
-    name : str
-        name of the project
     connector : Connector object
         object that provides the interface to the
         database, e.g. ArcticConnector (see pastastore.connectors)
+    name : str, optional
+        name of the PastaStore, by default takes the name of the Connector object
     """
 
-    def __init__(self, name: str, connector):
+    def __init__(self, connector, name: str = None):
         """Initialize PastaStore for managing pastas time series and models.
 
         Parameters
         ----------
-        name : str
-            name of the project
         connector : Connector object
             object that provides the interface to the
             database
+        name : str, optional
+            name of the PastaStore, if not provided uses the Connector name
         """
-        self.name = name
+        if isinstance(connector, str):
+            raise DeprecationWarning(
+                "PastaStore expects the connector as the first argument since v1.1!"
+            )
         self.conn = connector
+        self.name = name if name is not None else self.conn.name
         self._register_connector_methods()
 
         # register map, plot and yaml classes
@@ -646,7 +652,7 @@ class PastaStore:
         Parameters
         ----------
         mls : list of str, optional
-            list of model names, if None all models in the project
+            list of model names, if None all models in the pastastore
             are solved.
         report : boolean, optional
             determines if a report is printed when the model is solved,
@@ -873,7 +879,7 @@ class PastaStore:
                     conn.add_model(ml)
         if storename is None:
             storename = conn.name
-        return cls(storename, conn)
+        return cls(conn, storename)
 
     def search(
         self,
@@ -962,11 +968,15 @@ class PastaStore:
         ):
             iml = self.get_models(mlnam, return_dict=True)
 
+            PASFILE_LEQ_022 = parse_version(
+                iml["file_info"]["pastas_version"]
+            ) <= parse_version("0.22.0")
+
             # oseries
             structure.loc[mlnam, "oseries"] = iml["oseries"]["name"]
 
             for sm in iml["stressmodels"].values():
-                class_key = "stressmodel" if PASTAS_LEQ_022 else "class"
+                class_key = "stressmodel" if PASFILE_LEQ_022 else "class"
                 if sm[class_key] == "RechargeModel":
                     pnam = sm["prec"]["name"]
                     enam = sm["evap"]["name"]
