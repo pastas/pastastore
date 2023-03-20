@@ -127,7 +127,6 @@ def test_write_yaml_minimal(request, pstore):
 
 
 @pytest.mark.dependency()
-@pytest.mark.xfail(reason="wellmodel settings change only in 0.23.1 currently.")
 def test_write_yaml_minimal_nearest(request, pstore):
     depends(
         request,
