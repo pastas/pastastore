@@ -571,17 +571,18 @@ class PasConnector(BaseConnector, ConnectorUtil):
         Parameters
         ----------
         name : str
-            user-specified name of the connector
+            user-specified name of the connector, this will be the name of the
+            directory in which the data will be stored
         path : str
-            path to directory for reading/writing data
+            path to directory for storing the data
         """
         self.name = name
-        self.path = os.path.abspath(path)
-        self.relpath = os.path.relpath(path)
+        self.path = os.path.abspath(os.path.join(path, self.name))
+        self.relpath = os.path.relpath(self.path)
         self._initialize()
         self.models = ModelAccessor(self)
         # for older versions of PastaStore, if oseries_models library is empty
-        # populate oseries - models database
+        # populate oseries_models library
         self._update_all_oseries_model_links()
 
     def _initialize(self) -> None:
@@ -589,7 +590,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         for val in self._default_library_names:
             libdir = os.path.join(self.path, val)
             if not os.path.exists(libdir):
-                print(f"PasConnector: library {val} created in {libdir}")
+                print(f"PasConnector: library '{val}' created in '{libdir}'")
                 os.makedirs(libdir)
             else:
                 print(
