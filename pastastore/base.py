@@ -1271,7 +1271,7 @@ class ConnectorUtil:
         if "series" not in mdict["oseries"]:
             name = str(mdict["oseries"]["name"])
             if name not in self.oseries.index:
-                msg = "oseries {} not present in project".format(name)
+                msg = "oseries '{}' not present in library".format(name)
                 raise LookupError(msg)
             mdict["oseries"]["series"] = self.get_oseries(name)
             # update tmin/tmax from time series
@@ -1330,7 +1330,7 @@ class ConnectorUtil:
                                 stress["settings"]["tmin"] = stress["series"].index[0]
                                 stress["settings"]["tmax"] = stress["series"].index[-1]
                         else:
-                            msg = "stress '{}' not present in project".format(name)
+                            msg = "stress '{}' not present in library".format(name)
                             raise KeyError(msg)
         # hack for pcov w dtype object (when filled with NaNs on store?)
         if "fit" in mdict:
