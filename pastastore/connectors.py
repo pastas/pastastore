@@ -421,12 +421,12 @@ class PystoreConnector(BaseConnector, ConnectorUtil):
 class DictConnector(BaseConnector, ConnectorUtil):
     conn_type = "dict"
 
-    def __init__(self, name: str):
+    def __init__(self, name: str = "pastas_db"):
         """Create DictConnector object that stores data in dictionaries.
 
         Parameters
         ----------
-        name : str
+        name : str, optional
             user-specified name of the connector
         """
         self.name = name
