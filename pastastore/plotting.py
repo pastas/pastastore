@@ -587,9 +587,12 @@ class Maps:
 
         mask0 = (stresses["x"] != 0.0) | (stresses["y"] != 0.0)
 
-        c = stresses.loc[mask0, "kind"]
-        kind_to_color = {k: f"C{i}" for i, k in enumerate(c.unique())}
-        c = c.apply(lambda k: kind_to_color[k])
+        if "c" in kwargs:
+            c = kwargs.pop("c", None)
+        else:
+            c = stresses.loc[mask0, "kind"]
+            kind_to_color = {k: f"C{i}" for i, k in enumerate(c.unique())}
+            c = c.apply(lambda k: kind_to_color[k])
 
         r = self._plotmap_dataframe(stresses.loc[mask0], c=c, figsize=figsize, **kwargs)
         if "ax" in kwargs:
