@@ -56,7 +56,7 @@ this to work::
    conn = pst.ArcticConnector("my_db", connstr)
 
    # create project for managing Pastas data and models
-   store = pst.PastasProject("my_project", conn)
+   store = pst.PastaStore("my_project", conn)
 
 
 Using Pystore

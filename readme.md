@@ -41,7 +41,7 @@ folder called `pastas_db` in the current directory).
 import pastastore as pst
 
 # create connector instance
-conn = pst.PasConnector("my_db", path="./pastas_db")
+conn = pst.PasConnector(name="pastas_db", path=".")
 ```
 
 The next step is to pass that connector to the `PastaStore` object. This object
@@ -50,7 +50,7 @@ build and analyze models.
 
 ```python
 # create PastaStore instance
-pstore = pst.PastaStore("my_project", conn)
+pstore = pst.PastaStore(conn)
 ```
 
 Now the user can add time series, models or analyze or visualize existing
@@ -77,8 +77,18 @@ pstore.maps.add_background_map(ax)  # add a background map
 # plot my_oseries time series
 ax2 = pstore.plot.oseries(names=["my_oseries"])
 
+# create a model with pastas
+import pastas as ps
+ml = ps.Model(oseries, name="my_model")
+
+# add model to database
+pstore.add_model(ml)
+
+# load model from database
+ml2 = pstore.get_models("my_model")
+
 # export whole database to a zip file
-pstore.to_zip("my_db_backup.zip")
+pstore.to_zip("my_backup.zip")
 ```
 
 For more elaborate examples, refer to the

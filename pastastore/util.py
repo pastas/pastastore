@@ -485,7 +485,7 @@ def frontiers_checks(
     check4_gain: bool = True,
     check5_parambounds: bool = False,
     csv_dir: Optional[str] = None,
-) -> pd.DataFrame:
+) -> pd.DataFrame:  # pragma: no cover
     """Check models in a PastaStore to see if they pass reliability criteria.
 
     The reliability criteria are taken from Brakenhoff et al. 2022 [bra_2022]_.
@@ -738,7 +738,7 @@ def frontiers_aic_select(
     modelnames: Optional[List[str]] = None,
     oseries: Optional[List[str]] = None,
     full_output: bool = False,
-) -> pd.DataFrame:
+) -> pd.DataFrame:  # pragma: no cover
     """Select the best model structure based on the minimum AIC.
 
     As proposed by Brakenhoff et al. 2022 [bra_2022]_.

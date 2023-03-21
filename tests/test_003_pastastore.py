@@ -296,3 +296,22 @@ def test_example_pastastore():
 
     _ = example_pastastore()
     return
+
+
+def test_validate_names():
+    from pastastore.util import validate_names
+
+    validate_names(s="(test)") == "test"
+    validate_names(d={"(test)": 2})["test"]
+
+
+def test_meta_with_name(pstore):
+    s = pd.Series(
+        index=pd.date_range("2020-01-01", periods=10, freq="D"),
+        data=np.arange(10),
+        dtype=float,
+    )
+    smeta = {"name": "not_what_i_want"}
+    pstore.add_stress(s, "what_i_want", kind="special", metadata=smeta)
+    assert "what_i_want" in pstore.stresses.index, "This is not right."
+    pstore.del_stress("what_i_want")

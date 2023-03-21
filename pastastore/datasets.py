@@ -40,7 +40,7 @@ def example_pastastore(conn="DictConnector"):
         conn = _default_connector(conn)
 
     # initialize PastaStore
-    pstore = pst.PastaStore("example", conn)
+    pstore = pst.PastaStore(conn, "example")
 
     # add data
 
@@ -111,63 +111,60 @@ def example_pastastore(conn="DictConnector"):
     )
     # TODO: temporary fix for older version of hydropandas that does not
     # read Menyanthes time series names correctly.
-    try:
-        # multiwell notebook data
-        fname = os.path.join(datadir, "MenyanthesTest.men")
-        # meny = ps.read.MenyData(fname)
-        meny = hpd.ObsCollection.from_menyanthes(fname, hpd.Obs)
+    # multiwell notebook data
+    fname = os.path.join(datadir, "MenyanthesTest.men")
+    # meny = ps.read.MenyData(fname)
+    meny = hpd.ObsCollection.from_menyanthes(fname, hpd.Obs)
 
-        oseries = meny.loc["Obsevation well", "obs"]
-        ometa = {
-            "x": oseries.meta["x"],
-            "y": oseries.meta["y"],
-        }
-        pstore.add_oseries(oseries.dropna(), "head_mw", metadata=ometa)
+    oseries = meny.loc["Obsevation well", "obs"]
+    ometa = {
+        "x": oseries.meta["x"],
+        "y": oseries.meta["y"],
+    }
+    pstore.add_oseries(oseries.dropna(), "head_mw", metadata=ometa)
 
-        prec = meny.loc["Precipitation", "obs"]
-        prec.index = prec.index.round("D")
-        prec.name = "prec"
-        pmeta = {
-            "x": prec.meta["x"],
-            "y": prec.meta["y"],
-        }
-        pstore.add_stress(prec, "prec_mw", kind="prec", metadata=pmeta)
-        evap = meny.loc["Evaporation", "obs"]
-        evap.index = evap.index.round("D")
-        evap.name = "evap"
-        emeta = {
-            "x": evap.meta["x"],
-            "y": evap.meta["y"],
-        }
-        pstore.add_stress(evap, "evap_mw", kind="evap", metadata=emeta)
+    prec = meny.loc["Precipitation", "obs"]
+    prec.index = prec.index.round("D")
+    prec.name = "prec"
+    pmeta = {
+        "x": prec.meta["x"],
+        "y": prec.meta["y"],
+    }
+    pstore.add_stress(prec, "prec_mw", kind="prec", metadata=pmeta)
+    evap = meny.loc["Evaporation", "obs"]
+    evap.index = evap.index.round("D")
+    evap.name = "evap"
+    emeta = {
+        "x": evap.meta["x"],
+        "y": evap.meta["y"],
+    }
+    pstore.add_stress(evap, "evap_mw", kind="evap", metadata=emeta)
 
-        pressure = meny.loc["Air Pressure", "obs"]
-        pressure.index = pressure.index.round("D")
-        pressure.name = "pressure"
-        pres_meta = {
-            "x": pressure.meta["x"],
-            "y": pressure.meta["y"],
-        }
-        pstore.add_stress(pressure, "pressure_mw", kind="pressure", metadata=pres_meta)
+    pressure = meny.loc["Air Pressure", "obs"]
+    pressure.index = pressure.index.round("D")
+    pressure.name = "pressure"
+    pres_meta = {
+        "x": pressure.meta["x"],
+        "y": pressure.meta["y"],
+    }
+    pstore.add_stress(pressure, "pressure_mw", kind="pressure", metadata=pres_meta)
 
-        extraction_names = [
-            "Extraction 1",
-            "Extraction 2",
-            "Extraction 3",
-            "Extraction 4",
-        ]
-        for extr in extraction_names:
-            ts = meny.loc[extr, "obs"]
-            wmeta = {"x": ts.meta["x"], "y": ts.meta["y"]}
-            # replace spaces in names for Pastas
-            name = extr.replace(" ", "_").lower()
-            # resample to daily timestep
-            ts_d = timestep_weighted_resample(
-                ts, pd.date_range(ts.index[0], ts.index[-1], freq="D")
-            )
-            pstore.add_stress(ts_d, name, kind="well", metadata=wmeta)
-    except KeyError:
-        pass
+    extraction_names = [
+        "Extraction 1",
+        "Extraction 2",
+        "Extraction 3",
+        "Extraction 4",
+    ]
+    for extr in extraction_names:
+        ts = meny.loc[extr, "obs"]
+        wmeta = {"x": ts.meta["x"], "y": ts.meta["y"]}
+        # replace spaces in names for Pastas
+        name = extr.replace(" ", "_").lower()
+        # resample to daily timestep
+        ts_d = timestep_weighted_resample(
+            ts, pd.date_range(ts.index[0], ts.index[-1], freq="D")
+        )
+        pstore.add_stress(ts_d, name, kind="well", metadata=wmeta)
 
     return pstore
 

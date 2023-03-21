@@ -92,7 +92,7 @@ def test_benchmark_read_series_arctic(benchmark):
 
 
 def build_model(conn):
-    store = pst.PastaStore("test", conn)
+    store = pst.PastaStore(conn, "test")
 
     # oseries nb1
     if "oseries_nb1" not in store.oseries.index:
