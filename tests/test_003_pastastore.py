@@ -242,6 +242,7 @@ def test_update_ts_settings(request, pstore):
 #                       f"test_solve_models[{pstore.type}]"])
 #     pstore.model_results(["oseries1", "oseries2"], progressbar=False)
 
+
 def test_oseries_distances(pstore):
     _ = pstore.get_nearest_oseries()
 

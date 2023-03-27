@@ -261,4 +261,5 @@ def test_benchmark_read_model_arcticdb(benchmark):
     _ = benchmark(read_model, conn=conn)
     pst.util.delete_arcticdb_connector(conn=conn)
     import shutil
+
     shutil.rmtree("./arctic_db/")
