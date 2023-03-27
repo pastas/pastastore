@@ -59,6 +59,7 @@ PastaStore object are shown below:
 
 ```python
 import pandas as pd
+import pastas as ps
 
 # load oseries from CSV and add to database
 oseries = pd.read_csv("oseries.csv")
@@ -78,7 +79,6 @@ pstore.maps.add_background_map(ax)  # add a background map
 ax2 = pstore.plot.oseries(names=["my_oseries"])
 
 # create a model with pastas
-import pastas as ps
 ml = ps.Model(oseries, name="my_model")
 
 # add model to database

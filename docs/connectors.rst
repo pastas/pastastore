@@ -41,6 +41,28 @@ tim eseries are stored as JSON files. Models are stored as JSON as well but
 *do not* contain the time series themselves. These are picked up from
 the other directories when the model is loaded from the database.
 
+ArcticDB
+--------
+Note: this Connector uses ArcticDB the next-generation version of Arctic. Requires arcticdb Python package.
+
+The :ref:`ArcticDBConnector` is an object that creates a
+local database. This can be an existing or a new database.
+For each of the datasets a collection or library is created. These are named
+using the following convention: `<database name>.<library name>`.
+
+The ArcticDB implementation uses the following structure:
+
+.. code-block::
+
+   +-- database
+   |   +-- libraries (i.e. oseries, stresses, models)
+   |   |   +-- items... (i.e. individual time series or models)
+
+The data is stored within these libraries. Observations and stresses time series
+are stored as pandas.DataFrames. Models are stored as pickled dictionaries 
+and *do not* contain the time series themselves. These are picked up from
+the other libraries when the model is loaded from the database.
+
 Arctic
 ------
 Note: this Connector is not actively tested!
