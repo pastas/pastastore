@@ -104,7 +104,7 @@ def build_model(conn):
     store = pst.PastaStore(conn, "test")
 
     # oseries nb1
-    if "oseries_nb1" not in store.oseries.index:
+    if "oseries_nb1" not in store.oseries_names:
         o = pd.read_csv("./tests/data/head_nb1.csv", index_col=0, parse_dates=True)
         store.add_oseries(o, "oseries_nb1", metadata={"x": 100300, "y": 400400})
 
