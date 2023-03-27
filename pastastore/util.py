@@ -130,8 +130,9 @@ def delete_arcticdb_connector(
         list of library names to delete, by default None which deletes
         all libraries
     """
-    import arcticdb
     import shutil
+
+    import arcticdb
 
     if conn is not None:
         name = conn.name
