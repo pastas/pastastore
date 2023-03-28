@@ -256,7 +256,7 @@ def test_benchmark_read_model_arctic(benchmark):
 @pytest.mark.benchmark(group="read_model")
 @requires_pkg("arcticdb")
 def test_benchmark_read_model_arcticdb(benchmark):
-    uri = "lmdb://.arctic_db/"
+    uri = "lmdb://./arctic_db/"
     conn = pst.ArcticDBConnector("test", uri)
     _ = benchmark(read_model, conn=conn)
     pst.util.delete_arcticdb_connector(conn=conn)

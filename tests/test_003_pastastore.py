@@ -256,9 +256,12 @@ def test_copy_dbase(pstore):
     pst.util.copy_database(pstore.conn, conn2, overwrite=False, progressbar=True)
 
 
-@pytest.mark.xfail("datetime object not serializable.")
 def test_to_from_zip(pstore):
     zipname = f"test_{pstore.type}.zip"
+    pytest.xfail(
+        condition=pstore.type == "arcticdb",
+        reason="model datetime objects not supported",
+    )
     pstore.to_zip(zipname, progressbar=False, overwrite=True)
     conn = pst.DictConnector("test")
     try:
