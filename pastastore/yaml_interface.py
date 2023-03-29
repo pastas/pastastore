@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 from copy import deepcopy
@@ -33,8 +34,12 @@ def _convert_dict_dtypes_for_yaml(d: Dict):
                     _convert_dict_dtypes_for_yaml(iv)
         elif isinstance(v, pd.Timestamp):
             d[k] = v.strftime("%Y-%m-%d %H:%M:%S")
+        elif isinstance(v, datetime.datetime):
+            d[k] = pd.to_datetime(v).strftime("%Y-%m-%d %H:%M:%S")
         elif isinstance(v, pd.Timedelta):
             d[k] = v.to_timedelta64().__str__()
+        elif isinstance(v, datetime.timedelta):
+            d[k] = pd.to_timedelta(v).to_timedelta64().__str__()
         elif isinstance(v, np.int64):
             d[k] = int(v)
         elif isinstance(v, np.float64):

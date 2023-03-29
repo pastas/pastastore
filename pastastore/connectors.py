@@ -198,6 +198,187 @@ class ArcticConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
         return self._get_library("oseries_models").list_symbols()
 
 
+class ArcticDBConnector(BaseConnector, ConnectorUtil):
+    conn_type = "arcticdb"
+
+    def __init__(self, name: str, uri: str):
+        """Create an ArcticDBConnector object using ArcticDB to store data.
+
+        Parameters
+        ----------
+        name : str
+            name of the database
+        uri : str
+            URI connection string (e.g. 'lmdb://<your path here>')
+        """
+        try:
+            import arcticdb
+        except ModuleNotFoundError as e:
+            print("Please install arcticdb with `pip install arcticdb`!")
+            raise e
+        self.uri = uri
+        self.name = name
+
+        self.libs: dict = {}
+        self.arc = arcticdb.Arctic(uri)
+        self._initialize()
+        self.models = ModelAccessor(self)
+        # for older versions of PastaStore, if oseries_models library is empty
+        # populate oseries - models database
+        self._update_all_oseries_model_links()
+
+    def _initialize(self) -> None:
+        """Internal method to initalize the libraries."""
+
+        for libname in self._default_library_names:
+            if self._library_name(libname) not in self.arc.list_libraries():
+                self.arc.create_library(self._library_name(libname))
+            else:
+                print(
+                    f"ArcticDBConnector: library "
+                    f"'{self._library_name(libname)}'"
+                    " already exists. Linking to existing library."
+                )
+            self.libs[libname] = self._get_library(libname)
+
+    def _library_name(self, libname: str) -> str:
+        """Internal method to get full library name according to ArcticDB."""
+        return ".".join([self.name, libname])
+
+    def _get_library(self, libname: str):
+        """Get ArcticDB library handle.
+
+        Parameters
+        ----------
+        libname : str
+            name of the library
+
+        Returns
+        -------
+        lib : arcticdb.Library handle
+            handle to the library
+        """
+        # get library handle
+        lib = self.arc.get_library(self._library_name(libname))
+        return lib
+
+    def _add_item(
+        self,
+        libname: str,
+        item: Union[FrameorSeriesUnion, Dict],
+        name: str,
+        metadata: Optional[Dict] = None,
+        **_,
+    ) -> None:
+        """Internal method to add item to library (time series or model).
+
+        Parameters
+        ----------
+        libname : str
+            name of the library
+        item : Union[FrameorSeriesUnion, Dict]
+            item to add, either time series or pastas.Model as dictionary
+        name : str
+            name of the item
+        metadata : Optional[Dict], optional
+            dictionary containing metadata, by default None
+        """
+        lib = self._get_library(libname)
+        # only normalizable datatypes can be written with write, else use write_pickle
+        # normalizable: Series, DataFrames, Numpy Arrays
+        if isinstance(item, (dict, list)):
+            lib.write_pickle(name, item, metadata=metadata)
+        else:
+            lib.write(name, item, metadata=metadata)
+
+    def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
+        """Internal method to retrieve item from library.
+
+        Parameters
+        ----------
+        libname : str
+            name of the library
+        name : str
+            name of the item
+
+        Returns
+        -------
+        item : Union[FrameorSeriesUnion, Dict]
+            time series or model dictionary
+        """
+        lib = self._get_library(libname)
+        return lib.read(name).data
+
+    def _del_item(self, libname: str, name: str) -> None:
+        """Internal method to delete items (series or models).
+
+        Parameters
+        ----------
+        libname : str
+            name of library to delete item from
+        name : str
+            name of item to delete
+        """
+        lib = self._get_library(libname)
+        lib.delete(name)
+
+    def _get_metadata(self, libname: str, name: str) -> dict:
+        """Internal method to retrieve metadata for an item.
+
+        Parameters
+        ----------
+        libname : str
+            name of the library
+        name : str
+            name of the item
+
+        Returns
+        -------
+        dict
+            dictionary containing metadata
+        """
+        lib = self._get_library(libname)
+        return lib.read_metadata(name).metadata
+
+    @property
+    def oseries_names(self):
+        """List of oseries names.
+
+        Returns
+        -------
+        list
+            list of oseries in library
+        """
+        return self._get_library("oseries").list_symbols()
+
+    @property
+    def stresses_names(self):
+        """List of stresses names.
+
+        Returns
+        -------
+        list
+            list of stresses in library
+        """
+        return self._get_library("stresses").list_symbols()
+
+    @property
+    def model_names(self):
+        """List of model names.
+
+        Returns
+        -------
+        list
+            list of models in library
+        """
+        return self._get_library("models").list_symbols()
+
+    @property
+    def oseries_with_models(self):
+        """List of oseries with models."""
+        return self._get_library("oseries_models").list_symbols()
+
+
 class PystoreConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
     conn_type = "pystore"
 

@@ -15,7 +15,6 @@ ps.set_log_level("ERROR")
 
 def test_get_library(conn):
     olib = conn._get_library("oseries")
-    return
 
 
 def test_add_get_series(request, conn):
@@ -35,7 +34,6 @@ def test_add_get_series(request, conn):
         assert (o1 == o2).all()
     finally:
         conn.del_oseries("test_series")
-    return
 
 
 def test_add_get_series_wnans(request, conn):
@@ -56,7 +54,6 @@ def test_add_get_series_wnans(request, conn):
         assert o1.equals(o2)
     finally:
         conn.del_oseries("test_series_nans")
-    return
 
 
 def test_add_get_dataframe(request, conn):
@@ -74,7 +71,6 @@ def test_add_get_dataframe(request, conn):
         assert o1.equals(o2.astype(float))
     finally:
         conn.del_oseries("test_df")
-    return
 
 
 def test_add_pastas_timeseries(request, conn):
@@ -89,7 +85,6 @@ def test_add_pastas_timeseries(request, conn):
         conn.add_oseries(ts, "test_pastas_ts", metadata=None)
     except DeprecationWarning:
         pass
-    return
 
 
 def test_update_series(request, conn):
@@ -113,7 +108,6 @@ def test_update_series(request, conn):
         assert o3.index.size == 11
     finally:
         conn.del_oseries("test_df")
-    return
 
 
 def test_upsert_oseries(request, conn):
@@ -137,7 +131,6 @@ def test_upsert_oseries(request, conn):
         assert o3.index.size == 14
     finally:
         conn.del_oseries("test_df")
-    return
 
 
 def test_upsert_stress(request, conn):
@@ -167,7 +160,6 @@ def test_upsert_stress(request, conn):
         assert conn.stresses.loc["test_df", "kind"] == "not useless"
     finally:
         conn.del_stress("test_df")
-    return
 
 
 def test_update_metadata(request, conn):
@@ -187,7 +179,6 @@ def test_update_metadata(request, conn):
         assert m["y"] == 400000.0
     finally:
         conn.del_oseries("test_df")
-    return
 
 
 @pytest.mark.dependency()
@@ -199,7 +190,6 @@ def test_add_oseries(conn):
         metadata={"name": "oseries1", "x": 100000, "y": 400000},
         overwrite=True,
     )
-    return
 
 
 @pytest.mark.dependency()
@@ -211,21 +201,18 @@ def test_add_stress(conn):
         kind="prec",
         metadata={"kind": "prec", "x": 100001, "y": 400001},
     )
-    return
 
 
 @pytest.mark.dependency()
 def test_get_oseries(request, conn):
     depends(request, [f"test_add_oseries[{conn.type}]"])
     o = conn.get_oseries("oseries1")
-    return
 
 
 @pytest.mark.dependency()
 def test_get_oseries_and_metadata(request, conn):
     depends(request, [f"test_add_oseries[{conn.type}]"])
     o, m = conn.get_oseries("oseries1", return_metadata=True)
-    return
 
 
 @pytest.mark.dependency()
@@ -233,7 +220,6 @@ def test_get_stress(request, conn):
     depends(request, [f"test_add_stress[{conn.type}]"])
     s = conn.get_stresses("prec")
     s.name = "prec"
-    return
 
 
 @pytest.mark.dependency()
@@ -241,40 +227,34 @@ def test_get_stress_and_metadata(request, conn):
     depends(request, [f"test_add_stress[{conn.type}]"])
     s, m = conn.get_stresses("prec", return_metadata=True)
     s.name = "prec"
-    return
 
 
 @pytest.mark.dependency()
 def test_oseries_prop(request, conn):
     depends(request, [f"test_add_oseries[{conn.type}]"])
     conn.oseries
-    return
 
 
 @pytest.mark.dependency()
 def test_stresses_prop(request, conn):
     depends(request, [f"test_add_stress[{conn.type}]"])
     conn.stresses
-    return
 
 
 def test_repr(conn):
     conn.__repr__()
-    return
 
 
 @pytest.mark.dependency()
 def test_del_oseries(request, conn):
     depends(request, [f"test_add_oseries[{conn.type}]"])
     conn.del_oseries("oseries1")
-    return
 
 
 @pytest.mark.dependency()
 def test_del_stress(request, conn):
     depends(request, [f"test_add_stress[{conn.type}]"])
     conn.del_stress("prec")
-    return
 
 
 @pytest.mark.dependency()
@@ -287,7 +267,6 @@ def test_empty_library(request, conn):
     s1.name = "test_series"
     conn.add_oseries(s1, "test_series", metadata=None)
     conn.empty_library("stresses", prompt=False, progressbar=False)
-    return
 
 
 @pytest.mark.dependency()
@@ -302,4 +281,3 @@ def test_delete(request, conn):
     elif conn.conn_type == "pas":
         pst.util.delete_pas_connector(conn, libraries=["oseries"])
         pst.util.delete_pas_connector(conn)
-    return

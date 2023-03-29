@@ -7,7 +7,8 @@ import pytest
 
 import pastastore as pst
 
-params = ["dict", "pas"]  # "arctic" and "pystore" removed for CI, can be tested locally
+# "arctic" and "pystore" removed for CI, can be tested locally
+params = ["dict", "pas", "arcticdb"]
 
 
 def initialize_project(conn):
@@ -63,13 +64,16 @@ def conn(request):
     if request.param == "arctic":
         connstr = "mongodb://localhost:27017/"
         conn = pst.ArcticConnector(name, connstr)
+    elif request.param == "arcticdb":
+        uri = "lmdb://./arctic_db/"
+        conn = pst.ArcticDBConnector(name, uri)
     elif request.param == "pystore":
         path = "./tests/data/pystore"
         conn = pst.PystoreConnector(name, path)
     elif request.param == "dict":
         conn = pst.DictConnector(name)
     elif request.param == "pas":
-        conn = pst.PasConnector(name, "./tests/data/pas")
+        conn = pst.PasConnector(name, "./tests/data")
     else:
         raise ValueError("Unrecognized parameter!")
     conn.type = request.param  # added here for defining test dependencies
@@ -82,6 +86,10 @@ def pstore(request):
         connstr = "mongodb://localhost:27017/"
         name = "test_project"
         connector = pst.ArcticConnector(name, connstr)
+    elif request.param == "arcticdb":
+        name = "test_project"
+        uri = "lmdb://./arctic_db/"
+        connector = pst.ArcticDBConnector(name, uri)
     elif request.param == "pystore":
         name = "test_project"
         path = "./tests/data/pystore"
@@ -109,6 +117,14 @@ def delete_arctic_test_db():
     connector = pst.ArcticConnector(name, connstr)
     pst.util.delete_arctic_connector(connector)
     print("ArcticConnector 'test_project' deleted.")
+
+
+def delete_arcticdb_test_db():
+    connstr = "lmdb://./arctic_db/"
+    name = "test_project"
+    connector = pst.ArcticDBConnector(name, connstr)
+    pst.util.delete_arcticdb_connector(connector)
+    print("ArcticDBConnector 'test_project' deleted.")
 
 
 _has_pkg_cache = {}

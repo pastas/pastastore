@@ -48,6 +48,7 @@ lint = ["black", "flake8", "isort"]
 optional = ["contextily", "pyproj", "adjustText"]
 test = [
     "pastastore[lint,optional]",
+    "arcticdb",
     "hydropandas",
     "coverage",
     "codecov",
@@ -60,6 +61,9 @@ test = [
 pystore = ["fsspec>=0.3.3", "python-snappy", "dask[dataframe]"]
 arctic = [
     "arctic", # will not work as releases not uploaded to PyPI
+]
+arcticdb = [
+    "arcticdb",
 ]
 docs = [
     "pastastore[optional]",

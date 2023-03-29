@@ -32,6 +32,15 @@ PasConnector
    :private-members:
    :show-inheritance:
 
+ArcticDBConnector
+^^^^^^^^^^^^^^^^^
+
+.. autoclass:: pastastore.ArcticDBConnector
+   :members:
+   :undoc-members:
+   :private-members:
+   :show-inheritance:
+
 ArcticConnector
 ^^^^^^^^^^^^^^^
 
