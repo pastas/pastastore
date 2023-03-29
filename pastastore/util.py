@@ -24,7 +24,7 @@ def delete_pystore_connector(
     path: Optional[str] = None,
     name: Optional[str] = None,
     libraries: Optional[List[str]] = None,
-) -> None:
+) -> None:  # pragma: no cover
     """Delete libraries from pystore.
 
     Parameters
@@ -65,7 +65,7 @@ def delete_arctic_connector(
     connstr: Optional[str] = None,
     name: Optional[str] = None,
     libraries: Optional[List[str]] = None,
-) -> None:
+) -> None:  # pragma: no cover
     """Delete libraries from arctic database.
 
     Parameters
