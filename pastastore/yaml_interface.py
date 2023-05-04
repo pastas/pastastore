@@ -478,6 +478,114 @@ class PastastoreYAML:
 
         return d
 
+    def construct_mldict(self, mlyml: dict, mlnam: str) -> dict:
+        # get oseries + metadata
+        if isinstance(mlyml["oseries"], dict):
+            onam = str(mlyml["oseries"]["name"])
+            _ = mlyml.pop("oseries")
+        else:
+            onam = str(mlyml.pop("oseries"))
+
+        logger.info(f"Building model '{mlnam}' for oseries '{onam}'")
+        o, ometa = self.pstore.get_oseries(onam, return_metadata=True)
+
+        # create model to obtain default model settings
+        ml = ps.Model(o, name=mlnam, metadata=ometa)
+        mldict = ml.to_dict(series=True)
+
+        # update with stored model settings
+        if "settings" in mlyml:
+            mldict["settings"].update(mlyml["settings"])
+
+        # stressmodels
+        for smnam, smyml in mlyml["stressmodels"].items():
+            # set name if not provided
+            if smyml is not None:
+                name = smyml.get("name", smnam)
+            else:
+                name = smnam
+            logger.info(f"| parsing stressmodel: '{name}'")
+
+            # check whether smtyp is defined
+            classkey = "stressmodel" if PASTAS_LEQ_022 else "class"
+            if smyml is not None:
+                if PASTAS_LEQ_022:
+                    if "class" in smyml:
+                        smyml["stressmodel"] = smyml.pop("class")
+                if classkey in smyml:
+                    smtyp = True
+                else:
+                    smtyp = False
+            else:
+                smtyp = False
+
+            # check if RechargeModel based on name if smtyp not defined
+            if (
+                smnam.lower() in ["rch", "rech", "recharge", "rechargemodel"]
+            ) and not smtyp:
+                logger.info("| assuming RechargeModel based on stressmodel name.")
+                # check if stressmodel dictionary is empty, create (nearly
+                # empty) dict so defaults are used
+                if smyml is None:
+                    mlyml["stressmodels"][smnam] = {"name": "recharge"}
+                    smyml = mlyml["stressmodels"][smnam]
+                if "name" not in smyml:
+                    smyml["name"] = smnam
+                smtyp = smyml.get(classkey, "RechargeModel")
+            else:
+                # if no info is provided, raise error,
+                # cannot make any assumptions for non-RechargeModels
+                if smyml is None:
+                    raise ValueError(
+                        "Insufficient information " f"for stressmodel '{name}'!"
+                    )
+                # get stressmodel type, with default StressModel
+                if classkey in smyml:
+                    smtyp = smyml[classkey]
+                else:
+                    logger.info(
+                        "| no stressmodel class type provided, " "using 'StressModel'"
+                    )
+                    smtyp = "StressModel"
+
+            # parse dictionary based on smtyp
+            if smtyp in ["RechargeModel", "TarsoModel"]:
+                # parse RechargeModel
+                sm = self._parse_rechargemodel_dict(smyml, onam=onam)
+
+                # turn off constant for TarsoModel
+                if smtyp == "TarsoModel":
+                    mldict["constant"] = False
+            elif smtyp == "StressModel":
+                # parse StressModel
+                sm = self._parse_stressmodel_dict(smyml, onam=onam)
+            elif smtyp == "WellModel":
+                # parse WellModel
+                sm = self._parse_wellmodel_dict(smyml, onam=onam)
+            else:
+                raise NotImplementedError(
+                    "PastaStore.yaml interface does " f"not (yet) support '{smtyp}'!"
+                )
+
+            # add to list
+            smyml.update(sm)
+
+        # update model dict w/ default settings with loaded data
+        mldict.update(mlyml)
+
+        # add name to dictionary if not already present
+        if "name" not in mldict:
+            mldict["name"] = mlnam
+
+        # convert warmup and time_offset to panads.Timedelta
+        if "warmup" in mldict["settings"]:
+            mldict["settings"]["warmup"] = pd.Timedelta(mldict["settings"]["warmup"])
+        if "time_offset" in mldict["settings"]:
+            mldict["settings"]["time_offset"] = pd.Timedelta(
+                mldict["settings"]["time_offset"]
+            )
+        return mldict
+
     def load(self, fyaml: str) -> List[ps.Model]:
         """Load Pastas YAML file.
 
@@ -509,115 +617,7 @@ class PastastoreYAML:
         for mlnam in yml.keys():
             mlyml = yml[mlnam]
 
-            # get oseries + metadata
-            if isinstance(mlyml["oseries"], dict):
-                onam = str(mlyml["oseries"]["name"])
-                _ = mlyml.pop("oseries")
-            else:
-                onam = str(mlyml.pop("oseries"))
-
-            logger.info(f"Building model '{mlnam}' for oseries '{onam}'")
-            o, ometa = self.pstore.get_oseries(onam, return_metadata=True)
-
-            # create model to obtain default model settings
-            ml = ps.Model(o, name=mlnam, metadata=ometa)
-            mldict = ml.to_dict(series=True)
-
-            # update with stored model settings
-            if "settings" in mlyml:
-                mldict["settings"].update(mlyml["settings"])
-
-            # stressmodels
-            for smnam, smyml in mlyml["stressmodels"].items():
-                # set name if not provided
-                if smyml is not None:
-                    name = smyml.get("name", smnam)
-                else:
-                    name = smnam
-                logger.info(f"| parsing stressmodel: '{name}'")
-
-                # check whether smtyp is defined
-                classkey = "stressmodel" if PASTAS_LEQ_022 else "class"
-                if smyml is not None:
-                    if PASTAS_LEQ_022:
-                        if "class" in smyml:
-                            smyml["stressmodel"] = smyml.pop("class")
-                    if classkey in smyml:
-                        smtyp = True
-                    else:
-                        smtyp = False
-                else:
-                    smtyp = False
-
-                # check if RechargeModel based on name if smtyp not defined
-                if (
-                    smnam.lower() in ["rch", "rech", "recharge", "rechargemodel"]
-                ) and not smtyp:
-                    logger.info("| assuming RechargeModel based on stressmodel name.")
-                    # check if stressmodel dictionary is empty, create (nearly
-                    # empty) dict so defaults are used
-                    if smyml is None:
-                        mlyml["stressmodels"][smnam] = {"name": "recharge"}
-                        smyml = mlyml["stressmodels"][smnam]
-                    if "name" not in smyml:
-                        smyml["name"] = smnam
-                    smtyp = smyml.get(classkey, "RechargeModel")
-                else:
-                    # if no info is provided, raise error,
-                    # cannot make any assumptions for non-RechargeModels
-                    if smyml is None:
-                        raise ValueError(
-                            "Insufficient information " f"for stressmodel '{name}'!"
-                        )
-                    # get stressmodel type, with default StressModel
-                    if classkey in smyml:
-                        smtyp = smyml[classkey]
-                    else:
-                        logger.info(
-                            "| no stressmodel class type provided, "
-                            "using 'StressModel'"
-                        )
-                        smtyp = "StressModel"
-
-                # parse dictionary based on smtyp
-                if smtyp in ["RechargeModel", "TarsoModel"]:
-                    # parse RechargeModel
-                    sm = self._parse_rechargemodel_dict(smyml, onam=onam)
-
-                    # turn off constant for TarsoModel
-                    if smtyp == "TarsoModel":
-                        mldict["constant"] = False
-                elif smtyp == "StressModel":
-                    # parse StressModel
-                    sm = self._parse_stressmodel_dict(smyml, onam=onam)
-                elif smtyp == "WellModel":
-                    # parse WellModel
-                    sm = self._parse_wellmodel_dict(smyml, onam=onam)
-                else:
-                    raise NotImplementedError(
-                        "PastaStore.yaml interface does "
-                        f"not (yet) support '{smtyp}'!"
-                    )
-
-                # add to list
-                smyml.update(sm)
-
-            # update model dict w/ default settings with loaded data
-            mldict.update(mlyml)
-
-            # add name to dictionary if not already present
-            if "name" not in mldict:
-                mldict["name"] = mlnam
-
-            # convert warmup and time_offset to panads.Timedelta
-            if "warmup" in mldict["settings"]:
-                mldict["settings"]["warmup"] = pd.Timedelta(
-                    mldict["settings"]["warmup"]
-                )
-            if "time_offset" in mldict["settings"]:
-                mldict["settings"]["time_offset"] = pd.Timedelta(
-                    mldict["settings"]["time_offset"]
-                )
+            mldict = self.construct_mldict(mlyml, mlnam)
 
             # load model
             ml = ps.io.base._load_model(mldict)
