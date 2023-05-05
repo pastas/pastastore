@@ -25,7 +25,7 @@ Start Python and import the module::
 
     import pastastore as pst
     conn = pst.DictConnector("my_connector")
-    store = pst.PastaStore("my_store", conn)
+    store = pst.PastaStore(conn)
 
 See the :ref:`examples` section for some quick examples on how to get started.
 

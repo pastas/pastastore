@@ -22,7 +22,7 @@ is stored in-memory (in dictionaries)::
    conn = pst.DictConnect("my_db")
 
    # create project for managing Pastas data and models
-   store = pst.PastaStore("my_project", conn)
+   store = pst.PastaStore(conn)
 
 
 Using Pastas
@@ -35,11 +35,27 @@ that writes data to disk as no external dependencies are required::
    import pastastore as pst
 
    # define pas connector
-   path = "./data/pas"
+   path = "./data/pastas_db"
    conn = pst.PasConnector("my_db", path)
 
    # create project for managing Pastas data and models
-   store = pst.PastaStore("my_project", conn)
+   store = pst.PastaStore(conn)
+
+
+Using ArcticDB
+--------------
+
+The following snippet shows how to create an `ArcticDBConnector` and initialize
+a `PastaStore` object::
+
+   import pastastore as pst
+
+   # define arctic connector
+   uri = "lmdb://./my_path_here/"
+   conn = pst.ArcticDBConnector("my_db", uri)
+
+   # create project for managing Pastas data and models
+   store = pst.PastaStore(conn)
 
 
 Using Arctic
@@ -56,7 +72,7 @@ this to work::
    conn = pst.ArcticConnector("my_db", connstr)
 
    # create project for managing Pastas data and models
-   store = pst.PastaStore("my_project", conn)
+   store = pst.PastaStore(conn)
 
 
 Using Pystore
@@ -71,7 +87,7 @@ connection string to a database::
    conn = pst.PystoreConnector("my_db", path)
 
    # create project for managing Pastas data and models
-   store = pst.PastasProject("my_project", conn)
+   store = pst.PastasProject(conn)
 
 
 The PastaStore object

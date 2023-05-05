@@ -24,7 +24,7 @@ def delete_pystore_connector(
     path: Optional[str] = None,
     name: Optional[str] = None,
     libraries: Optional[List[str]] = None,
-) -> None:
+) -> None:  # pragma: no cover
     """Delete libraries from pystore.
 
     Parameters
@@ -65,7 +65,7 @@ def delete_arctic_connector(
     connstr: Optional[str] = None,
     name: Optional[str] = None,
     libraries: Optional[List[str]] = None,
-) -> None:
+) -> None:  # pragma: no cover
     """Delete libraries from arctic database.
 
     Parameters
@@ -107,6 +107,67 @@ def delete_arctic_connector(
         if libraries is not None:
             print()
             print(f" - deleted: {lib}")
+    print("Done!")
+
+
+def delete_arcticdb_connector(
+    conn=None,
+    uri: Optional[str] = None,
+    name: Optional[str] = None,
+    libraries: Optional[List[str]] = None,
+) -> None:
+    """Delete libraries from arcticDB database.
+
+    Parameters
+    ----------
+    conn : pastastore.ArcticDBConnector
+        ArcticDBConnector object
+    uri : str, optional
+        uri connection string to the database
+    name : str, optional
+        name of the database
+    libraries : Optional[List[str]], optional
+        list of library names to delete, by default None which deletes
+        all libraries
+    """
+    import shutil
+
+    import arcticdb
+
+    if conn is not None:
+        name = conn.name
+        uri = conn.uri
+    elif name is None or uri is None:
+        raise ValueError("Provide 'name' and 'uri' OR 'conn'!")
+
+    arc = arcticdb.Arctic(uri)
+
+    print(f"Deleting ArcticDBConnector database: '{name}' ... ", end="")
+    # get library names
+    if libraries is None:
+        libs = []
+        for ilib in arc.list_libraries():
+            if ilib.split(".")[0] == name:
+                # TODO: remove replace when arcticdb is able to delete
+                libs.append(ilib.replace(".", "/"))
+    elif name is not None:
+        # TODO: replace / with . when arcticdb is able to delete
+        libs = [name + "/" + ilib for ilib in libraries]
+    else:
+        raise ValueError("Provide 'name' and 'uri' OR 'conn'!")
+
+    for lib in libs:
+        # arc.delete_library(lib)  # TODO: not working at the moment.
+        shutil.rmtree(os.path.join(conn.uri.split("//")[-1], lib))
+
+        if libraries is not None:
+            print()
+            print(f" - deleted: {lib}")
+
+    remaining = [ilib for ilib in arc.list_libraries() if ilib.split(".") == name]
+    if len(remaining) == 0:
+        shutil.rmtree(os.path.join(conn.uri.split("//")[-1], name))
+
     print("Done!")
 
 
@@ -167,6 +228,8 @@ def delete_pastastore(pstore, libraries: Optional[List[str]] = None) -> None:
         delete_dict_connector(pstore)
     elif pstore.conn.conn_type == "arctic":
         delete_arctic_connector(conn=pstore.conn, libraries=libraries)
+    elif pstore.conn.conn_type == "arcticdb":
+        delete_arcticdb_connector(conn=pstore.conn, libraries=libraries)
     elif pstore.conn.conn_type == "pas":
         delete_pas_connector(conn=pstore.conn, libraries=libraries)
     else:
