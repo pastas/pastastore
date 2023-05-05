@@ -745,7 +745,8 @@ def frontiers_checks(
                         else:
                             check_gain_passed = np.abs(gain) > 2 * gain_std
                         checks.loc[
-                            f"gain > 2*std: {sm_name}-{iw:02g} ({sm.distances.index[iw]})"
+                            f"gain > 2*std: {sm_name}-{iw:02g} ({sm.distances.index[iw]})",
+                            :,
                         ] = (
                             gain,
                             2 * gain_std,
@@ -763,7 +764,7 @@ def frontiers_checks(
                     else:
                         check_gain_passed = np.abs(gain) > 2 * gain_std
                     check_gain_passed = np.abs(gain) > 2 * gain_std
-                    checks.loc[f"gain > 2*std: {sm_name}"] = (
+                    checks.loc[f"gain > 2*std: {sm_name}", :] = (
                         gain,
                         2 * gain_std,
                         "(unit head)/(unit well stress)",
