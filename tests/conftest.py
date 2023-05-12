@@ -134,7 +134,7 @@ def has_pkg(pkg):
     """
     Determines if the given Python package is installed.
 
-    Originally written by Mike Toews (mwtoews@gmail.com) for FloPy.
+    Originally written by Mike Toews for FloPy.
     """
     if pkg not in _has_pkg_cache:
         # for some dependencies, package name and import name are different

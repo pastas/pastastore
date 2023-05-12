@@ -81,7 +81,12 @@ jobs:
 
       - name: Run pytest
         run: |
-          pytest
+          pytest -m "not bgmap"
+
+      - name: Test backgroundmap once
+        if: ${{ matrix.python-version == '3.9' && matrix.pastas-version == 'git+https://github.com/pastas/pastas.git@dev' }}
+        run: |
+          pytest -m "bgmap"
 
       - name: Run codacy-coverage-reporter
         if: ${{ github.repository == 'pastas/pastastore' && success() }}

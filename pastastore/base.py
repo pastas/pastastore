@@ -68,7 +68,6 @@ class BaseConnector(ABC):
         lib : Any
             handle to the library
         """
-        pass
 
     @abstractmethod
     def _add_item(
@@ -94,7 +93,6 @@ class BaseConnector(ABC):
         metadata : dict, optional
             dictionary containing metadata, by default None
         """
-        pass
 
     @abstractmethod
     def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
@@ -114,7 +112,6 @@ class BaseConnector(ABC):
         item : FrameorSeriesUnion or dict
             item (time series or pastas.Model)
         """
-        pass
 
     @abstractmethod
     def _del_item(self, libname: str, name: str) -> None:
@@ -129,7 +126,6 @@ class BaseConnector(ABC):
         name : str
             name of item to delete
         """
-        pass
 
     @abstractmethod
     def _get_metadata(self, libname: str, name: str) -> Dict:
@@ -149,7 +145,6 @@ class BaseConnector(ABC):
         metadata : dict
             dictionary containing metadata
         """
-        pass
 
     @abstractproperty
     def oseries_names(self):
@@ -157,7 +152,6 @@ class BaseConnector(ABC):
 
         Property must be overriden by subclass.
         """
-        pass
 
     @abstractproperty
     def stresses_names(self):
@@ -165,7 +159,6 @@ class BaseConnector(ABC):
 
         Property must be overriden by subclass.
         """
-        pass
 
     @abstractproperty
     def model_names(self):
@@ -173,7 +166,6 @@ class BaseConnector(ABC):
 
         Property must be overriden by subclass.
         """
-        pass
 
     def set_check_model_series_values(self, b: bool):
         """Turn CHECK_MODEL_SERIES_VALUES option on (True) or off (False).
