@@ -983,8 +983,8 @@ class PastaStore:
                     structure.loc[mlnam, pnam] = 1
                     structure.loc[mlnam, enam] = 1
                 elif "stress" in sm:
-                    s = sm["stress"]
-                    structure.loc[mlnam, s["name"]] = 1
+                    for s in sm["stress"]:
+                        structure.loc[mlnam, s["name"]] = 1
         if dropna:
             return structure.dropna(how="all", axis=1)
         else:
