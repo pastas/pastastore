@@ -6,6 +6,10 @@ import pkg_resources
 import pytest
 
 import pastastore as pst
+import arcticdb_ext
+
+# prevent segmentationfault in GH Actions
+arcticdb_ext.set_config_int('VersionStore.NumIOThreads', 1)
 
 # "arctic" and "pystore" removed for CI, can be tested locally
 params = ["dict", "pas", "arcticdb"]
