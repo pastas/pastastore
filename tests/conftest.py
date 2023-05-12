@@ -6,6 +6,10 @@ import pkg_resources
 import pytest
 
 import pastastore as pst
+import arcticdb_ext
+
+# prevent segmentationfault in GH Actions
+arcticdb_ext.set_config_int("VersionStore.NumIOThreads", 1)
 
 # "arctic" and "pystore" removed for CI, can be tested locally
 params = ["dict", "pas", "arcticdb"]
@@ -134,7 +138,7 @@ def has_pkg(pkg):
     """
     Determines if the given Python package is installed.
 
-    Originally written by Mike Toews (mwtoews@gmail.com) for FloPy.
+    Originally written by Mike Toews for FloPy.
     """
     if pkg not in _has_pkg_cache:
         # for some dependencies, package name and import name are different
