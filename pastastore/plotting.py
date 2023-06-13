@@ -123,7 +123,6 @@ class Plots:
         if not split:
             axes.legend(loc=(0, 1), frameon=False, ncol=7, fontsize="x-small")
 
-        fig.tight_layout()
         return axes
 
     def oseries(self, names=None, ax=None, split=False, figsize=(10, 5), **kwargs):
