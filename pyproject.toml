@@ -45,11 +45,12 @@ repository = "https://github.com/pastas/pastastore"
 documentation = "https://pastastore.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
+full = ["pastastore[arcticdb,optional]"]
 lint = ["black", "flake8", "isort"]
 optional = ["contextily", "pyproj", "adjustText"]
 test = [
     "pastastore[arcticdb,lint,optional]",
-    "hydropandas",
+    "hydropandas[full]",
     "coverage",
     "codecov",
     "pytest",
