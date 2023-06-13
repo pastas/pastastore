@@ -1266,8 +1266,8 @@ class Maps:
             keyword arguments to ax.annotate
         """
         stroke = [patheffects.withStroke(linewidth=3, foreground="w")]
-        if "fontsize" in kwargs:
-            fontsize = kwargs.pop("fontsize", 10)
+
+        fontsize = kwargs.pop("fontsize", 10)
 
         if adjust:
             from adjustText import adjust_text
