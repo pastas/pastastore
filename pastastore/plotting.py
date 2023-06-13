@@ -1267,6 +1267,8 @@ class Maps:
             keyword arguments to ax.annotate
         """
         stroke = [patheffects.withStroke(linewidth=3, foreground="w")]
+        if "fontsize" in kwargs:
+            fontsize = kwargs.pop("fontsize", 10)
 
         if adjust:
             from adjustText import adjust_text
@@ -1274,7 +1276,13 @@ class Maps:
             texts = []
             for name, row in df.iterrows():
                 texts.append(
-                    ax.text(row["x"], row["y"], name, **{"path_effects": stroke})
+                    ax.text(
+                        row["x"],
+                        row["y"],
+                        name,
+                        fontsize=fontsize,
+                        **{"path_effects": stroke},
+                    )
                 )
 
             adjust_text(
@@ -1290,7 +1298,6 @@ class Maps:
             )
 
         else:
-            fontsize = kwargs.pop("fontsize", 10)
             textcoords = kwargs.pop("textcoords", "offset points")
             xytext = kwargs.pop("xytext", (10, 10))
 
