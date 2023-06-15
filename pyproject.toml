@@ -66,6 +66,7 @@ arctic = [
 arcticdb = ["arcticdb"]
 docs = [
     "pastastore[optional]",
+    "lxml",  # temporary fix: for hydropandas 0.8.0
     "sphinx_rtd_theme",
     "Ipython",
     "ipykernel",
