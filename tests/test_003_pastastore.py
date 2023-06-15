@@ -258,8 +258,6 @@ def test_copy_dbase(pstore):
 
 def test_to_from_zip(pstore):
     zipname = f"test_{pstore.type}.zip"
-    if pstore.type == "arcticdb":
-        pytest.xfail("model datetime objects not supported")
     pstore.to_zip(zipname, progressbar=False, overwrite=True)
     conn = pst.DictConnector("test")
     try:
