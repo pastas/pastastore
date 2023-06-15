@@ -7,6 +7,7 @@ import pastas as ps
 import pytest
 from numpy import allclose
 from pytest_dependency import depends
+from packaging.version import parse
 
 with warnings.catch_warnings():
     warnings.simplefilter(action="ignore", category=FutureWarning)
@@ -257,6 +258,9 @@ def test_copy_dbase(pstore):
 
 
 def test_to_from_zip(pstore):
+    
+    if pstore.type == "arcticdb" and parse(ps.__version__) < parse("1.1.0") :
+        pytest.xfail("model datetime objects not supported")
     zipname = f"test_{pstore.type}.zip"
     pstore.to_zip(zipname, progressbar=False, overwrite=True)
     conn = pst.DictConnector("test")
