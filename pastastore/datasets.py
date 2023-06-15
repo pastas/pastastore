@@ -1,7 +1,7 @@
 import os
 
-import hydropandas import Obs, ObsCollection
 import pandas as pd
+from hydropandas import Obs, ObsCollection
 
 try:
     from pastas.timeseries_utils import timestep_weighted_resample
