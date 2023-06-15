@@ -58,6 +58,7 @@ test = [
     "pytest-dependency",
     "pytest-benchmark",
     "codacy-coverage",
+    "lxml",  # temporary fix: for hydropandas 0.8.0
 ]
 pystore = ["fsspec>=0.3.3", "python-snappy", "dask[dataframe]"]
 arctic = [
@@ -66,7 +67,6 @@ arctic = [
 arcticdb = ["arcticdb"]
 docs = [
     "pastastore[optional]",
-    "lxml",  # temporary fix: for hydropandas 0.8.0
     "sphinx_rtd_theme",
     "Ipython",
     "ipykernel",
