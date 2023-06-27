@@ -410,7 +410,7 @@ class Plots:
             ax.set_yticklabels(names)
         else:
             ax.set_ylabel("Timeseries (-)")
-        ax.grid()
+        ax.grid(True)
 
         return ax
 
