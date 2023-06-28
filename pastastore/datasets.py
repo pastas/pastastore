@@ -1,7 +1,7 @@
 import os
 
-import hydropandas as hpd
 import pandas as pd
+from hydropandas import Obs, ObsCollection
 
 try:
     from pastas.timeseries_utils import timestep_weighted_resample
@@ -114,7 +114,7 @@ def example_pastastore(conn="DictConnector"):
     # multiwell notebook data
     fname = os.path.join(datadir, "MenyanthesTest.men")
     # meny = ps.read.MenyData(fname)
-    meny = hpd.ObsCollection.from_menyanthes(fname, hpd.Obs)
+    meny = ObsCollection.from_menyanthes(fname, Obs)
 
     oseries = meny.loc["Obsevation well", "obs"]
     ometa = {

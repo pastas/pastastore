@@ -684,7 +684,7 @@ def frontiers_checks(
         if check3_tmem:
             len_oseries_calib = (ml.settings["tmax"] - ml.settings["tmin"]).days
             for sm_name, sm in ml.stressmodels.items():
-                if sm_name.startswith("wells"):
+                if sm._name == "WellModel":
                     nwells = sm.distances.index.size
                     for iw in range(nwells):
                         p = sm.get_parameters(model=ml, istress=iw)
@@ -715,24 +715,7 @@ def frontiers_checks(
         # Check 4 - Uncertainty Gain
         if check4_gain:
             for sm_name, sm in ml.stressmodels.items():
-                if sm_name.startswith("wells"):
-                    p = ml.get_parameters(sm_name)
-                    gain = sm.rfunc.gain(p)
-                    A = ml.parameters.loc[f"{sm_name}_A", "optimal"]
-                    b = ml.parameters.loc[f"{sm_name}_b", "optimal"]
-                    var_A = ml.parameters.loc[f"{sm_name}_A", "stderr"] ** 2
-                    var_b = ml.parameters.loc[f"{sm_name}_b", "stderr"] ** 2
-                    cov_Ab = ml.fit.pcov.loc[f"{sm_name}_A", f"{sm_name}_b"]
-                    gain_std = np.sqrt(
-                        sm.rfunc.variance_gain(A, b, var_A, var_b, cov_Ab)
-                    )
-                    if gain_std is None:
-                        gain_std = np.nan
-                        check_gain_passed = pd.NA
-                    elif np.isnan(gain_std):
-                        check_gain_passed = pd.NA
-                    else:
-                        check_gain_passed = np.abs(gain) > 2 * gain_std
+                if sm._name == "WellModel":
                     for iw in range(sm.distances.index.size):
                         p = sm.get_parameters(model=ml, istress=iw)
                         gain = sm.rfunc.gain(p)

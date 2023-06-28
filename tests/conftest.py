@@ -1,12 +1,12 @@
 import importlib
 
+import arcticdb_ext
 import pandas as pd
 import pastas as ps
 import pkg_resources
 import pytest
 
 import pastastore as pst
-import arcticdb_ext
 
 # prevent segmentationfault in GH Actions
 arcticdb_ext.set_config_int("VersionStore.NumIOThreads", 1)

@@ -123,7 +123,6 @@ class Plots:
         if not split:
             axes.legend(loc=(0, 1), frameon=False, ncol=7, fontsize="x-small")
 
-        fig.tight_layout()
         return axes
 
     def oseries(self, names=None, ax=None, split=False, figsize=(10, 5), **kwargs):
@@ -411,7 +410,7 @@ class Plots:
             ax.set_yticklabels(names)
         else:
             ax.set_ylabel("Timeseries (-)")
-        ax.grid()
+        ax.grid(True)
 
         return ax
 
@@ -1268,13 +1267,21 @@ class Maps:
         """
         stroke = [patheffects.withStroke(linewidth=3, foreground="w")]
 
+        fontsize = kwargs.pop("fontsize", 10)
+
         if adjust:
             from adjustText import adjust_text
 
             texts = []
             for name, row in df.iterrows():
                 texts.append(
-                    ax.text(row["x"], row["y"], name, **{"path_effects": stroke})
+                    ax.text(
+                        row["x"],
+                        row["y"],
+                        name,
+                        fontsize=fontsize,
+                        **{"path_effects": stroke},
+                    )
                 )
 
             adjust_text(
@@ -1290,7 +1297,6 @@ class Maps:
             )
 
         else:
-            fontsize = kwargs.pop("fontsize", 10)
             textcoords = kwargs.pop("textcoords", "offset points")
             xytext = kwargs.pop("xytext", (10, 10))
 
