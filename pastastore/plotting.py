@@ -397,20 +397,30 @@ class Plots:
                     linewidth=0,
                     rasterized=True,
                 )
+
         # make a colorbar in an ax on the
         # right side, then set the current axes to ax again
         cb = fig.colorbar(pc, ax=ax, cax=cax, extend="both")
         cb.set_ticks(bounds)
         cb.ax.set_yticklabels(labels)
         cb.ax.minorticks_off()
+
         if set_yticks:
-            ax.set_yticks(np.arange(0.5, len(series) + 0.5))
+            ax.set_yticks(np.arange(0.5, len(series) + 0.5), major=True)
+            ax.set_yticks(np.arange(0, len(series) + 1), minor=True)
             if names is None:
                 names = [s.name for s in series]
             ax.set_yticklabels(names)
+
+            for tick in ax.yaxis.get_major_ticks():  # don't show major ytick marker
+                tick.tick1line.set_visible(False)
+
+            ax.grid(True, which="minor", axis="y")
+            ax.grid(True, which="major", axis="x")
+
         else:
             ax.set_ylabel("Timeseries (-)")
-        ax.grid(True)
+            ax.grid(True, which="both")
 
         return ax
 
