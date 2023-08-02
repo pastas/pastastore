@@ -418,8 +418,15 @@ class Plots:
             ax.grid(True, which="minor", axis="y")
             ax.grid(True, which="major", axis="x")
 
+            for tick in ax.yaxis.get_major_ticks():  # don't show major ytick marker
+                tick.tick1line.set_visible(False)
+
+            ax.grid(True, which="minor", axis="y")
+            ax.grid(True, which="major", axis="x")
+
         else:
             ax.set_ylabel("Timeseries (-)")
+            ax.grid(True, which="both")
             ax.grid(True, which="both")
 
         return ax
