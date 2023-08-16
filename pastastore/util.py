@@ -704,6 +704,8 @@ def frontiers_checks(
                         )
                 else:
                     tmem = ml.get_response_tmax(sm_name)
+                    if tmem is None:  # no rfunc in stressmodel
+                        tmem = 0
                     check_tmem_passed = tmem < len_oseries_calib / 2
                     checks.loc[f"calib_period > 2*t_mem_95%: {sm_name}", :] = (
                         tmem,
@@ -736,23 +738,30 @@ def frontiers_checks(
                             "(unit head)/(unit well stress)",
                             check_gain_passed,
                         )
+                    continue
+                elif sm._name == "LinearTrend":
+                    gain = ml.parameters.loc[f"{sm_name}_a", "optimal"]
+                    gain_std = ml.parameters.loc[f"{sm_name}_a", "stderr"]
+                elif sm._name == "StepTrend":
+                    gain = ml.parameters.loc[f"{sm_name}_d", "optimal"]
+                    gain_std = ml.parameters.loc[f"{sm_name}_d", "stderr"]
                 else:
                     gain = ml.parameters.loc[f"{sm_name}_A", "optimal"]
                     gain_std = ml.parameters.loc[f"{sm_name}_A", "stderr"]
-                    if gain_std is None:
-                        gain_std = np.nan
-                        check_gain_passed = pd.NA
-                    elif np.isnan(gain_std):
-                        check_gain_passed = pd.NA
-                    else:
-                        check_gain_passed = np.abs(gain) > 2 * gain_std
+
+                if gain_std is None:
+                    gain_std = np.nan
+                    check_gain_passed = pd.NA
+                elif np.isnan(gain_std):
+                    check_gain_passed = pd.NA
+                else:
                     check_gain_passed = np.abs(gain) > 2 * gain_std
-                    checks.loc[f"gain > 2*std: {sm_name}", :] = (
-                        gain,
-                        2 * gain_std,
-                        "(unit head)/(unit well stress)",
-                        check_gain_passed,
-                    )
+                checks.loc[f"gain > 2*std: {sm_name}", :] = (
+                    gain,
+                    2 * gain_std,
+                    "(unit head)/(unit well stress)",
+                    check_gain_passed,
+                )
 
         # Check 5 - Parameter Bounds
         if check5_parambounds:
