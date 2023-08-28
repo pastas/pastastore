@@ -742,7 +742,7 @@ def frontiers_checks(
                 elif sm._name == "LinearTrend":
                     gain = ml.parameters.loc[f"{sm_name}_a", "optimal"]
                     gain_std = ml.parameters.loc[f"{sm_name}_a", "stderr"]
-                elif sm._name == "StepTrend":
+                elif sm._name == "StepModel":
                     gain = ml.parameters.loc[f"{sm_name}_d", "optimal"]
                     gain_std = ml.parameters.loc[f"{sm_name}_d", "stderr"]
                 else:
