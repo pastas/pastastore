@@ -173,6 +173,13 @@ def test_get_parameters(request, pstore):
 
 
 @pytest.mark.dependency()
+def test_get_signatures(request, pstore):
+    depends(request, [f"test_create_models[{pstore.type}]"])
+    s = pstore.get_signatures(progressbar=False)
+    assert s.shape[1] == len(ps.stats.signatures.__all__)
+
+
+@pytest.mark.dependency()
 def test_iter_models(request, pstore):
     depends(request, [f"test_create_models[{pstore.type}]"])
     _ = list(pstore.iter_models())

@@ -300,6 +300,79 @@ class PastaStore:
             data = pd.concat([data, series], axis=0)
         return data
 
+    def get_signatures(
+        self,
+        signatures=None,
+        names=None,
+        libname="oseries",
+        progressbar=False,
+        ignore_errors=False,
+    ):
+        """Get groundwater signatures. NaN-values are returned when the
+        signature could not be computed.
+
+        Parameters
+        ----------
+        signatures : list of str, optional
+            list of groundwater signatures to compute, if None all groundwater
+            signatures in ps.stats.signatures.__all__ are used, by default None
+        names : str, list of str, or None, optional
+            names of the time series, by default None which
+            uses all the time series in the library
+        libname : str
+            name of the library containing the time series
+            ('oseries' or 'stresses'), by default "oseries"
+        progressbar : bool, optional
+            show progressbar, by default False
+        ignore_errors : bool, optional
+            ignore errors when True, i.e. when non-existent timeseries is
+            encountered in names, by default False
+
+        Returns
+        -------
+        sign : pandas.DataFrame
+            DataFrame containing the signatures (columns) per time series (rows)
+        """
+        names = self.conn._parse_names(names, libname=libname)
+
+        if signatures is None:
+            signatures = ps.stats.signatures.__all__.copy()
+
+        # create dataframe for results
+        sign = pd.DataFrame(index=names, columns=signatures, data=np.nan)
+
+        # loop through oseries names
+        desc = "Get groundwater signatures"
+        for name in tqdm(names, desc=desc) if progressbar else names:
+            try:
+                if libname == "oseries":
+                    s = self.conn.get_oseries(name)
+                else:
+                    s = self.conn.get_stresses(name)
+            except Exception as e:
+                if ignore_errors:
+                    sign.loc[name, :] = np.nan
+                    continue
+                else:
+                    raise e
+
+            try:
+                l = ps.stats.signatures.summary(s.squeeze(), signatures)
+            except Exception as e:
+                if ignore_errors:
+                    l = []
+                    for sign in signatures:
+                        try:
+                            sign_val = getattr(ps.stats.signatures, sign)(s.squeeze())
+                        except:
+                            sign_val = np.nan
+                        l.append(sign_val)
+                else:
+                    raise e
+            sign.loc[name, signatures] = l
+
+        return sign
+
     def get_tmin_tmax(self, libname, names=None, progressbar=False):
         """Get tmin and tmax for time series.
 
@@ -428,12 +501,12 @@ class PastaStore:
 
         modelnames = self.conn._parse_names(modelnames, libname="models")
 
-        # create dataframe for results
-        s = pd.DataFrame(index=modelnames, columns=statistics, data=np.nan)
-
         # if statistics is str
         if isinstance(statistics, str):
             statistics = [statistics]
+
+        # create dataframe for results
+        s = pd.DataFrame(index=modelnames, columns=statistics, data=np.nan)
 
         # loop through model names
         desc = "Get model statistics"
