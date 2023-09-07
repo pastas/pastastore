@@ -361,9 +361,11 @@ class PastaStore:
             except Exception as e:
                 if ignore_errors:
                     l = []
-                    for sign in signatures:
+                    for signature in signatures:
                         try:
-                            sign_val = getattr(ps.stats.signatures, sign)(s.squeeze())
+                            sign_val = getattr(ps.stats.signatures, signature)(
+                                s.squeeze()
+                            )
                         except:
                             sign_val = np.nan
                         l.append(sign_val)
