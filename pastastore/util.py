@@ -6,7 +6,7 @@ import pandas as pd
 from numpy.lib._iotools import NameValidator
 from pandas.testing import assert_series_equal
 from pastas.stats.tests import runs_test, stoffer_toloi
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from .version import PASTAS_LEQ_022
 

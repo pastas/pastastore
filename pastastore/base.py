@@ -11,7 +11,7 @@ import pastas as ps
 from numpy import isin
 from packaging.version import parse as parse_version
 from pastas.io.pas import PastasEncoder
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from .util import ItemInLibraryException, _custom_warning, validate_names
 from .version import PASTAS_LEQ_022
