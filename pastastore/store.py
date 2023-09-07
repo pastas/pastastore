@@ -994,6 +994,27 @@ class PastaStore:
             return structure
 
     def apply(self, libname, func, names=None, progressbar=True):
+        """Apply function to items in library.
+
+        Supported libraries are oseries, stresses, and models.
+
+        Parameters
+        ----------
+        libname : str
+            library name, supports "oseries", "stresses" and "models"
+        func : callable
+            function that accepts items from one of the supported libraries as input
+        names : str, list of str, optional
+            apply function to these names, by default None which loops over all stored
+            items in library
+        progressbar : bool, optional
+            show progressbar, by default True
+
+        Returns
+        -------
+        list
+            list of results of func
+        """
         names = self.conn._parse_names(names, libname)
         result = []
         if libname not in ("oseries", "stresses", "models"):
