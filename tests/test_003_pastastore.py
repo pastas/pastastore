@@ -189,6 +189,14 @@ def test_solve_models_and_get_stats(request, pstore):
 
 
 @pytest.mark.dependency()
+def test_apply(request, pstore):
+    depends(request, [f"test_solve_models_and_get_stats[{pstore.type}]"])
+    func = lambda ml: ml.parameters.loc["recharge_A", "optimal"]
+    result = pstore.apply("models", func)
+    assert len(result) == 2
+
+
+@pytest.mark.dependency()
 def test_save_and_load_model(request, pstore):
     ml = pstore.create_model("oseries2")
     sm = ps.StressModel(

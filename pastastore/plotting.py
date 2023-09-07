@@ -723,6 +723,7 @@ class Maps:
     def modelstat(
         self,
         statistic,
+        modelnames=None,
         label=True,
         adjust=False,
         cmap="viridis",
@@ -739,6 +740,8 @@ class Maps:
         ----------
         statistic: str
             name of the statistic, e.g. "evp" or "aic"
+        modelnames : list of str, optional
+            list of modelnames to include
         label: bool, optional
             label points, by default True
         adjust: bool, optional
@@ -768,7 +771,9 @@ class Maps:
         --------
         self.add_background_map
         """
-        statsdf = self.pstore.get_statistics([statistic], progressbar=False).to_frame()
+        statsdf = self.pstore.get_statistics(
+            [statistic], modelnames=modelnames, progressbar=False
+        ).to_frame()
 
         statsdf["oseries"] = [
             self.pstore.get_models(m, return_dict=True)["oseries"]["name"]

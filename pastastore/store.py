@@ -8,7 +8,7 @@ import pandas as pd
 import pastas as ps
 from packaging.version import parse as parse_version
 from pastas.io.pas import pastas_hook
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from .plotting import Maps, Plots
 from .util import _custom_warning
@@ -983,9 +983,45 @@ class PastaStore:
                     structure.loc[mlnam, pnam] = 1
                     structure.loc[mlnam, enam] = 1
                 elif "stress" in sm:
-                    for s in sm["stress"]:
+                    smstress = sm["stress"]
+                    if isinstance(smstress, dict):
+                        smstress = [smstress]
+                    for s in smstress:
                         structure.loc[mlnam, s["name"]] = 1
         if dropna:
             return structure.dropna(how="all", axis=1)
         else:
             return structure
+
+    def apply(self, libname, func, names=None, progressbar=True):
+        """Apply function to items in library.
+
+        Supported libraries are oseries, stresses, and models.
+
+        Parameters
+        ----------
+        libname : str
+            library name, supports "oseries", "stresses" and "models"
+        func : callable
+            function that accepts items from one of the supported libraries as input
+        names : str, list of str, optional
+            apply function to these names, by default None which loops over all stored
+            items in library
+        progressbar : bool, optional
+            show progressbar, by default True
+
+        Returns
+        -------
+        list
+            list of results of func
+        """
+        names = self.conn._parse_names(names, libname)
+        result = []
+        if libname not in ("oseries", "stresses", "models"):
+            raise ValueError(
+                "'libname' must be one of ['oseries', 'stresses', 'models']!"
+            )
+        getter = getattr(self.conn, f"get_{libname}")
+        for n in tqdm(names) if progressbar else names:
+            result.append(func(getter(n)))
+        return result
