@@ -8,8 +8,8 @@ from typing import Dict, Optional, Union
 import pandas as pd
 from pastas.io.pas import PastasEncoder, pastas_hook
 
-from .base import BaseConnector, ConnectorUtil, ModelAccessor
-from .util import _custom_warning
+from pastastore.base import BaseConnector, ConnectorUtil, ModelAccessor
+from pastastore.util import _custom_warning
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning

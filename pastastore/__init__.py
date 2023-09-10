@@ -1,10 +1,10 @@
-from . import connectors, util
-from .connectors import (
+from pastastore import connectors, util
+from pastastore.connectors import (
     ArcticConnector,
     ArcticDBConnector,
     DictConnector,
     PasConnector,
     PystoreConnector,
 )
-from .store import PastaStore
-from .version import __version__
+from pastastore.store import PastaStore
+from pastastore.version import __version__

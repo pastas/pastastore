@@ -8,7 +8,7 @@ from pandas.testing import assert_series_equal
 from pastas.stats.tests import runs_test, stoffer_toloi
 from tqdm.auto import tqdm
 
-from .version import PASTAS_LEQ_022
+from pastastore.version import PASTAS_LEQ_022
 
 
 def _custom_warning(message, category=UserWarning, filename="", lineno=-1, *args):
