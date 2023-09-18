@@ -10,9 +10,11 @@ from packaging.version import parse as parse_version
 from pastas.io.pas import pastas_hook
 from tqdm.auto import tqdm
 
-from .plotting import Maps, Plots
-from .util import _custom_warning
-from .yaml_interface import PastastoreYAML
+from pastastore.base import BaseConnector
+from pastastore.connectors import DictConnector
+from pastastore.plotting import Maps, Plots
+from pastastore.util import _custom_warning
+from pastastore.yaml_interface import PastastoreYAML
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning
@@ -38,14 +40,18 @@ class PastaStore:
         name of the PastaStore, by default takes the name of the Connector object
     """
 
-    def __init__(self, connector, name: str = None):
+    def __init__(
+        self,
+        connector: BaseConnector = DictConnector("pastas_db"),
+        name: Optional[str] = None,
+    ):
         """Initialize PastaStore for managing pastas time series and models.
 
         Parameters
         ----------
-        connector : Connector object
-            object that provides the interface to the
-            database
+        connector : Connector object, optional
+            object that provides the connection to the database. Default is
+            DictConnector which does not store data on disk.
         name : str, optional
             name of the PastaStore, if not provided uses the Connector name
         """

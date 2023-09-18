@@ -13,8 +13,8 @@ from packaging.version import parse as parse_version
 from pastas.io.pas import PastasEncoder
 from tqdm.auto import tqdm
 
-from .util import ItemInLibraryException, _custom_warning, validate_names
-from .version import PASTAS_LEQ_022
+from pastastore.util import ItemInLibraryException, _custom_warning, validate_names
+from pastastore.version import PASTAS_LEQ_022
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning

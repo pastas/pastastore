@@ -2,14 +2,14 @@ import datetime
 import logging
 import os
 from copy import deepcopy
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
 import pastas as ps
 import yaml
 
-from .version import PASTAS_LEQ_022
+from pastastore.version import PASTAS_LEQ_022
 
 ps.logger.setLevel("ERROR")
 
@@ -17,7 +17,7 @@ logging.basicConfig(level="INFO")
 logger = logging.getLogger(__name__)
 
 
-def _convert_dict_dtypes_for_yaml(d: Dict):
+def _convert_dict_dtypes_for_yaml(d: Dict[str, Any]):
     """Internal method to convert dictionary values for storing in YAML format.
 
     Parameters
