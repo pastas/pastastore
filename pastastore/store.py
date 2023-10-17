@@ -330,7 +330,7 @@ class PastaStore:
 
         Returns
         -------
-        sign : pandas.DataFrame
+        signatures_df : pandas.DataFrame
             DataFrame containing the signatures (columns) per time series (rows)
         """
         names = self.conn._parse_names(names, libname=libname)
@@ -339,7 +339,7 @@ class PastaStore:
             signatures = ps.stats.signatures.__all__.copy()
 
         # create dataframe for results
-        sign = pd.DataFrame(index=names, columns=signatures, data=np.nan)
+        signatures_df = pd.DataFrame(index=names, columns=signatures, data=np.nan)
 
         # loop through oseries names
         desc = "Get groundwater signatures"
@@ -351,7 +351,7 @@ class PastaStore:
                     s = self.conn.get_stresses(name)
             except Exception as e:
                 if ignore_errors:
-                    sign.loc[name, :] = np.nan
+                    signatures_df.loc[name, :] = np.nan
                     continue
                 else:
                     raise e
@@ -371,9 +371,9 @@ class PastaStore:
                         l.append(sign_val)
                 else:
                     raise e
-            sign.loc[name, signatures] = l
+            signatures_df.loc[name, signatures] = l
 
-        return sign
+        return signatures_df
 
     def get_tmin_tmax(self, libname, names=None, progressbar=False):
         """Get tmin and tmax for time series.
