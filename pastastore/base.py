@@ -940,7 +940,7 @@ class BaseConnector(ABC):
             libs = ["models", "oseries_models"]
         else:
             libs = [libname]
-        
+
         # delete items and clear caches
         for libname in libs:
             names = self._parse_names(None, libname)
