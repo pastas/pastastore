@@ -934,13 +934,24 @@ class BaseConnector(ABC):
             )
             if ui.lower() != "y":
                 return
-        names = self._parse_names(None, libname)
-        for name in (
-            tqdm(names, desc=f"Deleting items from {libname}") if progressbar else names
-        ):
-            self._del_item(libname, name)
-        self._clear_cache(libname)
-        print(f"Emptied library {libname} in {self.name}: " f"{self.__class__}")
+
+        if libname == "models":
+            # also delete linked modelnames linked to oseries
+            libs = ["models", "oseries_models"]
+        else:
+            libs = [libname]
+
+        # delete items and clear caches
+        for libname in libs:
+            names = self._parse_names(None, libname)
+            for name in (
+                tqdm(names, desc=f"Deleting items from {libname}")
+                if progressbar
+                else names
+            ):
+                self._del_item(libname, name)
+            self._clear_cache(libname)
+            print(f"Emptied library {libname} in {self.name}: " f"{self.__class__}")
 
     def _iter_series(self, libname: str, names: Optional[List[str]] = None):
         """Internal method iterate over time series in library.
