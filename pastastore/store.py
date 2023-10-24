@@ -415,6 +415,23 @@ class PastaStore:
             tmintmax.loc[n, "tmax"] = s.last_valid_index()
         return tmintmax
 
+    def get_extent(self, libname, names=None):
+        names = self.conn._parse_names(names, libname=libname)
+        if libname in ["oseries", "stresses"]:
+            df = getattr(self, libname)
+        elif libname == "models":
+            df = self.oseries
+        else:
+            raise ValueError(f"Cannot get extent for library '{libname}'.")
+
+        extent = [
+            df.loc[names, "x"].min(),
+            df.loc[names, "x"].max(),
+            df.loc[names, "y"].min(),
+            df.loc[names, "y"].max(),
+        ]
+        return extent
+
     def get_parameters(
         self,
         parameters: Optional[List[str]] = None,
