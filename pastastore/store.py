@@ -1111,7 +1111,7 @@ class PastaStore:
         Returns
         -------
         dict
-            dict of results of func, with names as keys and result as values
+            dict of results of func, with names as keys and results as values
         """
         names = self.conn._parse_names(names, libname)
         result = {}
@@ -1122,4 +1122,4 @@ class PastaStore:
         getter = getattr(self.conn, f"get_{libname}")
         for n in tqdm(names) if progressbar else names:
             result[n] = func(getter(n))
-        return pd.DataFrame.from_dict(result, orient="index")
+        return result
