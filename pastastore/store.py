@@ -1110,16 +1110,16 @@ class PastaStore:
 
         Returns
         -------
-        list
-            list of results of func
+        dict
+            dict of results of func, with names as keys and result as values
         """
         names = self.conn._parse_names(names, libname)
-        result = []
+        result = {}
         if libname not in ("oseries", "stresses", "models"):
             raise ValueError(
                 "'libname' must be one of ['oseries', 'stresses', 'models']!"
             )
         getter = getattr(self.conn, f"get_{libname}")
         for n in tqdm(names) if progressbar else names:
-            result.append(func(getter(n)))
-        return result
+            result[n] = func(getter(n))
+        return pd.DataFrame.from_dict(result, orient="index")
