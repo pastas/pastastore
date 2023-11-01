@@ -42,7 +42,7 @@ class PastaStore:
 
     def __init__(
         self,
-        connector: BaseConnector = DictConnector("pastas_db"),
+        connector: Optional[BaseConnector] = None,
         name: Optional[str] = None,
     ):
         """Initialize PastaStore for managing pastas time series and models.
@@ -50,8 +50,9 @@ class PastaStore:
         Parameters
         ----------
         connector : Connector object, optional
-            object that provides the connection to the database. Default is
-            DictConnector which does not store data on disk.
+            object that provides the connection to the database. Default is None, which
+            will create a DictConnector. This default Connector does not store data on
+            disk.
         name : str, optional
             name of the PastaStore, if not provided uses the Connector name
         """
@@ -59,6 +60,8 @@ class PastaStore:
             raise DeprecationWarning(
                 "PastaStore expects the connector as the first argument since v1.1!"
             )
+        if connector is None:
+            connector = DictConnector("pastas_db")
         self.conn = connector
         self.name = name if name is not None else self.conn.name
         self._register_connector_methods()
@@ -934,7 +937,7 @@ class PastaStore:
     def from_zip(
         cls,
         fname: str,
-        conn,
+        conn: Optional[BaseConnector] = None,
         storename: Optional[str] = None,
         progressbar: bool = True,
     ):
@@ -944,8 +947,9 @@ class PastaStore:
         ----------
         fname : str
             pathname of zipfile
-        conn : Connector object
-            connector for storing loaded data
+        conn : Connector object, optional
+            connector for storing loaded data, default is None which creates a
+            DictConnector. This Connector does not store data on disk.
         storename : str, optional
             name of the PastaStore, by default None, which
             defaults to the name of the Connector.
@@ -958,6 +962,9 @@ class PastaStore:
             return PastaStore containing data from zipfile
         """
         from zipfile import ZipFile
+
+        if conn is None:
+            conn = DictConnector("pastas_db")
 
         with ZipFile(fname, "r") as archive:
             namelist = [
