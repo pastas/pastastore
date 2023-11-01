@@ -366,21 +366,21 @@ class PastaStore:
                     raise e
 
             try:
-                l = ps.stats.signatures.summary(s.squeeze(), signatures)
+                i_signatures = ps.stats.signatures.summary(s.squeeze(), signatures)
             except Exception as e:
                 if ignore_errors:
-                    l = []
+                    i_signatures = []
                     for signature in signatures:
                         try:
                             sign_val = getattr(ps.stats.signatures, signature)(
                                 s.squeeze()
                             )
-                        except:
+                        except Exception as _:
                             sign_val = np.nan
-                        l.append(sign_val)
+                        i_signatures.append(sign_val)
                 else:
                     raise e
-            signatures_df.loc[name, signatures] = l
+            signatures_df.loc[name, signatures] = i_signatures
 
         return signatures_df
 
