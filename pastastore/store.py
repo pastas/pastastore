@@ -973,7 +973,7 @@ class PastaStore:
             for f in tqdm(namelist, desc="Reading zip") if progressbar else namelist:
                 libname, fjson = os.path.split(f)
                 if libname in ["stresses", "oseries"]:
-                    s = pd.read_json(archive.open(f), orient="columns")
+                    s = pd.read_json(archive.open(f), dtype=float, orient="columns")
                     if not isinstance(s.index, pd.DatetimeIndex):
                         s.index = pd.to_datetime(s.index, unit="ms")
                     s = s.sort_index()
