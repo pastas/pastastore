@@ -1,3 +1,4 @@
+# ruff: noqa: F401
 from pastastore import connectors, util
 from pastastore.connectors import (
     ArcticConnector,

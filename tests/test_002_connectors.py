@@ -14,7 +14,7 @@ ps.set_log_level("ERROR")
 
 
 def test_get_library(conn):
-    olib = conn._get_library("oseries")
+    _ = conn._get_library("oseries")
 
 
 def test_add_get_series(request, conn):
@@ -206,13 +206,13 @@ def test_add_stress(conn):
 @pytest.mark.dependency()
 def test_get_oseries(request, conn):
     depends(request, [f"test_add_oseries[{conn.type}]"])
-    o = conn.get_oseries("oseries1")
+    _ = conn.get_oseries("oseries1")
 
 
 @pytest.mark.dependency()
 def test_get_oseries_and_metadata(request, conn):
     depends(request, [f"test_add_oseries[{conn.type}]"])
-    o, m = conn.get_oseries("oseries1", return_metadata=True)
+    _ = conn.get_oseries("oseries1", return_metadata=True)
 
 
 @pytest.mark.dependency()
@@ -225,7 +225,7 @@ def test_get_stress(request, conn):
 @pytest.mark.dependency()
 def test_get_stress_and_metadata(request, conn):
     depends(request, [f"test_add_stress[{conn.type}]"])
-    s, m = conn.get_stresses("prec", return_metadata=True)
+    s, _ = conn.get_stresses("prec", return_metadata=True)
     s.name = "prec"
 
 

@@ -14,9 +14,6 @@ follows::
     ax = pstore.maps.oseries()
     pstore.maps.add_background_map(ax)  # for adding a background map
 """
-
-from collections.abc import Iterable
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -96,15 +93,11 @@ class Plots:
 
         if ax is None:
             if split:
-                fig, axes = plt.subplots(len(names), 1, sharex=True, figsize=figsize)
+                _, axes = plt.subplots(len(names), 1, sharex=True, figsize=figsize)
             else:
-                fig, axes = plt.subplots(1, 1, figsize=figsize)
+                _, axes = plt.subplots(1, 1, figsize=figsize)
         else:
             axes = ax
-            if isinstance(axes, Iterable):
-                fig = axes[0].figure
-            else:
-                fig = axes.figure
 
         tsdict = self.pstore.conn._get_series(
             libname, names, progressbar=progressbar, squeeze=False

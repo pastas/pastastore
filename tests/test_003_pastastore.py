@@ -39,7 +39,7 @@ def test_search(pstore):
 
 @pytest.mark.dependency()
 def test_create_model(pstore):
-    ml = pstore.create_model("oseries1")
+    _ = pstore.create_model("oseries1")
 
 
 @pytest.mark.dependency()
@@ -139,7 +139,7 @@ def test_get_model(request, pstore):
             f"test_store_model_missing_series[{pstore.type}]",
         ],
     )
-    ml = pstore.conn.get_models("oseries1")
+    _ = pstore.conn.get_models("oseries1")
 
 
 @pytest.mark.dependency()
@@ -158,7 +158,7 @@ def test_del_model(request, pstore):
 
 @pytest.mark.dependency()
 def test_create_models(pstore):
-    mls = pstore.create_models_bulk(
+    _ = pstore.create_models_bulk(
         ["oseries1", "oseries2"], store=True, progressbar=False
     )
     _ = pstore.conn.models
@@ -188,7 +188,7 @@ def test_iter_models(request, pstore):
 @pytest.mark.dependency()
 def test_solve_models_and_get_stats(request, pstore):
     depends(request, [f"test_create_models[{pstore.type}]"])
-    mls = pstore.solve_models(
+    _ = pstore.solve_models(
         ignore_solve_errors=False, progressbar=False, store_result=True
     )
     stats = pstore.get_statistics(["evp", "aic"], progressbar=False)
@@ -198,7 +198,10 @@ def test_solve_models_and_get_stats(request, pstore):
 @pytest.mark.dependency()
 def test_apply(request, pstore):
     depends(request, [f"test_solve_models_and_get_stats[{pstore.type}]"])
-    func = lambda ml: ml.parameters.loc["recharge_A", "optimal"]
+
+    def func(ml):
+        return ml.parameters.loc["recharge_A", "optimal"]
+
     result = pstore.apply("models", func)
     assert len(result) == 2
 
