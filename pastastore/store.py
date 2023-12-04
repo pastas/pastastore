@@ -8,11 +8,13 @@ import pandas as pd
 import pastas as ps
 from packaging.version import parse as parse_version
 from pastas.io.pas import pastas_hook
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
-from .plotting import Maps, Plots
-from .util import _custom_warning
-from .yaml_interface import PastastoreYAML
+from pastastore.base import BaseConnector
+from pastastore.connectors import DictConnector
+from pastastore.plotting import Maps, Plots
+from pastastore.util import _custom_warning
+from pastastore.yaml_interface import PastastoreYAML
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning
@@ -38,14 +40,19 @@ class PastaStore:
         name of the PastaStore, by default takes the name of the Connector object
     """
 
-    def __init__(self, connector, name: str = None):
+    def __init__(
+        self,
+        connector: Optional[BaseConnector] = None,
+        name: Optional[str] = None,
+    ):
         """Initialize PastaStore for managing pastas time series and models.
 
         Parameters
         ----------
-        connector : Connector object
-            object that provides the interface to the
-            database
+        connector : Connector object, optional
+            object that provides the connection to the database. Default is None, which
+            will create a DictConnector. This default Connector does not store data on
+            disk.
         name : str, optional
             name of the PastaStore, if not provided uses the Connector name
         """
@@ -53,6 +60,8 @@ class PastaStore:
             raise DeprecationWarning(
                 "PastaStore expects the connector as the first argument since v1.1!"
             )
+        if connector is None:
+            connector = DictConnector("pastas_db")
         self.conn = connector
         self.name = name if name is not None else self.conn.name
         self._register_connector_methods()
@@ -300,6 +309,81 @@ class PastaStore:
             data = pd.concat([data, series], axis=0)
         return data
 
+    def get_signatures(
+        self,
+        signatures=None,
+        names=None,
+        libname="oseries",
+        progressbar=False,
+        ignore_errors=False,
+    ):
+        """Get groundwater signatures. NaN-values are returned when the
+        signature could not be computed.
+
+        Parameters
+        ----------
+        signatures : list of str, optional
+            list of groundwater signatures to compute, if None all groundwater
+            signatures in ps.stats.signatures.__all__ are used, by default None
+        names : str, list of str, or None, optional
+            names of the time series, by default None which
+            uses all the time series in the library
+        libname : str
+            name of the library containing the time series
+            ('oseries' or 'stresses'), by default "oseries"
+        progressbar : bool, optional
+            show progressbar, by default False
+        ignore_errors : bool, optional
+            ignore errors when True, i.e. when non-existent timeseries is
+            encountered in names, by default False
+
+        Returns
+        -------
+        signatures_df : pandas.DataFrame
+            DataFrame containing the signatures (columns) per time series (rows)
+        """
+        names = self.conn._parse_names(names, libname=libname)
+
+        if signatures is None:
+            signatures = ps.stats.signatures.__all__.copy()
+
+        # create dataframe for results
+        signatures_df = pd.DataFrame(index=names, columns=signatures, data=np.nan)
+
+        # loop through oseries names
+        desc = "Get groundwater signatures"
+        for name in tqdm(names, desc=desc) if progressbar else names:
+            try:
+                if libname == "oseries":
+                    s = self.conn.get_oseries(name)
+                else:
+                    s = self.conn.get_stresses(name)
+            except Exception as e:
+                if ignore_errors:
+                    signatures_df.loc[name, :] = np.nan
+                    continue
+                else:
+                    raise e
+
+            try:
+                i_signatures = ps.stats.signatures.summary(s.squeeze(), signatures)
+            except Exception as e:
+                if ignore_errors:
+                    i_signatures = []
+                    for signature in signatures:
+                        try:
+                            sign_val = getattr(ps.stats.signatures, signature)(
+                                s.squeeze()
+                            )
+                        except Exception as _:
+                            sign_val = np.nan
+                        i_signatures.append(sign_val)
+                else:
+                    raise e
+            signatures_df.loc[name, signatures] = i_signatures
+
+        return signatures_df
+
     def get_tmin_tmax(self, libname, names=None, progressbar=False):
         """Get tmin and tmax for time series.
 
@@ -333,6 +417,23 @@ class PastaStore:
             tmintmax.loc[n, "tmin"] = s.first_valid_index()
             tmintmax.loc[n, "tmax"] = s.last_valid_index()
         return tmintmax
+
+    def get_extent(self, libname, names=None, buffer=0.0):
+        names = self.conn._parse_names(names, libname=libname)
+        if libname in ["oseries", "stresses"]:
+            df = getattr(self, libname)
+        elif libname == "models":
+            df = self.oseries
+        else:
+            raise ValueError(f"Cannot get extent for library '{libname}'.")
+
+        extent = [
+            df.loc[names, "x"].min() - buffer,
+            df.loc[names, "x"].max() + buffer,
+            df.loc[names, "y"].min() - buffer,
+            df.loc[names, "y"].max() + buffer,
+        ]
+        return extent
 
     def get_parameters(
         self,
@@ -428,12 +529,12 @@ class PastaStore:
 
         modelnames = self.conn._parse_names(modelnames, libname="models")
 
-        # create dataframe for results
-        s = pd.DataFrame(index=modelnames, columns=statistics, data=np.nan)
-
         # if statistics is str
         if isinstance(statistics, str):
             statistics = [statistics]
+
+        # create dataframe for results
+        s = pd.DataFrame(index=modelnames, columns=statistics, data=np.nan)
 
         # loop through model names
         desc = "Get model statistics"
@@ -836,7 +937,7 @@ class PastaStore:
     def from_zip(
         cls,
         fname: str,
-        conn,
+        conn: Optional[BaseConnector] = None,
         storename: Optional[str] = None,
         progressbar: bool = True,
     ):
@@ -846,8 +947,9 @@ class PastaStore:
         ----------
         fname : str
             pathname of zipfile
-        conn : Connector object
-            connector for storing loaded data
+        conn : Connector object, optional
+            connector for storing loaded data, default is None which creates a
+            DictConnector. This Connector does not store data on disk.
         storename : str, optional
             name of the PastaStore, by default None, which
             defaults to the name of the Connector.
@@ -861,6 +963,9 @@ class PastaStore:
         """
         from zipfile import ZipFile
 
+        if conn is None:
+            conn = DictConnector("pastas_db")
+
         with ZipFile(fname, "r") as archive:
             namelist = [
                 fi for fi in archive.namelist() if not fi.endswith("_meta.json")
@@ -868,7 +973,7 @@ class PastaStore:
             for f in tqdm(namelist, desc="Reading zip") if progressbar else namelist:
                 libname, fjson = os.path.split(f)
                 if libname in ["stresses", "oseries"]:
-                    s = pd.read_json(archive.open(f), orient="columns")
+                    s = pd.read_json(archive.open(f), dtype=float, orient="columns")
                     if not isinstance(s.index, pd.DatetimeIndex):
                         s.index = pd.to_datetime(s.index, unit="ms")
                     s = s.sort_index()
@@ -983,9 +1088,45 @@ class PastaStore:
                     structure.loc[mlnam, pnam] = 1
                     structure.loc[mlnam, enam] = 1
                 elif "stress" in sm:
-                    for s in sm["stress"]:
+                    smstress = sm["stress"]
+                    if isinstance(smstress, dict):
+                        smstress = [smstress]
+                    for s in smstress:
                         structure.loc[mlnam, s["name"]] = 1
         if dropna:
             return structure.dropna(how="all", axis=1)
         else:
             return structure
+
+    def apply(self, libname, func, names=None, progressbar=True):
+        """Apply function to items in library.
+
+        Supported libraries are oseries, stresses, and models.
+
+        Parameters
+        ----------
+        libname : str
+            library name, supports "oseries", "stresses" and "models"
+        func : callable
+            function that accepts items from one of the supported libraries as input
+        names : str, list of str, optional
+            apply function to these names, by default None which loops over all stored
+            items in library
+        progressbar : bool, optional
+            show progressbar, by default True
+
+        Returns
+        -------
+        dict
+            dict of results of func, with names as keys and results as values
+        """
+        names = self.conn._parse_names(names, libname)
+        result = {}
+        if libname not in ("oseries", "stresses", "models"):
+            raise ValueError(
+                "'libname' must be one of ['oseries', 'stresses', 'models']!"
+            )
+        getter = getattr(self.conn, f"get_{libname}")
+        for n in tqdm(names) if progressbar else names:
+            result[n] = func(getter(n))
+        return result

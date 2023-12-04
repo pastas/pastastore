@@ -11,10 +11,10 @@ import pastas as ps
 from numpy import isin
 from packaging.version import parse as parse_version
 from pastas.io.pas import PastasEncoder
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
-from .util import ItemInLibraryException, _custom_warning, validate_names
-from .version import PASTAS_LEQ_022
+from pastastore.util import ItemInLibraryException, _custom_warning, validate_names
+from pastastore.version import PASTAS_LEQ_022
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning
@@ -934,13 +934,24 @@ class BaseConnector(ABC):
             )
             if ui.lower() != "y":
                 return
-        names = self._parse_names(None, libname)
-        for name in (
-            tqdm(names, desc=f"Deleting items from {libname}") if progressbar else names
-        ):
-            self._del_item(libname, name)
-        self._clear_cache(libname)
-        print(f"Emptied library {libname} in {self.name}: " f"{self.__class__}")
+
+        if libname == "models":
+            # also delete linked modelnames linked to oseries
+            libs = ["models", "oseries_models"]
+        else:
+            libs = [libname]
+
+        # delete items and clear caches
+        for libname in libs:
+            names = self._parse_names(None, libname)
+            for name in (
+                tqdm(names, desc=f"Deleting items from {libname}")
+                if progressbar
+                else names
+            ):
+                self._del_item(libname, name)
+            self._clear_cache(libname)
+            print(f"Emptied library {libname} in {self.name}: " f"{self.__class__}")
 
     def _iter_series(self, libname: str, names: Optional[List[str]] = None):
         """Internal method iterate over time series in library.

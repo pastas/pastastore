@@ -6,7 +6,6 @@ import pytest
 from pytest_dependency import depends
 
 import pastastore as pst
-from pastastore.version import PASTAS_LEQ_022
 
 
 @contextmanager

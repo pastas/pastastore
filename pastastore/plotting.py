@@ -14,9 +14,6 @@ follows::
     ax = pstore.maps.oseries()
     pstore.maps.add_background_map(ax)  # for adding a background map
 """
-
-from collections.abc import Iterable
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -96,15 +93,11 @@ class Plots:
 
         if ax is None:
             if split:
-                fig, axes = plt.subplots(len(names), 1, sharex=True, figsize=figsize)
+                _, axes = plt.subplots(len(names), 1, sharex=True, figsize=figsize)
             else:
-                fig, axes = plt.subplots(1, 1, figsize=figsize)
+                _, axes = plt.subplots(1, 1, figsize=figsize)
         else:
             axes = ax
-            if isinstance(axes, Iterable):
-                fig = axes[0].figure
-            else:
-                fig = axes.figure
 
         tsdict = self.pstore.conn._get_series(
             libname, names, progressbar=progressbar, squeeze=False
@@ -397,20 +390,31 @@ class Plots:
                     linewidth=0,
                     rasterized=True,
                 )
+
         # make a colorbar in an ax on the
         # right side, then set the current axes to ax again
         cb = fig.colorbar(pc, ax=ax, cax=cax, extend="both")
         cb.set_ticks(bounds)
         cb.ax.set_yticklabels(labels)
         cb.ax.minorticks_off()
+
         if set_yticks:
-            ax.set_yticks(np.arange(0.5, len(series) + 0.5))
+            ax.set_yticks(np.arange(0.5, len(series) + 0.5), minor=False)
+            ax.set_yticks(np.arange(0, len(series) + 1), minor=True)
             if names is None:
                 names = [s.name for s in series]
             ax.set_yticklabels(names)
+
+            for tick in ax.yaxis.get_major_ticks():  # don't show major ytick marker
+                tick.tick1line.set_visible(False)
+
+            ax.grid(True, which="minor", axis="y")
+            ax.grid(True, which="major", axis="x")
+
         else:
             ax.set_ylabel("Timeseries (-)")
-        ax.grid(True)
+            ax.grid(True, which="both")
+            ax.grid(True, which="both")
 
         return ax
 
@@ -712,6 +716,7 @@ class Maps:
     def modelstat(
         self,
         statistic,
+        modelnames=None,
         label=True,
         adjust=False,
         cmap="viridis",
@@ -728,6 +733,8 @@ class Maps:
         ----------
         statistic: str
             name of the statistic, e.g. "evp" or "aic"
+        modelnames : list of str, optional
+            list of modelnames to include
         label: bool, optional
             label points, by default True
         adjust: bool, optional
@@ -757,7 +764,9 @@ class Maps:
         --------
         self.add_background_map
         """
-        statsdf = self.pstore.get_statistics([statistic], progressbar=False).to_frame()
+        statsdf = self.pstore.get_statistics(
+            [statistic], modelnames=modelnames, progressbar=False
+        ).to_frame()
 
         statsdf["oseries"] = [
             self.pstore.get_models(m, return_dict=True)["oseries"]["name"]
