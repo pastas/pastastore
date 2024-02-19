@@ -1,5 +1,4 @@
 import os
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -9,9 +8,7 @@ from numpy import allclose
 from packaging.version import parse
 from pytest_dependency import depends
 
-with warnings.catch_warnings():
-    warnings.simplefilter(action="ignore", category=FutureWarning)
-    import pastastore as pst
+import pastastore as pst
 
 
 @pytest.mark.dependency()
