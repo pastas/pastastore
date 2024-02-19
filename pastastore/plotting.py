@@ -1295,7 +1295,7 @@ class Maps:
 
             adjust_text(
                 texts,
-                force_text=0.05,
+                force_text=(0.05, 0.10),
                 **{
                     "arrowprops": {
                         "arrowstyle": "-",
