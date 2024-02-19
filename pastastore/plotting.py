@@ -14,6 +14,7 @@ follows::
     ax = pstore.maps.oseries()
     pstore.maps.add_background_map(ax)  # for adding a background map
 """
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
