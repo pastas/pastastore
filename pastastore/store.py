@@ -380,7 +380,7 @@ class PastaStore:
                         i_signatures.append(sign_val)
                 else:
                     raise e
-            signatures_df.loc[name, signatures] = i_signatures
+            signatures_df.loc[name, signatures] = i_signatures.squeeze()
 
         return signatures_df
 
@@ -1127,6 +1127,8 @@ class PastaStore:
                 "'libname' must be one of ['oseries', 'stresses', 'models']!"
             )
         getter = getattr(self.conn, f"get_{libname}")
-        for n in tqdm(names) if progressbar else names:
+        for n in (
+            tqdm(names, desc=f"Applying {func.__name__}") if progressbar else names
+        ):
             result[n] = func(getter(n))
         return result
