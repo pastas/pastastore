@@ -707,7 +707,7 @@ def frontiers_checks(
                             check_tmem_passed,
                         )
                 else:
-                    tmem = ml.get_response_tmax(sm_name)
+                    tmem = ml.get_response_tmax(sm_name, cutoff=check3_cutoff)
                     if tmem is None:  # no rfunc in stressmodel
                         tmem = 0
                     check_tmem_passed = tmem < len_oseries_calib / 2
