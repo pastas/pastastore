@@ -867,3 +867,4 @@ def frontiers_aic_select(
         return (
             df.join(aic).groupby("oseries").idxmin().rename(columns={"aic": "min_aic"})
         )
+
