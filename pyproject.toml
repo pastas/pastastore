@@ -93,3 +93,24 @@ line_length = 88
 [tool.pytest.ini_options]
 addopts = "--durations=0 --cov-report xml:coverage.xml --cov pastastore -v"
 markers = ["bgmap: test tile download for background map"]
+
+[tool.mypy]
+python_version = 3.9
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = [
+    'matplotlib.*',
+    'scipy.stats.*',
+    'mypy-setuptools.*',
+    'mypy-pypandoc.*',
+    'mypy-numpy.*',
+    'mypy-pandas.*',
+    'mypy-pystore.*',
+    'mypy-arctic.*',
+    'mypy-art_tools.*',
+    'mypy-tqdm.*',
+    'mypy-pastas.*',
+]
+ignore_missing_imports = true
