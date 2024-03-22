@@ -1,5 +1,5 @@
 # ruff: noqa: F401
-from pastastore import connectors, util
+from pastastore import connectors, styling, util
 from pastastore.connectors import (
     ArcticConnector,
     ArcticDBConnector,
