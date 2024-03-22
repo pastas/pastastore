@@ -90,3 +90,7 @@ line-length = 88
 profile = "black"
 src_paths = ["pastastore"]
 line_length = 88
+
+[tool.pytest.ini_options]
+addopts = "--durations=0 --cov-report xml:coverage.xml --cov pastastore -v"
+markers = ["bgmap: test tile download for background map"]
