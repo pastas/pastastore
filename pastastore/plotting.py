@@ -562,6 +562,22 @@ class Plots:
 
         return ax
 
+    def compare_models(self, modelnames, ax=None, **kwargs):
+        models = self.pstore.get_models(modelnames)
+        names = []
+        onames = [iml.oseries.name for iml in models]
+        if len(np.unique(onames)) == 1:
+            for modelname in modelnames:
+                if onames[0] in modelname:
+                    names.append(modelname.replace(onames[0], ""))
+                else:
+                    names.append(modelname)
+        else:
+            names = modelnames
+        cm = ps.CompareModels(models, names=names)
+        cm.plot(**kwargs)
+        return cm
+
 
 class Maps:
     """Map Class for PastaStore.
