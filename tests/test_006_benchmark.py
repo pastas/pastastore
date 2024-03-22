@@ -9,7 +9,7 @@ import pastastore as pst
 
 # data
 data = np.random.random_sample(int(1e5))
-s = pd.Series(index=pd.date_range("1970", periods=1e5, freq="H"), data=data)
+s = pd.Series(index=pd.date_range("1970", periods=int(1e5), freq="h"), data=data)
 metadata = {"x": 100000.0, "y": 300000.0}
 
 

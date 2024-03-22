@@ -335,9 +335,11 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
             try:
                 assert_series_equal(
                     oso,
-                    ml.oseries.series_original
-                    if PASTAS_LEQ_022
-                    else ml.oseries._series_original,
+                    (
+                        ml.oseries.series_original
+                        if PASTAS_LEQ_022
+                        else ml.oseries._series_original
+                    ),
                 )
                 compare_oso = True
             except (ValueError, AssertionError):
@@ -378,9 +380,9 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
             for ts in stresses:
                 df.loc[f"- time series: '{ts.name}'"] = ts.name
                 for tsk in ts.settings.keys():
-                    df.loc[
-                        f"  - {ts.name} settings: {tsk}", f"model {i}"
-                    ] = ts.settings[tsk]
+                    df.loc[f"  - {ts.name} settings: {tsk}", f"model {i}"] = (
+                        ts.settings[tsk]
+                    )
 
                 if i == 0:
                     if PASTAS_LEQ_022:
@@ -403,9 +405,11 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                     try:
                         assert_series_equal(
                             so1[counter],
-                            ts.series_original
-                            if PASTAS_LEQ_022
-                            else ts._series_original,
+                            (
+                                ts.series_original
+                                if PASTAS_LEQ_022
+                                else ts._series_original
+                            ),
                         )
                         compare_so1 = True
                     except (ValueError, AssertionError):
@@ -703,7 +707,7 @@ def frontiers_checks(
                             check_tmem_passed,
                         )
                 else:
-                    tmem = ml.get_response_tmax(sm_name)
+                    tmem = ml.get_response_tmax(sm_name, cutoff=check3_cutoff)
                     if tmem is None:  # no rfunc in stressmodel
                         tmem = 0
                     check_tmem_passed = tmem < len_oseries_calib / 2

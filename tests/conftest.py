@@ -1,15 +1,12 @@
 import importlib
+from importlib import metadata
 
-import arcticdb_ext
+# import arcticdb_ext
 import pandas as pd
 import pastas as ps
-import pkg_resources
 import pytest
 
 import pastastore as pst
-
-# prevent segmentationfault in GH Actions
-arcticdb_ext.set_config_int("VersionStore.NumIOThreads", 1)
 
 # "arctic" and "pystore" removed for CI, can be tested locally
 params = ["dict", "pas", "arcticdb"]
@@ -134,29 +131,54 @@ def delete_arcticdb_test_db():
 _has_pkg_cache = {}
 
 
-def has_pkg(pkg):
+def has_pkg(pkg: str, strict: bool = True) -> bool:
     """
     Determines if the given Python package is installed.
 
-    Originally written by Mike Toews for FloPy.
+    Parameters
+    ----------
+    pkg : str
+        Name of the package to check.
+    strict : bool
+        If False, only check if package metadata is available.
+        If True, try to import the package (all dependencies must be present).
+
+    Returns
+    -------
+    bool
+        True if the package is installed, otherwise False.
+
+    Notes
+    -----
+    Originally written by Mike Toews (mwtoews@gmail.com) for FloPy.
     """
-    if pkg not in _has_pkg_cache:
-        # for some dependencies, package name and import name are different
-        # (e.g. pyshp/shapefile, mfpymake/pymake, python-dateutil/dateutil)
-        # pkg_resources expects package name, importlib expects import name
-        try:
-            _has_pkg_cache[pkg] = bool(importlib.import_module(pkg))
-        except (ImportError, ModuleNotFoundError):
-            try:
-                _has_pkg_cache[pkg] = bool(pkg_resources.get_distribution(pkg))
-            except pkg_resources.DistributionNotFound:
-                _has_pkg_cache[pkg] = False
+
+    def try_import():
+        try:  # import name, e.g. "import shapefile"
+            importlib.import_module(pkg)
+            return True
+        except ModuleNotFoundError:
+            return False
+
+    def try_metadata() -> bool:
+        try:  # package name, e.g. pyshp
+            metadata.distribution(pkg)
+            return True
+        except metadata.PackageNotFoundError:
+            return False
+
+    found = False
+    if not strict:
+        found = pkg in _has_pkg_cache or try_metadata()
+    if not found:
+        found = try_import()
+    _has_pkg_cache[pkg] = found
 
     return _has_pkg_cache[pkg]
 
 
 def requires_pkg(*pkgs):
-    missing = {pkg for pkg in pkgs if not has_pkg(pkg)}
+    missing = {pkg for pkg in pkgs if not has_pkg(pkg, strict=True)}
     return pytest.mark.skipif(
         missing,
         reason=f"missing package{'s' if len(missing) != 1 else ''}: "

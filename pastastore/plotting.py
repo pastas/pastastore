@@ -14,6 +14,7 @@ follows::
     ax = pstore.maps.oseries()
     pstore.maps.add_background_map(ax)  # for adding a background map
 """
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -49,6 +50,9 @@ class Plots:
         split=False,
         figsize=(10, 5),
         progressbar=True,
+        show_legend=True,
+        labelfunc=None,
+        legend_kwargs=None,
         **kwargs,
     ):
         """Internal method to plot time series from pastastore.
@@ -71,6 +75,13 @@ class Plots:
         progressbar : bool, optional
             show progressbar when loading time series from store,
             by default True
+        show_legend : bool, optional
+            show legend, default is True.
+        labelfunc : callable, optional
+            function to create custom labels, function should take name of time series
+            as input
+        legend_kwargs : dict, optional
+            additional arguments to pass to legend
 
         Returns
         -------
@@ -109,16 +120,33 @@ class Plots:
                 iax = axes
             else:
                 iax = ax
+            if labelfunc is not None:
+                n = labelfunc(n)
             iax.plot(ts.index, ts.squeeze(), label=n, **kwargs)
-            if split:
+
+            if split and show_legend:
                 iax.legend(loc="best", fontsize="x-small")
 
-        if not split:
-            axes.legend(loc=(0, 1), frameon=False, ncol=7, fontsize="x-small")
+        if not split and show_legend:
+            if legend_kwargs is None:
+                legend_kwargs = {}
+            ncol = legend_kwargs.pop("ncol", 7)
+            fontsize = legend_kwargs.pop("fontsize", "x-small")
+            axes.legend(loc=(0, 1), frameon=False, ncol=ncol, fontsize=fontsize)
 
         return axes
 
-    def oseries(self, names=None, ax=None, split=False, figsize=(10, 5), **kwargs):
+    def oseries(
+        self,
+        names=None,
+        ax=None,
+        split=False,
+        figsize=(10, 5),
+        show_legend=True,
+        labelfunc=None,
+        legend_kwargs=None,
+        **kwargs,
+    ):
         """Plot oseries.
 
         Parameters
@@ -134,6 +162,13 @@ class Plots:
             A maximum of 20 time series is supported when split=True.
         figsize : tuple, optional
             figure size, by default (10, 5)
+        show_legend : bool, optional
+            show legend, default is True.
+        labelfunc : callable, optional
+            function to create custom labels, function should take name of time series
+            as input
+        legend_kwargs : dict, optional
+            additional arguments to pass to legend
 
         Returns
         -------
@@ -146,6 +181,9 @@ class Plots:
             ax=ax,
             split=split,
             figsize=figsize,
+            show_legend=show_legend,
+            labelfunc=labelfunc,
+            legend_kwargs=legend_kwargs,
             **kwargs,
         )
 
@@ -156,6 +194,9 @@ class Plots:
         ax=None,
         split=False,
         figsize=(10, 5),
+        show_legend=True,
+        labelfunc=None,
+        legend_kwargs=None,
         **kwargs,
     ):
         """Plot stresses.
@@ -176,6 +217,13 @@ class Plots:
             A maximum of 20 time series is supported when split=True.
         figsize : tuple, optional
             figure size, by default (10, 5)
+        show_legend : bool, optional
+            show legend, default is True.
+        labelfunc : callable, optional
+            function to create custom labels, function should take name of time series
+            as input
+        legend_kwargs : dict, optional
+            additional arguments to pass to legend
 
         Returns
         -------
@@ -196,6 +244,9 @@ class Plots:
             ax=ax,
             split=split,
             figsize=figsize,
+            show_legend=show_legend,
+            labelfunc=labelfunc,
+            legend_kwargs=legend_kwargs,
             **kwargs,
         )
 
@@ -511,6 +562,22 @@ class Plots:
 
         return ax
 
+    def compare_models(self, modelnames, ax=None, **kwargs):
+        models = self.pstore.get_models(modelnames)
+        names = []
+        onames = [iml.oseries.name for iml in models]
+        if len(np.unique(onames)) == 1:
+            for modelname in modelnames:
+                if onames[0] in modelname:
+                    names.append(modelname.replace(onames[0], ""))
+                else:
+                    names.append(modelname)
+        else:
+            names = modelnames
+        cm = ps.CompareModels(models, names=names)
+        cm.plot(**kwargs)
+        return cm
+
 
 class Maps:
     """Map Class for PastaStore.
@@ -539,10 +606,12 @@ class Maps:
         self,
         names=None,
         kind=None,
+        extent=None,
         labels=True,
         adjust=False,
         figsize=(10, 8),
         backgroundmap=False,
+        label_kwargs=None,
         **kwargs,
     ):
         """Plot stresses locations on map.
@@ -554,6 +623,8 @@ class Maps:
         kind: str, optional
             if passed, only plot stresses of a specific kind, default is None
             which plots all stresses.
+        extent : list of float, optional
+            plot only stresses within extent [xmin, xmax, ymin, ymax]
         labels: bool, optional
             label models, by default True
         adjust: bool, optional
@@ -565,6 +636,8 @@ class Maps:
         backgroundmap: bool, optional
             if True, add background map (default CRS is EPSG:28992) with default tiles
             by OpenStreetMap.Mapnik. Default option is False.
+        label_kwargs: dict, optional
+            dictionary with keyword arguments to pass to add_labels method
 
         Returns
         -------
@@ -575,10 +648,10 @@ class Maps:
         --------
         self.add_background_map
         """
-        if names is not None:
-            df = self.pstore.stresses.loc[names]
-        else:
-            df = self.pstore.stresses
+        names = self.pstore.conn._parse_names(names, "stresses")
+        if extent is not None:
+            names = self.pstore.within(extent, names=names, libname="stresses")
+        df = self.pstore.stresses.loc[names]
 
         if kind is not None:
             if isinstance(kind, str):
@@ -603,7 +676,9 @@ class Maps:
         else:
             ax = r
         if labels:
-            self.add_labels(stresses, ax, adjust=adjust)
+            if label_kwargs is None:
+                label_kwargs = {}
+            self.add_labels(stresses, ax, adjust=adjust, **label_kwargs)
 
         if backgroundmap:
             self.add_background_map(ax)
@@ -613,10 +688,12 @@ class Maps:
     def oseries(
         self,
         names=None,
+        extent=None,
         labels=True,
         adjust=False,
         figsize=(10, 8),
         backgroundmap=False,
+        label_kwargs=None,
         **kwargs,
     ):
         """Plot oseries locations on map.
@@ -625,8 +702,11 @@ class Maps:
         ----------
         names: list, optional
             oseries names, by default None which plots all oseries locations
-        labels: bool, optional
-            label models, by default True
+        extent : list of float, optional
+            plot only oseries within extent [xmin, xmax, ymin, ymax]
+        labels: bool or str, optional
+            label models, by default True, if passed as "grouped", only the first
+            label for each x,y-location is shown.
         adjust: bool, optional
             automated smart label placement using adjustText, by default False
         figsize: tuple, optional
@@ -634,6 +714,8 @@ class Maps:
         backgroundmap: bool, optional
             if True, add background map (default CRS is EPSG:28992) with default tiles
             by OpenStreetMap.Mapnik. Default option is False.
+        label_kwargs: dict, optional
+            dictionary with keyword arguments to pass to add_labels method
 
         Returns
         -------
@@ -646,6 +728,8 @@ class Maps:
         """
 
         names = self.pstore.conn._parse_names(names, "oseries")
+        if extent is not None:
+            names = self.pstore.within(extent, names=names)
         oseries = self.pstore.oseries.loc[names]
         mask0 = (oseries["x"] != 0.0) | (oseries["y"] != 0.0)
         r = self._plotmap_dataframe(oseries.loc[mask0], figsize=figsize, **kwargs)
@@ -654,7 +738,12 @@ class Maps:
         else:
             ax = r
         if labels:
-            self.add_labels(oseries, ax, adjust=adjust)
+            if label_kwargs is None:
+                label_kwargs = {}
+            if labels == "grouped":
+                gr = oseries.sort_index().reset_index().groupby(["x", "y"])
+                oseries = oseries.loc[gr["index"].first().tolist()]
+            self.add_labels(oseries, ax, adjust=adjust, **label_kwargs)
 
         if backgroundmap:
             self.add_background_map(ax)
@@ -1258,7 +1347,7 @@ class Maps:
         ctx.add_basemap(ax, source=providers[map_provider], crs=proj.srs, **kwargs)
 
     @staticmethod
-    def add_labels(df, ax, adjust=False, **kwargs):
+    def add_labels(df, ax, adjust=False, objects=None, **kwargs):
         """Add labels to points on plot.
 
         Uses dataframe index to label points.
@@ -1271,11 +1360,12 @@ class Maps:
             axes object to label points on
         adjust: bool
             automated smart label placement using adjustText
+        objects : list of matplotlib objects
+            use to avoid labels overlapping markers
         **kwargs:
-            keyword arguments to ax.annotate
+            keyword arguments to ax.annotate or adjusttext
         """
         stroke = [patheffects.withStroke(linewidth=3, foreground="w")]
-
         fontsize = kwargs.pop("fontsize", 10)
 
         if adjust:
@@ -1295,7 +1385,9 @@ class Maps:
 
             adjust_text(
                 texts,
-                force_text=0.05,
+                objects=objects,
+                force_text=(0.05, 0.10),
+                **kwargs,
                 **{
                     "arrowprops": {
                         "arrowstyle": "-",
@@ -1318,4 +1410,5 @@ class Maps:
                     textcoords=textcoords,
                     xytext=xytext,
                     **{"path_effects": stroke},
+                    **kwargs,
                 )
