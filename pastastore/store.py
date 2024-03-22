@@ -1136,3 +1136,31 @@ class PastaStore:
         ):
             result[n] = func(getter(n))
         return result
+
+    def within(self, extent, names=None, libname="oseries"):
+        xmin, xmax, ymin, ymax = extent
+        names = self.conn._parse_names(names, libname)
+        if libname == "oseries":
+            df = self.oseries.loc[names]
+        elif libname == "stresses":
+            df = self.stresses.loc[names]
+        elif libname == "models":
+            onames = np.unique(
+                [
+                    self.get_models(modelname, return_dict=True)["oseries"]["name"]
+                    for modelname in names
+                ]
+            )
+            df = self.oseries.loc[onames]
+        else:
+            raise ValueError(
+                "libname must be one of ['oseries', 'stresses', 'models']"
+                f", got '{libname}'"
+            )
+        mask = (
+            (df["x"] <= xmax)
+            & (df["x"] >= xmin)
+            & (df["y"] >= ymin)
+            & (df["y"] <= ymax)
+        )
+        return df.loc[mask].index.tolist()
