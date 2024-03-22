@@ -991,8 +991,9 @@ class PastaStore:
         libname: str,
         s: Optional[Union[list, str]] = None,
         case_sensitive: bool = True,
+        sort=True,
     ):
-        """Search for names of time series or models starting with s.
+        """Search for names of time series or models starting with `s`.
 
         Parameters
         ----------
@@ -1002,6 +1003,8 @@ class PastaStore:
             find names with part of this string or strings in list
         case_sensitive : bool, optional
             whether search should be case sensitive, by default True
+        sort : bool, optional
+            sort list of names
 
         Returns
         -------
@@ -1031,7 +1034,8 @@ class PastaStore:
                 else:
                     m = np.append(m, [n for n in lib_names if sub.lower() in n.lower()])
             matches = list(np.unique(m))
-
+        if sort:
+            matches.sort()
         return matches
 
     def get_model_timeseries_names(
