@@ -606,10 +606,12 @@ class Maps:
         self,
         names=None,
         kind=None,
+        extent=None,
         labels=True,
         adjust=False,
         figsize=(10, 8),
         backgroundmap=False,
+        label_kwargs=None,
         **kwargs,
     ):
         """Plot stresses locations on map.
@@ -621,6 +623,8 @@ class Maps:
         kind: str, optional
             if passed, only plot stresses of a specific kind, default is None
             which plots all stresses.
+        extent : list of float, optional
+            plot only stresses within extent [xmin, xmax, ymin, ymax]
         labels: bool, optional
             label models, by default True
         adjust: bool, optional
@@ -632,6 +636,8 @@ class Maps:
         backgroundmap: bool, optional
             if True, add background map (default CRS is EPSG:28992) with default tiles
             by OpenStreetMap.Mapnik. Default option is False.
+        label_kwargs: dict, optional
+            dictionary with keyword arguments to pass to add_labels method
 
         Returns
         -------
@@ -642,10 +648,10 @@ class Maps:
         --------
         self.add_background_map
         """
-        if names is not None:
-            df = self.pstore.stresses.loc[names]
-        else:
-            df = self.pstore.stresses
+        names = self.pstore.conn._parse_names(names, "stresses")
+        if extent is not None:
+            names = self.pstore.within(extent, names=names, libname="stresses")
+        df = self.pstore.stresses.loc[names]
 
         if kind is not None:
             if isinstance(kind, str):
@@ -670,7 +676,9 @@ class Maps:
         else:
             ax = r
         if labels:
-            self.add_labels(stresses, ax, adjust=adjust)
+            if label_kwargs is None:
+                label_kwargs = {}
+            self.add_labels(stresses, ax, adjust=adjust, **label_kwargs)
 
         if backgroundmap:
             self.add_background_map(ax)
@@ -680,10 +688,12 @@ class Maps:
     def oseries(
         self,
         names=None,
+        extent=None,
         labels=True,
         adjust=False,
         figsize=(10, 8),
         backgroundmap=False,
+        label_kwargs=None,
         **kwargs,
     ):
         """Plot oseries locations on map.
@@ -692,8 +702,11 @@ class Maps:
         ----------
         names: list, optional
             oseries names, by default None which plots all oseries locations
-        labels: bool, optional
-            label models, by default True
+        extent : list of float, optional
+            plot only oseries within extent [xmin, xmax, ymin, ymax]
+        labels: bool or str, optional
+            label models, by default True, if passed as "grouped", only the first
+            label for each x,y-location is shown.
         adjust: bool, optional
             automated smart label placement using adjustText, by default False
         figsize: tuple, optional
@@ -701,6 +714,8 @@ class Maps:
         backgroundmap: bool, optional
             if True, add background map (default CRS is EPSG:28992) with default tiles
             by OpenStreetMap.Mapnik. Default option is False.
+        label_kwargs: dict, optional
+            dictionary with keyword arguments to pass to add_labels method
 
         Returns
         -------
@@ -713,6 +728,8 @@ class Maps:
         """
 
         names = self.pstore.conn._parse_names(names, "oseries")
+        if extent is not None:
+            names = self.pstore.within(extent, names=names)
         oseries = self.pstore.oseries.loc[names]
         mask0 = (oseries["x"] != 0.0) | (oseries["y"] != 0.0)
         r = self._plotmap_dataframe(oseries.loc[mask0], figsize=figsize, **kwargs)
@@ -721,7 +738,12 @@ class Maps:
         else:
             ax = r
         if labels:
-            self.add_labels(oseries, ax, adjust=adjust)
+            if label_kwargs is None:
+                label_kwargs = {}
+            if labels == "grouped":
+                gr = oseries.sort_index().reset_index().groupby(["x", "y"])
+                oseries = oseries.loc[gr["index"].first().tolist()]
+            self.add_labels(oseries, ax, adjust=adjust, **label_kwargs)
 
         if backgroundmap:
             self.add_background_map(ax)
