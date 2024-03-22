@@ -50,6 +50,9 @@ class Plots:
         split=False,
         figsize=(10, 5),
         progressbar=True,
+        show_legend=True,
+        labelfunc=None,
+        legend_kwargs=None,
         **kwargs,
     ):
         """Internal method to plot time series from pastastore.
@@ -72,6 +75,13 @@ class Plots:
         progressbar : bool, optional
             show progressbar when loading time series from store,
             by default True
+        show_legend : bool, optional
+            show legend, default is True.
+        labelfunc : callable, optional
+            function to create custom labels, function should take name of time series
+            as input
+        legend_kwargs : dict, optional
+            additional arguments to pass to legend
 
         Returns
         -------
@@ -110,16 +120,33 @@ class Plots:
                 iax = axes
             else:
                 iax = ax
+            if labelfunc is not None:
+                n = labelfunc(n)
             iax.plot(ts.index, ts.squeeze(), label=n, **kwargs)
-            if split:
+
+            if split and show_legend:
                 iax.legend(loc="best", fontsize="x-small")
 
-        if not split:
-            axes.legend(loc=(0, 1), frameon=False, ncol=7, fontsize="x-small")
+        if not split and show_legend:
+            if legend_kwargs is None:
+                legend_kwargs = {}
+            ncol = legend_kwargs.pop("ncol", 7)
+            fontsize = legend_kwargs.pop("fontsize", "x-small")
+            axes.legend(loc=(0, 1), frameon=False, ncol=ncol, fontsize=fontsize)
 
         return axes
 
-    def oseries(self, names=None, ax=None, split=False, figsize=(10, 5), **kwargs):
+    def oseries(
+        self,
+        names=None,
+        ax=None,
+        split=False,
+        figsize=(10, 5),
+        show_legend=True,
+        labelfunc=None,
+        legend_kwargs=None,
+        **kwargs,
+    ):
         """Plot oseries.
 
         Parameters
@@ -135,6 +162,13 @@ class Plots:
             A maximum of 20 time series is supported when split=True.
         figsize : tuple, optional
             figure size, by default (10, 5)
+        show_legend : bool, optional
+            show legend, default is True.
+        labelfunc : callable, optional
+            function to create custom labels, function should take name of time series
+            as input
+        legend_kwargs : dict, optional
+            additional arguments to pass to legend
 
         Returns
         -------
@@ -147,6 +181,9 @@ class Plots:
             ax=ax,
             split=split,
             figsize=figsize,
+            show_legend=show_legend,
+            labelfunc=labelfunc,
+            legend_kwargs=legend_kwargs,
             **kwargs,
         )
 
@@ -157,6 +194,9 @@ class Plots:
         ax=None,
         split=False,
         figsize=(10, 5),
+        show_legend=True,
+        labelfunc=None,
+        legend_kwargs=None,
         **kwargs,
     ):
         """Plot stresses.
@@ -177,6 +217,13 @@ class Plots:
             A maximum of 20 time series is supported when split=True.
         figsize : tuple, optional
             figure size, by default (10, 5)
+        show_legend : bool, optional
+            show legend, default is True.
+        labelfunc : callable, optional
+            function to create custom labels, function should take name of time series
+            as input
+        legend_kwargs : dict, optional
+            additional arguments to pass to legend
 
         Returns
         -------
@@ -197,6 +244,9 @@ class Plots:
             ax=ax,
             split=split,
             figsize=figsize,
+            show_legend=show_legend,
+            labelfunc=labelfunc,
+            legend_kwargs=legend_kwargs,
             **kwargs,
         )
 
