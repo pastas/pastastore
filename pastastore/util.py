@@ -632,7 +632,9 @@ def frontiers_checks(
     else:
         models = pstore.model_names
 
-    for mlnam in tqdm(models, desc="Running model diagnostics") if progressbar else models:
+    for mlnam in (
+        tqdm(models, desc="Running model diagnostics") if progressbar else models
+    ):
         ml = pstore.get_models(mlnam)
 
         if ml.parameters["optimal"].hasnans:
