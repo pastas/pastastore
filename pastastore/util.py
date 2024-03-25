@@ -552,6 +552,7 @@ def frontiers_checks(
     check4_gain: bool = True,
     check5_parambounds: bool = False,
     csv_dir: Optional[str] = None,
+    progressbar: bool = False,
 ) -> pd.DataFrame:  # pragma: no cover
     """Check models in a PastaStore to see if they pass reliability criteria.
 
@@ -597,6 +598,8 @@ def frontiers_checks(
     csv_dir : string, optional
         directory to store CSV file with overview of checks for every
         model, by default None which will not store results
+    progressbar : bool, optional
+        show progressbar, by default False
 
     Returns
     -------
@@ -629,7 +632,7 @@ def frontiers_checks(
     else:
         models = pstore.model_names
 
-    for mlnam in tqdm(models, desc="Running model diagnostics"):
+    for mlnam in tqdm(models, desc="Running model diagnostics") if progressbar else models:
         ml = pstore.get_models(mlnam)
 
         if ml.parameters["optimal"].hasnans:
