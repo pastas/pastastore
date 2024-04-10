@@ -11,9 +11,7 @@ import yaml
 
 from pastastore.version import PASTAS_LEQ_022
 
-ps.logger.setLevel("ERROR")
 
-logging.basicConfig(level="INFO")
 logger = logging.getLogger(__name__)
 
 
