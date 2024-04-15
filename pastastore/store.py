@@ -1,7 +1,7 @@
 import json
 import os
 import warnings
-from typing import List, Optional, Tuple, Union
+from typing import List, Literal, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -384,7 +384,12 @@ class PastaStore:
 
         return signatures_df
 
-    def get_tmin_tmax(self, libname, names=None, progressbar=False):
+    def get_tmin_tmax(
+        self,
+        libname: Literal["oseries", "stresses", "models"],
+        names: Union[str, List[str], None] = None,
+        progressbar: bool = False,
+    ):
         """Get tmin and tmax for time series.
 
         Parameters
@@ -410,12 +415,25 @@ class PastaStore:
         )
         desc = f"Get tmin/tmax {libname}"
         for n in tqdm(names, desc=desc) if progressbar else names:
-            if libname == "oseries":
-                s = self.conn.get_oseries(n)
+            if libname == "models":
+                mld = self.conn.get_models(
+                    n,
+                    return_dict=True,
+                    progressbar=False,
+                    update_ts_settings=False,
+                    squeeze=True,
+                )
+                tmintmax.loc[n, "tmin"] = mld["settings"]["tmin"]
+                tmintmax.loc[n, "tmax"] = mld["settings"]["tmax"]
             else:
-                s = self.conn.get_stresses(n)
-            tmintmax.loc[n, "tmin"] = s.first_valid_index()
-            tmintmax.loc[n, "tmax"] = s.last_valid_index()
+                s = (
+                    self.conn.get_oseries(n)
+                    if libname == "oseries"
+                    else self.conn.get_stresses(n)
+                )
+                tmintmax.loc[n, "tmin"] = s.first_valid_index()
+                tmintmax.loc[n, "tmax"] = s.last_valid_index()
+
         return tmintmax
 
     def get_extent(self, libname, names=None, buffer=0.0):

@@ -25,6 +25,7 @@ def test_iter_stresses(pstore):
 def test_get_tmintmax(pstore):
     _ = pstore.get_tmin_tmax("oseries")
     _ = pstore.get_tmin_tmax("stresses")
+    _ = pstore.get_tmin_tmax("models")
 
 
 @pytest.mark.dependency()
