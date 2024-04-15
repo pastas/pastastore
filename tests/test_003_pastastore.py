@@ -33,6 +33,7 @@ def test_get_tmintmax(pstore):
     pstore.conn.add_model(ml)
     mltt = pstore.get_tmin_tmax("models")
     assert mltt.at["oseries1", "tmax"] == pd.Timestamp("2015-06-28")
+    pstore.del_model("oseries1")
 
 
 @pytest.mark.dependency()
