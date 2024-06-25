@@ -419,9 +419,6 @@ class PastaStore:
                 mld = self.conn.get_models(
                     n,
                     return_dict=True,
-                    progressbar=False,
-                    update_ts_settings=False,
-                    squeeze=True,
                 )
                 tmintmax.loc[n, "tmin"] = mld["settings"]["tmin"]
                 tmintmax.loc[n, "tmax"] = mld["settings"]["tmax"]

@@ -23,7 +23,6 @@ def test_iter_stresses(pstore):
 
 @pytest.mark.dependency()
 def test_get_tmintmax(pstore):
-    print(pstore.model_names)
     ostt = pstore.get_tmin_tmax("oseries")
     assert ostt.at["oseries1", "tmin"] == pd.Timestamp("2010-01-14")
     sttt = pstore.get_tmin_tmax("stresses")
