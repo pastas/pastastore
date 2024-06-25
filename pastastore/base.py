@@ -659,6 +659,16 @@ class BaseConnector(ABC):
             self._del_oseries_model_link(oname, n)
         self._clear_cache("_modelnames_cache")
 
+    def del_model(self, names: Union[list, str]) -> None:
+        """Delete model(s) from the database.
+
+        Parameters
+        ----------
+        names : str or list of str
+            name(s) of the model to delete
+        """
+        self.del_models(names=names)
+
     def del_oseries(self, names: Union[list, str], remove_models: bool = False):
         """Delete oseries from the database.
 

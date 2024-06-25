@@ -11,7 +11,6 @@ import yaml
 
 from pastastore.version import PASTAS_LEQ_022
 
-
 logger = logging.getLogger(__name__)
 
 
