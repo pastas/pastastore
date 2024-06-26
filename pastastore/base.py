@@ -1277,12 +1277,9 @@ class ConnectorUtil:
             meta = pd.DataFrame(metalist)
         elif len(metalist) == 0:
             meta = pd.DataFrame()
-        if "name" in meta.columns:
-            meta.set_index("name", inplace=True)
-        else:
-            meta.index = names
-            meta.index.name = "name"
 
+        meta.index = names
+        meta.index.name = "name"
         return meta
 
     def _parse_model_dict(self, mdict: dict, update_ts_settings: bool = False):
