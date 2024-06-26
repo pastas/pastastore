@@ -93,5 +93,5 @@ jobs:
         if: ${{ github.repository == 'pastas/pastastore' && success() }}
         uses: codacy/codacy-coverage-reporter-action@master
         with:
-          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          project-token: ${{ secrets.CODACY_API_TOKEN }}
           coverage-reports: coverage.xml

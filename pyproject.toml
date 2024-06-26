@@ -58,14 +58,7 @@ test = [
     "pytest-benchmark",
     "codacy-coverage",
 ]
-pystore = ["fsspec>=0.3.3", "python-snappy", "dask[dataframe]"]
-arctic = [
-    "arctic", # will not work as releases not uploaded to PyPI
-]
-arcticdb = [
-    "arcticdb",
-    "protobuf~=4.0",
-] # TODO: temporarily set protobuf to version 4
+arcticdb = ["arcticdb"]
 docs = [
     "pastastore[optional]",
     "sphinx_rtd_theme",
@@ -94,7 +87,7 @@ addopts = "--durations=0 --cov-report xml:coverage.xml --cov pastastore -v"
 markers = ["bgmap: test tile download for background map"]
 
 [tool.mypy]
-python_version = 3.9
+python_version = "3.9" 
 warn_return_any = true
 warn_unused_configs = true
 
