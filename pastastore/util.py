@@ -1,6 +1,7 @@
 """Useful utilities for pastastore."""
 
 import os
+import warnings
 from typing import Dict, List, Optional, Union
 
 import numpy as np
@@ -23,6 +24,7 @@ class ItemInLibraryException(Exception):
     pass
 
 
+# TODO: remove in future version
 def delete_pystore_connector(
     conn=None,
     path: Optional[str] = None,
@@ -43,6 +45,12 @@ def delete_pystore_connector(
         list of library names to delete, by default None which deletes
         all libraries
     """
+    warnings.warn(
+        "This function is deprecated. We recommend to migrate to a different "
+        "Connector, e.g. `pst.PasConnector`.",
+        DeprecationWarning,
+        stacklevel=1,
+    )
     import pystore
 
     if conn is not None:
@@ -64,6 +72,7 @@ def delete_pystore_connector(
             print(f" - deleted: {lib}")
 
 
+# TODO: remove in future version
 def delete_arctic_connector(
     conn=None,
     connstr: Optional[str] = None,
@@ -84,6 +93,12 @@ def delete_arctic_connector(
         list of library names to delete, by default None which deletes
         all libraries
     """
+    warnings.warn(
+        "This function is deprecated. We recommend to migrate to a different "
+        "Connector, e.g. `pst.ArcticDBConnector`.",
+        DeprecationWarning,
+        stacklevel=1,
+    )
     import arctic
 
     if conn is not None:
@@ -228,10 +243,12 @@ def delete_pastastore(pstore, libraries: Optional[List[str]] = None) -> None:
     TypeError
         when Connector type is not recognized
     """
+    # TODO: remove in future version
     if pstore.conn.conn_type == "pystore":
         delete_pystore_connector(conn=pstore.conn, libraries=libraries)
     elif pstore.conn.conn_type == "dict":
         delete_dict_connector(pstore)
+    # TODO: remove in future version
     elif pstore.conn.conn_type == "arctic":
         delete_arctic_connector(conn=pstore.conn, libraries=libraries)
     elif pstore.conn.conn_type == "arcticdb":
