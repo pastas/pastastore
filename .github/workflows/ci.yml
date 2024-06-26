@@ -32,20 +32,13 @@ jobs:
           pip install .
           pip install ".[lint]"
 
-      - name: Run black
-        uses: psf/black@stable
+      - name: ruff-lint
+        uses: chartboost/ruff-action@v1
+
+      - name: ruff-format
+        uses: chartboost/ruff-action@v1
         with:
-          options: "--check --diff"
-          jupyter: true
-
-      - name: Run isort
-        run: |
-          isort --check --diff --profile=black ./pastastore
-
-      - name: Run flake8
-        run: |
-          flake8 --count --show-source --exit-zero --max-line-length=88 ./pastastore
-          flake8 --count --exit-zero --max-line-length=88 --statistics ./pastastore
+          args: "format --check"
 
   test:
     name: Tests
@@ -60,7 +53,7 @@ jobs:
             "git+https://github.com/pastas/pastas.git@v0.22.0",
             "git+https://github.com/pastas/pastas.git@v0.23.1",
             "git+https://github.com/pastas/pastas.git@v1.0.1",
-            "git+https://github.com/pastas/pastas.git@v1.4.0",
+            "git+https://github.com/pastas/pastas.git@v1.5.0",
             "git+https://github.com/pastas/pastas.git@dev",
           ]
 

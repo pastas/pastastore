@@ -1,3 +1,4 @@
+# ruff: noqa: D100 D103
 import numpy as np
 import pandas as pd
 import pytest
@@ -8,7 +9,8 @@ import pastastore as pst
 # %% write
 
 # data
-data = np.random.random_sample(int(1e5))
+rng = np.random.default_rng()
+data = rng.random(int(1e5))
 s = pd.Series(index=pd.date_range("1970", periods=int(1e5), freq="h"), data=data)
 metadata = {"x": 100000.0, "y": 300000.0}
 

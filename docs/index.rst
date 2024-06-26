@@ -14,7 +14,7 @@ An small example using pastastore::
   import pandas as pd
   
   # initialize a connector and a pastastore
-  pstore = pst.PastaStore("my_store", pst.PasConnector("my_dbase", "./path_to_folder"))
+  pstore = pst.PastaStore(pst.PasConnector("./path_to_folder", name="my_dbase"))
 
   # read some data
   series = pd.read_csv("some.csv", index_col=[0], parse_dates=True)
