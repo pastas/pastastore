@@ -75,7 +75,7 @@ jobs:
           cache-dependency-path: pyproject.toml
 
       - name: Install dependencies < PY312
-        if: ${{ matrix.pastas-version != '3.12'}}  
+        if: ${{ matrix.python-version != '3.12'}}  
         run: |
           pip install --upgrade pip
           pip install numpy
@@ -83,7 +83,7 @@ jobs:
           pip install -e .[test]
 
       - name: Install dependencies == PY312
-        if: ${{ matrix.pastas-version == '3.12'}}  
+        if: ${{ matrix.python-version == '3.12'}}  
         run: |
           pip install --upgrade pip
           pip install numpy
