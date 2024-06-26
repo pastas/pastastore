@@ -19,7 +19,7 @@ from pastas.io.pas import PastasEncoder
 from tqdm.auto import tqdm
 
 from pastastore.util import ItemInLibraryException, _custom_warning, validate_names
-from pastastore.version import PASTAS_LEQ_022
+from pastastore.version import PASTAS_GEQ_150, PASTAS_LEQ_022
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning
@@ -303,17 +303,21 @@ class BaseConnector(ABC):
         series = self._set_series_name(series, name)
         if self._pastas_validate(validate):
             if libname == "oseries":
-                if not ps.validate_oseries(series):
+                if PASTAS_GEQ_150 and not ps.validate_oseries(series):
                     raise ValueError(
                         "oseries does not meet pastas criteria,"
                         " see `ps.validate_oseries()`!"
                     )
+                else:
+                    ps.validate_oseries(series)
             else:
-                if not ps.validate_stress(series):
+                if PASTAS_GEQ_150 and not ps.validate_stress(series):
                     raise ValueError(
                         "stress does not meet pastas criteria,"
                         " see `ps.validate_stress()`!"
                     )
+                else:
+                    ps.validate_stress(series)
         in_store = getattr(self, f"{libname}_names")
         if name not in in_store or overwrite:
             self._add_item(
