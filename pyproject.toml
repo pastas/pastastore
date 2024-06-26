@@ -58,6 +58,17 @@ test = [
     "pytest-benchmark",
     "codacy-coverage",
 ]
+test_py312 = [
+    "pastastore[lint,optional]",
+    "hydropandas[full]",
+    "coverage",
+    "codecov",
+    "pytest",
+    "pytest-cov",
+    "pytest-dependency",
+    "pytest-benchmark",
+    "codacy-coverage",
+]
 arcticdb = ["arcticdb"]
 docs = [
     "pastastore[optional]",
@@ -101,7 +112,7 @@ addopts = "--durations=0 --cov-report xml:coverage.xml --cov pastastore -v"
 markers = ["bgmap: test tile download for background map"]
 
 [tool.mypy]
-python_version = "3.9" 
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 
