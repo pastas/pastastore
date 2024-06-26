@@ -711,6 +711,8 @@ class BaseConnector(ABC):
     def del_model(self, names: Union[list, str]) -> None:
         """Delete model(s) from the database.
 
+        Alias for del_models().
+
         Parameters
         ----------
         names : str or list of str
@@ -921,6 +923,45 @@ class BaseConnector(ABC):
         else:
             return stresses
 
+    def get_stress(
+        self,
+        names: Union[list, str],
+        return_metadata: bool = False,
+        progressbar: bool = False,
+        squeeze: bool = True,
+    ) -> Union[Union[FrameorSeriesUnion, Dict], Optional[Union[Dict, List]]]:
+        """Get stresses from database.
+
+        Alias for `get_stresses()`
+
+        Parameters
+        ----------
+        names : str or list of str
+            names of the stresses to load
+        return_metadata : bool, optional
+            return metadata as dictionary or list of dictionaries,
+            default is False
+        progressbar : bool, optional
+            show progressbar, by default False
+        squeeze : bool, optional
+            if True return DataFrame or Series instead of dictionary
+            for single entry
+
+        Returns
+        -------
+        stresses : pandas.DataFrame or dict of DataFrames
+            returns time series as DataFrame or dictionary of DataFrames if
+            multiple names were passed
+        metadata : dict or list of dict
+            metadata for each stress, only returned if return_metadata=True
+        """
+        return self.get_stresses(
+            names,
+            return_metadata=return_metadata,
+            progressbar=progressbar,
+            squeeze=squeeze,
+        )
+
     def get_models(
         self,
         names: Union[list, str],
@@ -967,6 +1008,48 @@ class BaseConnector(ABC):
             return models[0]
         else:
             return models
+
+    def get_model(
+        self,
+        names: Union[list, str],
+        return_dict: bool = False,
+        progressbar: bool = False,
+        squeeze: bool = True,
+        update_ts_settings: bool = False,
+    ) -> Union[ps.Model, list]:
+        """Load models from database.
+
+        Alias for get_models().
+
+        Parameters
+        ----------
+        names : str or list of str
+            names of the models to load
+        return_dict : bool, optional
+            return model dictionary instead of pastas.Model (much
+            faster for obtaining parameters, for example)
+        progressbar : bool, optional
+            show progressbar, by default False
+        squeeze : bool, optional
+            if True return Model instead of list of Models
+            for single entry
+        update_ts_settings : bool, optional
+            update time series settings based on time series in store.
+            overwrites stored tmin/tmax in model.
+
+        Returns
+        -------
+        pastas.Model or list of pastas.Model
+            return pastas model, or list of models if multiple names were
+            passed
+        """
+        return self.get_models(
+            names,
+            return_dict=return_dict,
+            progressbar=progressbar,
+            squeeze=squeeze,
+            update_ts_settings=update_ts_settings,
+        )
 
     def empty_library(
         self, libname: str, prompt: bool = True, progressbar: bool = True
