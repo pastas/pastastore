@@ -58,16 +58,9 @@ test = [
     "pytest-dependency",
     "pytest-benchmark",
     "codacy-coverage",
-    "lxml",                               # temporary fix: for hydropandas 0.8.0
+    "lxml",
 ]
-pystore = ["fsspec>=0.3.3", "python-snappy", "dask[dataframe]"]
-arctic = [
-    "arctic", # will not work as releases not uploaded to PyPI
-]
-arcticdb = [
-    "arcticdb",
-    "protobuf~=4.0",
-] # TODO: temporarily set protobuf to version 4
+arcticdb = ["arcticdb"]
 docs = [
     "pastastore[optional]",
     "sphinx_rtd_theme",

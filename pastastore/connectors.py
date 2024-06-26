@@ -32,6 +32,12 @@ class ArcticConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
         connstr : str
             connection string (e.g. 'mongodb://localhost:27017/')
         """
+        warnings.warn(
+            "ArcticConnector is deprecated. Please use a different "
+            "connector, e.g. `pst.ArcticDBConnector`.",
+            DeprecationWarning,
+            stacklevel=1,
+        )
         try:
             import arctic
         except ModuleNotFoundError as e:
@@ -397,6 +403,12 @@ class PystoreConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
         path : str
             path to the pystore directory
         """
+        warnings.warn(
+            "PystoreConnector is deprecated. Please use a different "
+            "connector, e.g. `pst.PasConnector`.",
+            DeprecationWarning,
+            stacklevel=1,
+        )
         try:
             import pystore
         except ModuleNotFoundError as e:

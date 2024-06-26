@@ -32,22 +32,6 @@ def test_benchmark_write_series_pas(benchmark):
 
 
 @pytest.mark.benchmark(group="write_series")
-@requires_pkg("pystore")
-def test_benchmark_write_series_pystore(benchmark):
-    path = "./tests/data/pystore"
-    conn = pst.PystoreConnector("test", path)
-    _ = benchmark(series_write, conn=conn)
-
-
-@pytest.mark.benchmark(group="write_series")
-@requires_pkg("arctic")
-def test_benchmark_write_series_arctic(benchmark):
-    connstr = "mongodb://localhost:27017/"
-    conn = pst.ArcticConnector("test", connstr)
-    _ = benchmark(series_write, conn=conn)
-
-
-@pytest.mark.benchmark(group="write_series")
 @requires_pkg("arcticdb")
 def test_benchmark_write_series_arcticdb(benchmark):
     uri = "lmdb://./arctic_db/"
@@ -72,22 +56,6 @@ def series_read(conn):
 @pytest.mark.benchmark(group="read_series")
 def test_benchmark_read_series_pas(benchmark):
     conn = pst.PasConnector("test", "./tests/data/pas")
-    _ = benchmark(series_read, conn=conn)
-
-
-@pytest.mark.benchmark(group="read_series")
-@requires_pkg("pystore")
-def test_benchmark_read_series_pystore(benchmark):
-    path = "./tests/data/pystore"
-    conn = pst.PystoreConnector("test", path)
-    _ = benchmark(series_read, conn=conn)
-
-
-@pytest.mark.benchmark(group="read_series")
-@requires_pkg("arctic")
-def test_benchmark_read_series_arctic(benchmark):
-    connstr = "mongodb://localhost:27017/"
-    conn = pst.ArcticConnector("test", connstr)
     _ = benchmark(series_read, conn=conn)
 
 
@@ -148,24 +116,6 @@ def test_benchmark_write_model_pas(benchmark):
 
 
 @pytest.mark.benchmark(group="write_model")
-@requires_pkg("pystore")
-def test_benchmark_write_model_pystore(benchmark):
-    path = "./tests/data/pystore"
-    conn = pst.PystoreConnector("test", path)
-    ml = build_model(conn)
-    _ = benchmark(write_model, conn=conn, ml=ml)
-
-
-@pytest.mark.benchmark(group="write_model")
-@requires_pkg("arctic")
-def test_benchmark_write_model_arctic(benchmark):
-    connstr = "mongodb://localhost:27017/"
-    conn = pst.ArcticConnector("test", connstr)
-    ml = build_model(conn)
-    _ = benchmark(write_model, conn=conn, ml=ml)
-
-
-@pytest.mark.benchmark(group="write_model")
 @requires_pkg("arcticdb")
 def test_benchmark_write_model_arcticdb(benchmark):
     uri = "lmdb://./arctic_db/"
@@ -185,24 +135,6 @@ def write_model_nocheckts(conn, ml):
 @pytest.mark.benchmark(group="write_model")
 def test_benchmark_write_model_nocheckts_pas(benchmark):
     conn = pst.PasConnector("test", "./tests/data/pas")
-    ml = build_model(conn)
-    _ = benchmark(write_model_nocheckts, conn=conn, ml=ml)
-
-
-@pytest.mark.benchmark(group="write_model")
-@requires_pkg("pystore")
-def test_benchmark_write_model_nocheckts_pystore(benchmark):
-    path = "./tests/data/pystore"
-    conn = pst.PystoreConnector("test", path)
-    ml = build_model(conn)
-    _ = benchmark(write_model_nocheckts, conn=conn, ml=ml)
-
-
-@pytest.mark.benchmark(group="write_model")
-@requires_pkg("arctic")
-def test_benchmark_write_model_nocheckts_arctic(benchmark):
-    connstr = "mongodb://localhost:27017/"
-    conn = pst.ArcticConnector("test", connstr)
     ml = build_model(conn)
     _ = benchmark(write_model_nocheckts, conn=conn, ml=ml)
 
@@ -235,24 +167,6 @@ def test_benchmark_read_model_pas(benchmark):
     conn = pst.PasConnector("test", "./tests/data/pas")
     _ = benchmark(read_model, conn=conn)
     pst.util.delete_pas_connector(conn)
-
-
-@pytest.mark.benchmark(group="read_model")
-@requires_pkg("pystore")
-def test_benchmark_read_model_pystore(benchmark):
-    path = "./tests/data/pystore"
-    conn = pst.PystoreConnector("test", path)
-    _ = benchmark(read_model, conn=conn)
-    pst.util.delete_pystore_connector(conn=conn)
-
-
-@pytest.mark.benchmark(group="read_model")
-@requires_pkg("arctic")
-def test_benchmark_read_model_arctic(benchmark):
-    connstr = "mongodb://localhost:27017/"
-    conn = pst.ArcticConnector("test", connstr)
-    _ = benchmark(read_model, conn=conn)
-    pst.util.delete_arctic_connector(conn=conn)
 
 
 @pytest.mark.benchmark(group="read_model")
