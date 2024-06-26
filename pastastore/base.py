@@ -359,7 +359,7 @@ class BaseConnector(ABC):
         self._validate_input_series(series)
         series = self._set_series_name(series, name)
         stored = self._get_series(libname, name, progressbar=False)
-        if self.conn_type == "pas" and (type(series) != type(stored)):
+        if self.conn_type == "pas" and not isinstance(series, type(stored)):
             if isinstance(series, pd.DataFrame):
                 stored = stored.to_frame()
         # get union of index
