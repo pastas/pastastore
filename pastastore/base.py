@@ -1,6 +1,8 @@
 import functools
 import json
 import warnings
+
+# import weakref
 from abc import ABC, abstractmethod, abstractproperty
 from collections.abc import Iterable
 from itertools import chain
@@ -18,6 +20,34 @@ from pastastore.version import PASTAS_LEQ_022
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning
+
+
+# def weak_lru(maxsize=128, typed=False):
+#     """LRU Cache decorator that keeps a weak reference to 'self'.
+
+#     From https://stackoverflow.com/a/68052994/10596229.
+
+#     Parameters
+#     ----------
+#     maxsize : int, optional
+#         maximum size of cache, by default 128
+#     typed : bool, optional
+#         whether to differentiate between types, by default False
+
+#     """
+
+#     def wrapper(func):
+#         @functools.lru_cache(maxsize, typed)
+#         def _func(_self, *args, **kwargs):
+#             return func(_self(), *args, **kwargs)
+
+#         @functools.wraps(func)
+#         def inner(self, *args, **kwargs):
+#             return _func(weakref.ref(self), *args, **kwargs)
+
+#         return inner
+
+#     return wrapper
 
 
 class BaseConnector(ABC):
@@ -1260,7 +1290,9 @@ class ConnectorUtil:
             meta = pd.DataFrame(metalist)
         elif len(metalist) == 0:
             meta = pd.DataFrame()
+
         meta.index = names
+        meta.index.name = "name"
         return meta
 
     def _parse_model_dict(self, mdict: dict, update_ts_settings: bool = False):

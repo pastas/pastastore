@@ -14,6 +14,7 @@ from pastastore.base import BaseConnector
 from pastastore.connectors import DictConnector
 from pastastore.plotting import Maps, Plots
 from pastastore.util import _custom_warning
+from pastastore.version import PASTAS_GEQ_150
 from pastastore.yaml_interface import PastastoreYAML
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
@@ -573,6 +574,7 @@ class PastaStore:
         name: str,
         modelname: str = None,
         add_recharge: bool = True,
+        add_ar_noisemodel: bool = False,
         recharge_name: str = "recharge",
     ) -> ps.Model:
         """Create a pastas Model.
@@ -587,6 +589,8 @@ class PastaStore:
             add recharge to the model by looking for the closest
             precipitation and evaporation time series in the stresses
             library, by default True
+        add_ar1_noisemodel : bool, optional
+            add AR(1) noise model to the model, by default False
         recharge_name : str
             name of the RechargeModel
 
@@ -613,6 +617,8 @@ class PastaStore:
             ml = ps.Model(ts, name=modelname, metadata=meta)
             if add_recharge:
                 self.add_recharge(ml, recharge_name=recharge_name)
+            if add_ar_noisemodel and PASTAS_GEQ_150:
+                ml.add_noisemodel(ps.ArNoiseModel())
             return ml
         else:
             raise ValueError("Empty time series!")
