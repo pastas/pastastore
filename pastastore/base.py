@@ -3,7 +3,8 @@ import json
 import warnings
 
 # import weakref
-from collections.abc import ABC, Iterable, abstractmethod, abstractproperty
+from abc import ABC, abstractmethod, abstractproperty
+from collections.abc import Iterable
 from itertools import chain
 from typing import Dict, List, Optional, Tuple, Union
 
