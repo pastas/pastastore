@@ -6,7 +6,7 @@ import json
 import warnings
 
 # import weakref
-from abc import ABC, abstractmethod, abstractproperty
+from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from itertools import chain
 from typing import Dict, List, Optional, Tuple, Union
@@ -303,9 +303,17 @@ class BaseConnector(ABC):
         series = self._set_series_name(series, name)
         if self._pastas_validate(validate):
             if libname == "oseries":
-                ps.validate_oseries(series)
+                if not ps.validate_oseries(series):
+                    raise ValueError(
+                        "oseries does not meet pastas criteria,"
+                        " see `ps.validate_oseries()`!"
+                    )
             else:
-                ps.validate_stress(series)
+                if not ps.validate_stress(series):
+                    raise ValueError(
+                        "stress does not meet pastas criteria,"
+                        " see `ps.validate_stress()`!"
+                    )
         in_store = getattr(self, f"{libname}_names")
         if name not in in_store or overwrite:
             self._add_item(
@@ -809,8 +817,6 @@ class BaseConnector(ABC):
             imeta = self._get_metadata(libname, n)
             if imeta is None:
                 imeta = {}
-            if "name" not in imeta.keys():
-                imeta["name"] = n
             metalist.append(imeta)
         if as_frame:
             meta = self._meta_list_to_frame(metalist, names=names)
