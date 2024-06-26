@@ -1,3 +1,5 @@
+"""Module containing classes for connecting to different data stores."""
+
 import json
 import os
 import warnings
@@ -16,11 +18,12 @@ warnings.showwarning = _custom_warning
 
 
 class ArcticConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
+    """ArcticConnector object that connects to a running MongoDB database via Arctic."""
+
     conn_type = "arctic"
 
     def __init__(self, name: str, connstr: str):
-        """Create an ArcticConnector object that connects to a running MongoDB
-        database via Arctic.
+        """Create an ArcticConnector object that connects to a MongoDB database.
 
         Parameters
         ----------
@@ -52,8 +55,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
         self._update_all_oseries_model_links()
 
     def _initialize(self) -> None:
-        """Internal method to initalize the libraries."""
-
+        """Initialize the libraries (internal method)."""
         for libname in self._default_library_names:
             if self._library_name(libname) not in self.arc.list_libraries():
                 self.arc.initialize_library(self._library_name(libname))
@@ -66,7 +68,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
             self.libs[libname] = self._get_library(libname)
 
     def _library_name(self, libname: str) -> str:
-        """Internal method to get full library name according to Arctic."""
+        """Get full library name according to Arctic (internal method)."""
         return ".".join([self.name, libname])
 
     def _get_library(self, libname: str):
@@ -94,7 +96,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
         metadata: Optional[Dict] = None,
         **_,
     ) -> None:
-        """Internal method to add item to library (time series or model).
+        """Add item to library (time series or model) (internal method).
 
         Parameters
         ----------
@@ -111,7 +113,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
         lib.write(name, item, metadata=metadata)
 
     def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
-        """Internal method to retrieve item from library.
+        """Retrieve item from library (internal method).
 
         Parameters
         ----------
@@ -129,7 +131,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
         return lib.read(name).data
 
     def _del_item(self, libname: str, name: str) -> None:
-        """Internal method to delete items (series or models).
+        """Delete items (series or models) (internal method).
 
         Parameters
         ----------
@@ -142,7 +144,7 @@ class ArcticConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
         lib.delete(name)
 
     def _get_metadata(self, libname: str, name: str) -> dict:
-        """Internal method to retrieve metadata for an item.
+        """Retrieve metadata for an item (internal method).
 
         Parameters
         ----------
@@ -199,6 +201,8 @@ class ArcticConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
 
 
 class ArcticDBConnector(BaseConnector, ConnectorUtil):
+    """ArcticDBConnector object using ArcticDB to store data."""
+
     conn_type = "arcticdb"
 
     def __init__(self, name: str, uri: str):
@@ -228,8 +232,7 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
         self._update_all_oseries_model_links()
 
     def _initialize(self) -> None:
-        """Internal method to initalize the libraries."""
-
+        """Initialize the libraries (internal method)."""
         for libname in self._default_library_names:
             if self._library_name(libname) not in self.arc.list_libraries():
                 self.arc.create_library(self._library_name(libname))
@@ -242,7 +245,7 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
             self.libs[libname] = self._get_library(libname)
 
     def _library_name(self, libname: str) -> str:
-        """Internal method to get full library name according to ArcticDB."""
+        """Get full library name according to ArcticDB (internal method)."""
         return ".".join([self.name, libname])
 
     def _get_library(self, libname: str):
@@ -270,7 +273,7 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
         metadata: Optional[Dict] = None,
         **_,
     ) -> None:
-        """Internal method to add item to library (time series or model).
+        """Add item to library (time series or model) (internal method).
 
         Parameters
         ----------
@@ -292,7 +295,7 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
             lib.write(name, item, metadata=metadata)
 
     def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
-        """Internal method to retrieve item from library.
+        """Retrieve item from library (internal method).
 
         Parameters
         ----------
@@ -310,7 +313,7 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
         return lib.read(name).data
 
     def _del_item(self, libname: str, name: str) -> None:
-        """Internal method to delete items (series or models).
+        """Delete items (series or models) (internal method).
 
         Parameters
         ----------
@@ -323,7 +326,7 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
         lib.delete(name)
 
     def _get_metadata(self, libname: str, name: str) -> dict:
-        """Internal method to retrieve metadata for an item.
+        """Retrieve metadata for an item (internal method).
 
         Parameters
         ----------
@@ -380,6 +383,8 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
 
 
 class PystoreConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
+    """PystoreConnector object using pystore as database backend."""
+
     conn_type = "pystore"
 
     def __init__(self, name: str, path: str):
@@ -412,7 +417,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
         self._update_all_oseries_model_links()
 
     def _initialize(self) -> None:
-        """Internal method to initalize the libraries (stores)."""
+        """Initialize the libraries (stores) (internal method)."""
         for libname in self._default_library_names:
             if libname in self.store.list_collections():
                 print(
@@ -447,7 +452,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
         metadata: Optional[Dict] = None,
         overwrite: bool = False,
     ) -> None:
-        """Internal method to add item to library (time series or model).
+        """Add item to library (time series or model) (internal method).
 
         Parameters
         ----------
@@ -489,7 +494,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
         lib.write(name, s, metadata=metadata, overwrite=overwrite)
 
     def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
-        """Internal method to retrieve item from pystore library.
+        """Retrieve item from pystore library (internal method).
 
         Parameters
         ----------
@@ -522,7 +527,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
         return s
 
     def _del_item(self, libname: str, name: str) -> None:
-        """Internal method to delete data from the store.
+        """Delete data from the store (internal method).
 
         Parameters
         ----------
@@ -536,7 +541,7 @@ class PystoreConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
         self._clear_cache(libname)
 
     def _get_metadata(self, libname: str, name: str) -> dict:
-        """Internal method to read metadata from pystore.
+        """Read metadata from pystore (internal method).
 
         Parameters
         ----------
@@ -600,6 +605,8 @@ class PystoreConnector(BaseConnector, ConnectorUtil):  # pragma: no cover
 
 
 class DictConnector(BaseConnector, ConnectorUtil):
+    """DictConnector object that stores timeseries and models in dictionaries."""
+
     conn_type = "dict"
 
     def __init__(self, name: str = "pastas_db"):
@@ -643,7 +650,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         metadata: Optional[Dict] = None,
         **_,
     ) -> None:
-        """Internal method to add item (time series or models).
+        """Add item (time series or models) (internal method).
 
         Parameters
         ----------
@@ -663,7 +670,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
             lib[name] = (metadata, item)
 
     def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
-        """Internal method to retrieve item from pystore library.
+        """Retrieve item from database (internal method).
 
         Parameters
         ----------
@@ -685,7 +692,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         return item
 
     def _del_item(self, libname: str, name: str) -> None:
-        """Internal method to delete items (series or models).
+        """Delete items (series or models) (internal method).
 
         Parameters
         ----------
@@ -698,7 +705,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         _ = lib.pop(name)
 
     def _get_metadata(self, libname: str, name: str) -> dict:
-        """Internal method to read metadata.
+        """Read metadata (internal method).
 
         Parameters
         ----------
@@ -742,6 +749,8 @@ class DictConnector(BaseConnector, ConnectorUtil):
 
 
 class PasConnector(BaseConnector, ConnectorUtil):
+    """PasConnector object that stores time series and models as JSON files on disk."""
+
     conn_type = "pas"
 
     def __init__(self, name: str, path: str):
@@ -767,7 +776,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         self._update_all_oseries_model_links()
 
     def _initialize(self) -> None:
-        """Internal method to initialize the libraries."""
+        """Initialize the libraries (internal method)."""
         for val in self._default_library_names:
             libdir = os.path.join(self.path, val)
             if not os.path.exists(libdir):
@@ -803,7 +812,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         metadata: Optional[Dict] = None,
         **_,
     ) -> None:
-        """Internal method to add item (time series or models).
+        """Add item (time series or models) (internal method).
 
         Parameters
         ----------
@@ -845,7 +854,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
                 fm.write(jsondict)
 
     def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
-        """Internal method to retrieve item.
+        """Retrieve item (internal method).
 
         Parameters
         ----------
@@ -878,7 +887,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         return item
 
     def _del_item(self, libname: str, name: str) -> None:
-        """Internal method to delete items (series or models).
+        """Delete items (series or models) (internal method).
 
         Parameters
         ----------
@@ -898,7 +907,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
                 pass
 
     def _get_metadata(self, libname: str, name: str) -> dict:
-        """Internal method to read metadata.
+        """Read metadata (internal method).
 
         Parameters
         ----------

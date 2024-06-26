@@ -1,3 +1,5 @@
+"""Module containing the PastaStore object for managing time series and models."""
+
 import json
 import os
 import warnings
@@ -72,7 +74,7 @@ class PastaStore:
         self.yaml = PastastoreYAML(self)
 
     def _register_connector_methods(self):
-        """Internal method for registering connector methods."""
+        """Register connector methods (internal method)."""
         methods = [
             func
             for func in dir(self.conn)
@@ -83,26 +85,70 @@ class PastaStore:
 
     @property
     def oseries(self):
+        """
+        Returns the oseries metadata as dataframe.
+
+        Returns
+        -------
+        oseries
+            oseries metadata as dataframe
+        """
         return self.conn.oseries
 
     @property
     def stresses(self):
+        """
+        Returns the stresses metadata as dataframe.
+
+        Returns
+        -------
+        stresses
+            stresses metadata as dataframe
+        """
         return self.conn.stresses
 
     @property
     def models(self):
+        """Return list of model names.
+
+        Returns
+        -------
+        list
+            list of model names
+        """
         return self.conn.models
 
     @property
     def oseries_names(self):
+        """Return list of oseries names.
+
+        Returns
+        -------
+        list
+            list of oseries names
+        """
         return self.conn.oseries_names
 
     @property
     def stresses_names(self):
+        """Return list of streses names.
+
+        Returns
+        -------
+        list
+            list of stresses names
+        """
         return self.conn.stresses_names
 
     @property
     def model_names(self):
+        """Return list of model names.
+
+        Returns
+        -------
+        list
+            list of model names
+        """
         return self.conn.model_names
 
     @property
@@ -111,22 +157,57 @@ class PastaStore:
 
     @property
     def n_oseries(self):
+        """Return number of oseries.
+
+        Returns
+        -------
+        int
+            number of oseries
+        """
         return self.conn.n_oseries
 
     @property
     def n_stresses(self):
+        """Return number of stresses.
+
+        Returns
+        -------
+        int
+            number of stresses
+        """
         return self.conn.n_stresses
 
     @property
     def n_models(self):
+        """Return number of models.
+
+        Returns
+        -------
+        int
+            number of models
+        """
         return self.conn.n_models
 
     @property
     def oseries_models(self):
+        """Return dictionary of models per oseries.
+
+        Returns
+        -------
+        dict
+            dictionary containing list of models (values) for each oseries (keys).
+        """
         return self.conn.oseries_models
 
     @property
     def oseries_with_models(self):
+        """Return list of oseries for which models are contained in the database.
+
+        Returns
+        -------
+        list
+            list of oseries names for which models are contained in the database.
+        """
         return self.conn.oseries_with_models
 
     def __repr__(self):
@@ -136,7 +217,7 @@ class PastaStore:
     def get_oseries_distances(
         self, names: Optional[Union[list, str]] = None
     ) -> FrameorSeriesUnion:
-        """Method to obtain the distances in meters between the oseries.
+        """Get the distances in meters between the oseries.
 
         Parameters
         ----------
@@ -175,7 +256,7 @@ class PastaStore:
         n: int = 1,
         maxdist: Optional[float] = None,
     ) -> FrameorSeriesUnion:
-        """Method to obtain the nearest (n) oseries.
+        """Get the nearest (n) oseries.
 
         Parameters
         ----------
@@ -191,7 +272,6 @@ class PastaStore:
         oseries:
             list with the names of the oseries.
         """
-
         distances = self.get_oseries_distances(names)
         if maxdist is not None:
             distances = distances.where(distances <= maxdist, np.nan)
@@ -214,8 +294,7 @@ class PastaStore:
         stresses: Optional[Union[list, str]] = None,
         kind: Optional[Union[str, List[str]]] = None,
     ) -> FrameorSeriesUnion:
-        """Method to obtain the distances in meters between the oseries and
-        stresses.
+        """Get the distances in meters between the oseries and stresses.
 
         Parameters
         ----------
@@ -274,7 +353,7 @@ class PastaStore:
         n: int = 1,
         maxdist: Optional[float] = None,
     ) -> FrameorSeriesUnion:
-        """Method to obtain the nearest (n) stresses of a specific kind.
+        """Get the nearest (n) stresses of a specific kind.
 
         Parameters
         ----------
@@ -295,7 +374,6 @@ class PastaStore:
         stresses:
             list with the names of the stresses.
         """
-
         distances = self.get_distances(oseries, stresses, kind)
         if maxdist is not None:
             distances = distances.where(distances <= maxdist, np.nan)
@@ -317,8 +395,9 @@ class PastaStore:
         progressbar=False,
         ignore_errors=False,
     ):
-        """Get groundwater signatures. NaN-values are returned when the
-        signature could not be computed.
+        """Get groundwater signatures.
+
+        NaN-values are returned when the signature cannot be computed.
 
         Parameters
         ----------
@@ -403,7 +482,6 @@ class PastaStore:
         tmintmax : pd.dataframe
             Dataframe containing tmin and tmax per time series
         """
-
         names = self.conn._parse_names(names, libname=libname)
         tmintmax = pd.DataFrame(
             index=names, columns=["tmin", "tmax"], dtype="datetime64[ns]"
@@ -419,6 +497,23 @@ class PastaStore:
         return tmintmax
 
     def get_extent(self, libname, names=None, buffer=0.0):
+        """Get extent [xmin, xmax, ymin, ymax] from library.
+
+        Parameters
+        ----------
+        libname : str
+            name of the library containing the time series
+            ('oseries', 'stresses', 'models')
+        names : str, list of str, or None, optional
+            list of names to include for computing the extent
+        buffer : float, optional
+            add this distance to the extent, by default 0.0
+
+        Returns
+        -------
+        extent : list
+            extent [xmin, xmax, ymin, ymax]
+        """
         names = self.conn._parse_names(names, libname=libname)
         if libname in ["oseries", "stresses"]:
             df = getattr(self, libname)
@@ -443,8 +538,10 @@ class PastaStore:
         progressbar: Optional[bool] = False,
         ignore_errors: Optional[bool] = False,
     ) -> FrameorSeriesUnion:
-        """Get model parameters. NaN-values are returned when the parameters
-        are not present in the model or the model is not optimized.
+        """Get model parameters.
+
+        NaN-values are returned when the parameters are not present in the model or the
+        model is not optimized.
 
         Parameters
         ----------
@@ -526,7 +623,6 @@ class PastaStore:
         -------
         s : pandas.DataFrame
         """
-
         modelnames = self.conn._parse_names(modelnames, libname="models")
 
         # if statistics is str
@@ -709,9 +805,9 @@ class PastaStore:
         for var in ("prec", "evap"):
             try:
                 name = self.get_nearest_stresses(ml.oseries.name, kind=var).iloc[0, 0]
-            except AttributeError:
+            except AttributeError as e:
                 msg = "No precipitation or evaporation time series found!"
-                raise Exception(msg)
+                raise Exception(msg) from e
             if isinstance(name, float):
                 if np.isnan(name):
                     raise ValueError(
@@ -828,8 +924,8 @@ class PastaStore:
         """
         try:
             from art_tools import pastas_get_model_results
-        except Exception:
-            raise ModuleNotFoundError("You need 'art_tools' to use this method!")
+        except Exception as e:
+            raise ModuleNotFoundError("You need 'art_tools' to use this method!") from e
 
         if mls is None:
             mls = self.conn.models
@@ -870,7 +966,7 @@ class PastaStore:
                 "File already exists! " "Use 'overwrite=True' to " "force writing file."
             )
         elif os.path.exists(fname):
-            warnings.warn(f"Overwriting file '{os.path.basename(fname)}'")
+            warnings.warn(f"Overwriting file '{os.path.basename(fname)}'", stacklevel=1)
 
         with ZipFile(fname, "w", compression=ZIP_DEFLATED) as archive:
             # oseries
@@ -1011,13 +1107,12 @@ class PastaStore:
         matches : list
             list of names that match search result
         """
-
         if libname == "models":
-            lib_names = getattr(self, "model_names")
+            lib_names = self.model_names
         elif libname == "stresses":
-            lib_names = getattr(self, "stresses_names")
+            lib_names = self.stresses_names
         elif libname == "oseries":
-            lib_names = getattr(self, "oseries_names")
+            lib_names = self.oseries_names
         else:
             raise ValueError("Provide valid libname: 'models', 'stresses' or 'oseries'")
 
@@ -1064,7 +1159,6 @@ class PastaStore:
             indicating whether a stress is contained within a time series
             model.
         """
-
         model_names = self.conn._parse_names(modelnames, libname="models")
         structure = pd.DataFrame(
             index=model_names, columns=["oseries"] + self.stresses_names
@@ -1138,6 +1232,23 @@ class PastaStore:
         return result
 
     def within(self, extent, names=None, libname="oseries"):
+        """Get names of items within extent.
+
+        Parameters
+        ----------
+        extent : list
+            list with [xmin, xmax, ymin, ymax]
+        names : str, list of str, optional
+            list of names to include, by default None
+        libname : str, optional
+            name of library, must be one of ('oseries', 'stresses', 'models'), by
+            default "oseries"
+
+        Returns
+        -------
+        list
+            list of items within extent
+        """
         xmin, xmax, ymin, ymax = extent
         names = self.conn._parse_names(names, libname)
         if libname == "oseries":

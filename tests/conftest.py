@@ -1,3 +1,4 @@
+# ruff: noqa: D100 D103
 import importlib
 from importlib import metadata
 
@@ -78,7 +79,7 @@ def conn(request):
     else:
         raise ValueError("Unrecognized parameter!")
     conn.type = request.param  # added here for defining test dependencies
-    yield conn
+    return conn
 
 
 @pytest.fixture(scope="module", params=params)
@@ -133,7 +134,7 @@ _has_pkg_cache = {}
 
 def has_pkg(pkg: str, strict: bool = True) -> bool:
     """
-    Determines if the given Python package is installed.
+    Determine if the given Python package is installed.
 
     Parameters
     ----------

@@ -1,3 +1,5 @@
+"""Module containing example dataset."""
+
 import os
 
 import pandas as pd
@@ -13,7 +15,7 @@ from pastastore.base import BaseConnector
 
 
 def example_pastastore(conn="DictConnector"):
-    """Example dataset loaded into PastaStore.
+    """Get example PastaStore.
 
     Parameters
     ----------
@@ -27,7 +29,6 @@ def example_pastastore(conn="DictConnector"):
     pstore : pastastore.PastaStore
         PastaStore containing example dataset
     """
-
     # check it test dataset is available
     datadir = os.path.join(os.path.dirname(__file__), "../tests/data")
     if not os.path.exists(datadir):

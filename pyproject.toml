@@ -83,10 +83,24 @@ packages = ["pastastore"]
 [tool.setuptools.dynamic]
 version = { attr = "pastastore.version.__version__" }
 
-[tool.black]
+[tool.ruff]
 line-length = 88
+extend-include = ["*.ipynb"]
 
-[tool.isort]
-profile = "black"
-src_paths = ["pastastore"]
-line_length = 88
+[tool.ruff.lint]
+# See: https://docs.astral.sh/ruff/rules/
+select = [
+    "C4",  # flake8-comprehensions
+    "E",   # pycodestyle
+    "F",   # pyflakes
+    "I",   # isort
+    "PT",  # pytest-style
+    "D",   # pydocstyle
+    "B",   # flake8-bugbear
+    "NPY", # numpy
+]
+
+[tool.ruff.format]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"

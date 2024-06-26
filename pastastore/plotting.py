@@ -1,4 +1,4 @@
-"""This module contains all the plotting methods for PastaStore.
+"""Module containing all the plotting methods for PastaStore.
 
 Pastastore comes with a number helpful plotting methods to quickly
 visualize time series or the locations of the time series contained in the
@@ -55,7 +55,7 @@ class Plots:
         legend_kwargs=None,
         **kwargs,
     ):
-        """Internal method to plot time series from pastastore.
+        """Plot time series from pastastore (internal method).
 
         Parameters
         ----------
@@ -507,7 +507,6 @@ class Plots:
         ax : matplotlib Axes
             The axes in which the cumulative histogram is plotted
         """
-
         statsdf = self.pstore.get_statistics(
             [statistic], modelnames=modelnames, progressbar=False
         )
@@ -563,6 +562,23 @@ class Plots:
         return ax
 
     def compare_models(self, modelnames, ax=None, **kwargs):
+        """Compare multiple models and plot the results.
+
+        Parameters
+        ----------
+        modelnames : list
+            A list of model names to compare.
+        ax : matplotlib.axes.Axes, optional
+            The axes on which to plot the comparison. If not provided, a new figure
+            and axes will be created.
+        **kwargs : dict
+            Additional keyword arguments to pass to the plot function.
+
+        Returns
+        -------
+        cm : pastastore.CompareModels
+            The CompareModels object containing the comparison results.
+        """
         models = self.pstore.get_models(modelnames)
         names = []
         onames = [iml.oseries.name for iml in models]
@@ -644,7 +660,7 @@ class Maps:
         ax: matplotlib.Axes
             axes object
 
-        See also
+        See Also
         --------
         self.add_background_map
         """
@@ -722,11 +738,10 @@ class Maps:
         ax: matplotlib.Axes
             axes object
 
-        See also
+        See Also
         --------
         self.add_background_map
         """
-
         names = self.pstore.conn._parse_names(names, "oseries")
         if extent is not None:
             names = self.pstore.within(extent, names=names)
@@ -774,11 +789,10 @@ class Maps:
         ax: matplotlib.Axes
             axes object
 
-        See also
+        See Also
         --------
         self.add_background_map
         """
-
         model_oseries = [
             self.pstore.get_models(m, return_dict=True)["oseries"]["name"]
             for m in self.pstore.model_names
@@ -849,7 +863,7 @@ class Maps:
         ax: matplotlib.Axes
             axes object
 
-        See also
+        See Also
         --------
         self.add_background_map
         """
@@ -898,7 +912,7 @@ class Maps:
         figsize=(10, 8),
         **kwargs,
     ):
-        """Internal method for plotting dataframe with point locations.
+        """Plot dataframe with point locations (internal method).
 
         Can be called directly for more control over plot characteristics.
 
@@ -932,7 +946,6 @@ class Maps:
         sc : scatter handle
             scatter plot handle, returned if ax is not None
         """
-
         if ax is None:
             return_scatter = False
             fig, ax = plt.subplots(figsize=figsize)
@@ -1016,7 +1029,7 @@ class Maps:
         ax: axes object
             axis handle of the resulting figure
 
-        See also
+        See Also
         --------
         self.add_background_map
         """
@@ -1102,7 +1115,7 @@ class Maps:
         uniques = stresses.loc[:, ["stressmodel", "color"]].drop_duplicates(
             keep="first"
         )
-        for name, row in uniques.iterrows():
+        for _, row in uniques.iterrows():
             (h,) = ax.plot(
                 [],
                 [],
@@ -1201,7 +1214,7 @@ class Maps:
         ax: axes object
             axis handle of the resulting figure
 
-        See also
+        See Also
         --------
         self.add_background_map
         """

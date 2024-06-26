@@ -1,3 +1,4 @@
+# ruff: noqa: D100 D103
 import os
 
 import numpy as np
@@ -294,8 +295,8 @@ def test_example_pastastore():
 def test_validate_names():
     from pastastore.util import validate_names
 
-    validate_names(s="(test)") == "test"
-    validate_names(d={"(test)": 2})["test"]
+    assert validate_names(s="(test)") == "test"
+    assert validate_names(d={"(test)": 2})["test"] == 2
 
 
 def test_meta_with_name(pstore):

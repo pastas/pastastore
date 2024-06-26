@@ -1,3 +1,4 @@
+# ruff: noqa: D100 D103
 import matplotlib.pyplot as plt
 import pytest
 from conftest import requires_pkg
@@ -34,7 +35,7 @@ def test_cumulative_hist(request, pstore):
 # %% maps
 
 
-@pytest.mark.bgmap
+@pytest.mark.bgmap()
 def test_map_oseries_w_bgmap(pstore):
     ax = pstore.maps.oseries()
     # only test bgmap once for pas
