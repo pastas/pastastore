@@ -41,24 +41,6 @@ ArcticDBConnector
    :private-members:
    :show-inheritance:
 
-ArcticConnector
-^^^^^^^^^^^^^^^
-
-.. autoclass:: pastastore.ArcticConnector
-   :members:
-   :undoc-members:
-   :private-members:
-   :show-inheritance:
-
-PystoreConnector
-^^^^^^^^^^^^^^^^
-
-.. autoclass:: pastastore.PystoreConnector
-   :members:
-   :undoc-members:
-   :private-members:
-   :show-inheritance:
-
 .. _Pastastore_API:
 
 PastaStore

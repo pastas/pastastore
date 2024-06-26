@@ -1,3 +1,4 @@
+# ruff: noqa: D100 D103
 import os
 
 import numpy as np
@@ -23,8 +24,16 @@ def test_iter_stresses(pstore):
 
 @pytest.mark.dependency()
 def test_get_tmintmax(pstore):
-    _ = pstore.get_tmin_tmax("oseries")
-    _ = pstore.get_tmin_tmax("stresses")
+    ostt = pstore.get_tmin_tmax("oseries")
+    assert ostt.at["oseries1", "tmin"] == pd.Timestamp("2010-01-14")
+    sttt = pstore.get_tmin_tmax("stresses")
+    assert sttt.at["evap2", "tmax"] == pd.Timestamp("2016-11-22")
+    ml = pstore.create_model("oseries1")
+    ml.solve(report=False)
+    pstore.conn.add_model(ml)
+    mltt = pstore.get_tmin_tmax("models")
+    assert mltt.at["oseries1", "tmax"] == pd.Timestamp("2015-06-28")
+    pstore.del_model("oseries1")
 
 
 @pytest.mark.dependency()
@@ -294,8 +303,8 @@ def test_example_pastastore():
 def test_validate_names():
     from pastastore.util import validate_names
 
-    validate_names(s="(test)") == "test"
-    validate_names(d={"(test)": 2})["test"]
+    assert validate_names(s="(test)") == "test"
+    assert validate_names(d={"(test)": 2})["test"] == 2
 
 
 def test_meta_with_name(pstore):

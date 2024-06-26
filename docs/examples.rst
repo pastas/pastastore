@@ -58,38 +58,6 @@ a `PastaStore` object::
    store = pst.PastaStore(conn)
 
 
-Using Arctic
-------------
-
-The following snippet shows how to create an `ArcticConnector` and initialize
-a `PastaStore` object. Please note that a MongoDB instance must be running for
-this to work::
-
-   import pastastore as pst
-
-   # define arctic connector
-   connstr = "mongodb://localhost:27017/"
-   conn = pst.ArcticConnector("my_db", connstr)
-
-   # create project for managing Pastas data and models
-   store = pst.PastaStore(conn)
-
-
-Using Pystore
--------------
-
-To use the `PystoreConnector` the steps are identical, the only difference is
-that the user has to provide a path to a location on disk instead of a
-connection string to a database::
-
-   # define pystore connector
-   path = "./data/pystore"
-   conn = pst.PystoreConnector("my_db", path)
-
-   # create project for managing Pastas data and models
-   store = pst.PastasProject(conn)
-
-
 The PastaStore object
 ---------------------
 

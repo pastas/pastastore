@@ -1,3 +1,4 @@
+# ruff: noqa: D100 D103
 import os
 import tempfile
 from contextlib import contextmanager
@@ -27,8 +28,8 @@ def test_load_yaml_rechargemodel(pstore):
       stressmodels:                   # stressmodels dictionary
         recharge:                     # name of the recharge stressmodel
           class: RechargeModel        # type of pastas StressModel
-          prec: prec2                 # name of precipitation stress, obtained from pastastore
-          evap: evap2                 # name of evaporation stress, obtained from pastastore
+          prec: prec2                 # name of precipitation stress, from pastastore
+          evap: evap2                 # name of evaporation stress, from pastastore
           recharge: Linear            # pastas recharge type
           rfunc: Exponential          # response function
     """
@@ -45,7 +46,7 @@ def test_load_yaml_stressmodel(pstore):
       stressmodels:                   # stressmodels dictionary
         prec:                         # name of the recharge stressmodel
           class: StressModel          # type of pastas StressModel
-          stress: prec2               # name of precipitation stress, obtained from pastastore
+          stress: prec2               # name of precipitation stress, from pastastore
           rfunc: Gamma                # response function
     """
     with tempyaml(yamlstr) as f:

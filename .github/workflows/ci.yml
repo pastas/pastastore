@@ -32,20 +32,13 @@ jobs:
           pip install .
           pip install ".[lint]"
 
-      - name: Run black
-        uses: psf/black@stable
+      - name: ruff-lint
+        uses: chartboost/ruff-action@v1
+
+      - name: ruff-format
+        uses: chartboost/ruff-action@v1
         with:
-          options: "--check --diff"
-          jupyter: true
-
-      - name: Run isort
-        run: |
-          isort --check --diff --profile=black ./pastastore
-
-      - name: Run flake8
-        run: |
-          flake8 --count --show-source --exit-zero --max-line-length=88 ./pastastore
-          flake8 --count --exit-zero --max-line-length=88 --statistics ./pastastore
+          args: "format --check"
 
   test:
     name: Tests
@@ -54,15 +47,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
         pastas-version:
           [
             "git+https://github.com/pastas/pastas.git@v0.22.0",
             "git+https://github.com/pastas/pastas.git@v0.23.1",
             "git+https://github.com/pastas/pastas.git@v1.0.1",
-            "git+https://github.com/pastas/pastas.git@v1.4.0",
+            "git+https://github.com/pastas/pastas.git@v1.5.0",
             "git+https://github.com/pastas/pastas.git@dev",
           ]
+        exclude:
+          - python-version: "3.12"
+            pastas-version: "git+https://github.com/pastas/pastas.git@v0.22.0"
+          - python-version: "3.12"
+            pastas-version: "git+https://github.com/pastas/pastas.git@v0.23.1"
+          - python-version: "3.12"
+            pastas-version: "git+https://github.com/pastas/pastas.git@v1.0.1"
 
     steps:
       - uses: actions/checkout@v4
@@ -74,18 +74,28 @@ jobs:
           cache: "pip"
           cache-dependency-path: pyproject.toml
 
-      - name: Install dependencies
+      - name: Install dependencies < PY312
+        if: ${{ matrix.python-version != '3.12'}}  
         run: |
           pip install --upgrade pip
+          pip install numpy
           pip install ${{ matrix.pastas-version }}
           pip install -e .[test]
+
+      - name: Install dependencies == PY312
+        if: ${{ matrix.python-version == '3.12'}}  
+        run: |
+          pip install --upgrade pip
+          pip install numpy
+          pip install ${{ matrix.pastas-version }}
+          pip install -e .[test_py312]
 
       - name: Run pytest
         run: |
           pytest -m "not bgmap"
 
       - name: Test backgroundmap once
-        if: ${{ matrix.python-version == '3.9' && matrix.pastas-version == 'git+https://github.com/pastas/pastas.git@dev' }}
+        if: ${{ matrix.python-version == '3.11' && matrix.pastas-version == 'git+https://github.com/pastas/pastas.git@dev' }}
         run: |
           pytest -m "bgmap"
 
@@ -93,5 +103,5 @@ jobs:
         if: ${{ github.repository == 'pastas/pastastore' && success() }}
         uses: codacy/codacy-coverage-reporter-action@master
         with:
-          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          project-token: ${{ secrets.CODACY_API_TOKEN }}
           coverage-reports: coverage.xml

@@ -1,3 +1,4 @@
+# ruff: noqa: D100 D103
 import warnings
 
 import numpy as np
@@ -20,18 +21,15 @@ def test_get_library(conn):
 def test_add_get_series(request, conn):
     o1 = pd.Series(
         index=pd.date_range("2000", periods=10, freq="D"),
-        data=1.0,
-        dtype=np.float64,
+        data=0.0,
     )
     o1.name = "test_series"
     conn.add_oseries(o1, "test_series", metadata=None)
     o2 = conn.get_oseries("test_series")
-    # PasConnector has no logic for preserving Series
-    if conn.conn_type == "pas":
-        o2 = o2.squeeze()
     try:
         assert isinstance(o2, pd.Series)
-        assert (o1 == o2).all()
+        assert o1.equals(o2)
+        assert o1.dtype == o2.dtype
     finally:
         conn.del_oseries("test_series")
 
@@ -46,9 +44,6 @@ def test_add_get_series_wnans(request, conn):
     o1.name = "test_series_nans"
     conn.add_oseries(o1, "test_series_nans", metadata=None)
     o2 = conn.get_oseries("test_series_nans")
-    # PasConnector has no logic for preserving Series
-    if conn.conn_type == "pas":
-        o2 = o2.squeeze()
     try:
         assert isinstance(o2, pd.Series)
         assert o1.equals(o2)
@@ -65,10 +60,12 @@ def test_add_get_dataframe(request, conn):
     o1.index.name = "test_idx"
     conn.add_oseries(o1, "test_df", metadata=None)
     o2 = conn.get_oseries("test_df")
+    # little hack as PasConnector does preserve DataFrames after load...
+    if conn.conn_type == "pas":
+        o2 = o2.to_frame()
     try:
         assert isinstance(o2, pd.DataFrame)
-        # little hack as PasConnector has dtype int after load...
-        assert o1.equals(o2.astype(float))
+        assert o1.equals(o2)
     finally:
         conn.del_oseries("test_df")
 
@@ -232,13 +229,13 @@ def test_get_stress_and_metadata(request, conn):
 @pytest.mark.dependency()
 def test_oseries_prop(request, conn):
     depends(request, [f"test_add_oseries[{conn.type}]"])
-    conn.oseries
+    _ = conn.oseries
 
 
 @pytest.mark.dependency()
 def test_stresses_prop(request, conn):
     depends(request, [f"test_add_stress[{conn.type}]"])
-    conn.stresses
+    _ = conn.stresses
 
 
 def test_repr(conn):
