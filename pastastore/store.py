@@ -14,6 +14,7 @@ from pastastore.base import BaseConnector
 from pastastore.connectors import DictConnector
 from pastastore.plotting import Maps, Plots
 from pastastore.util import _custom_warning
+from pastastore.version import PASTAS_GEQ_150
 from pastastore.yaml_interface import PastastoreYAML
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
