@@ -178,7 +178,7 @@ class PastastoreYAML:
         self.pstore = pstore
 
     def _parse_rechargemodel_dict(self, d: Dict, onam: Optional[str] = None) -> Dict:
-        """Internal method to parse RechargeModel dictionary.
+        """Parse RechargeModel dictionary (internal method).
 
         Note: supports 'nearest' as input to 'prec' and 'evap',
         which will automatically select nearest stress with kind="prec" or
@@ -205,7 +205,7 @@ class PastastoreYAML:
         if isinstance(prec_val, dict):
             pnam = prec_val["name"]
             p = self.pstore.get_stresses(pnam)
-            prec_val["series"] = p
+            prec_val["series"] = p.squeeze()
             prec = prec_val
         elif prec_val.startswith("nearest"):
             if onam is None:
@@ -221,7 +221,7 @@ class PastastoreYAML:
                 "name": pnam,
                 "settings": "prec",
                 "metadata": pmeta,
-                "series": p,
+                "series": p.squeeze(),
             }
         elif isinstance(prec_val, str):
             pnam = d["prec"]
@@ -230,7 +230,7 @@ class PastastoreYAML:
                 "name": pnam,
                 "settings": "prec",
                 "metadata": pmeta,
-                "series": p,
+                "series": p.squeeze(),
             }
         else:
             raise NotImplementedError(f"Could not parse prec value: '{prec_val}'")
@@ -241,7 +241,7 @@ class PastastoreYAML:
         if isinstance(evap_val, dict):
             enam = evap_val["name"]
             e = self.pstore.get_stresses(enam)
-            evap_val["series"] = e
+            evap_val["series"] = e.squeeze()
             evap = evap_val
         elif evap_val.startswith("nearest"):
             if onam is None:
@@ -257,7 +257,7 @@ class PastastoreYAML:
                 "name": enam,
                 "settings": "evap",
                 "metadata": emeta,
-                "series": e,
+                "series": e.squeeze(),
             }
         elif isinstance(evap_val, str):
             enam = d["evap"]
@@ -266,7 +266,7 @@ class PastastoreYAML:
                 "name": enam,
                 "settings": "evap",
                 "metadata": emeta,
-                "series": e,
+                "series": e.squeeze(),
             }
         else:
             raise NotImplementedError(f"Could not parse evap value: '{evap_val}'")
@@ -307,7 +307,7 @@ class PastastoreYAML:
             onam = d["oseries"]
             if isinstance(onam, str):
                 o = self.pstore.get_oseries(onam)
-                d["oseries"] = o
+                d["oseries"] = o.squeeze()
 
         return d
 
@@ -487,7 +487,7 @@ class PastastoreYAML:
         o, ometa = self.pstore.get_oseries(onam, return_metadata=True)
 
         # create model to obtain default model settings
-        ml = ps.Model(o, name=mlnam, metadata=ometa)
+        ml = ps.Model(o.squeeze(), name=mlnam, metadata=ometa)
         mldict = ml.to_dict(series=True)
 
         # update with stored model settings
