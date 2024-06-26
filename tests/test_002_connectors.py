@@ -1,3 +1,4 @@
+# ruff: noqa: D100 D103
 import warnings
 
 import numpy as np
@@ -228,13 +229,13 @@ def test_get_stress_and_metadata(request, conn):
 @pytest.mark.dependency()
 def test_oseries_prop(request, conn):
     depends(request, [f"test_add_oseries[{conn.type}]"])
-    conn.oseries
+    _ = conn.oseries
 
 
 @pytest.mark.dependency()
 def test_stresses_prop(request, conn):
     depends(request, [f"test_add_stress[{conn.type}]"])
-    conn.stresses
+    _ = conn.stresses
 
 
 def test_repr(conn):

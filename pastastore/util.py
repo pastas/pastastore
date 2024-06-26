@@ -1,3 +1,5 @@
+"""Useful utilities for pastastore."""
+
 import os
 from typing import Dict, List, Optional, Union
 
@@ -16,6 +18,8 @@ def _custom_warning(message, category=UserWarning, filename="", lineno=-1, *args
 
 
 class ItemInLibraryException(Exception):
+    """Exception when item is already in library."""
+
     pass
 
 
@@ -172,6 +176,7 @@ def delete_arcticdb_connector(
 
 
 def delete_dict_connector(conn, libraries: Optional[List[str]] = None) -> None:
+    """Delete DictConnector object."""
     print(f"Deleting DictConnector: '{conn.name}' ... ", end="")
     if libraries is None:
         del conn
@@ -185,6 +190,7 @@ def delete_dict_connector(conn, libraries: Optional[List[str]] = None) -> None:
 
 
 def delete_pas_connector(conn, libraries: Optional[List[str]] = None) -> None:
+    """Delete PasConnector object."""
     import shutil
 
     print(f"Deleting PasConnector database: '{conn.name}' ... ", end="")
@@ -303,7 +309,6 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
         returns True if models are equivalent when detailed_comparison=True
         else returns DataFrame containing comparison details.
     """
-
     df = pd.DataFrame(columns=["model 0", "model 1"])
     so1 = []  # for storing series_original
     sv1 = []  # for storing series_validated
@@ -615,7 +620,6 @@ def frontiers_checks(
     Application of Time Series Analysis to Estimate Drawdown From Multiple Well
     Fields. Front. Earth Sci., 14 June 2022 doi:10.3389/feart.2022.907609
     """
-
     df = pd.DataFrame(columns=["all_checks_passed"])
 
     if modelnames is not None:
@@ -739,7 +743,10 @@ def frontiers_checks(
                         else:
                             check_gain_passed = np.abs(gain) > 2 * gain_std
                         checks.loc[
-                            f"gain > 2*std: {sm_name}-{iw:02g} ({sm.distances.index[iw]})",
+                            (
+                                f"gain > 2*std: {sm_name}-{iw:02g}"
+                                f" ({sm.distances.index[iw]})"
+                            ),
                             :,
                         ] = (
                             gain,
@@ -834,7 +841,6 @@ def frontiers_aic_select(
     Multiple Well Fields. Front. Earth Sci., 14 June 2022
     doi:10.3389/feart.2022.907609
     """
-
     if modelnames is None and oseries is None:
         modelnames = pstore.model_names
     elif modelnames is None and oseries is not None:
@@ -858,7 +864,7 @@ def frontiers_aic_select(
         # with lowest AIC per location
         collect = []
         gr = df.join(aic).groupby("oseries")
-        for o, idf in gr:
+        for _, idf in gr:
             idf.index.name = "modelname"
             idf = (
                 idf.sort_values("aic").reset_index().set_index(["oseries", "modelname"])
