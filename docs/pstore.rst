@@ -12,25 +12,25 @@ Methods are available for the following tasks:
   nearest time series to a location::
 
     # get 3 nearest oseries
-    store.get_nearest_oseries("my_oseries", n=3)
+    pstore.get_nearest_oseries("my_oseries", n=3)
 
     # get nearest precipitation series
-    store.get_nearest_stress("my_oseries", kind="prec")
+    pstore.get_nearest_stress("my_oseries", kind="prec")
 
 
 * Creating pastas Models, optionally adding a recharge stressmodel::
 
     # create model
-    ml = store.create_model("my_oseries", add_recharge=True)
+    ml = pstore.create_model("my_oseries", add_recharge=True)
 
 Bulk operations are also provided for:
 
 * Creating and storing pastas Models::
 
     # create models and store in database
-    store.create_models(add_recharge=True, store=True)
+    pstore.create_models(add_recharge=True, store=True)
 
 * Optimizing pastas Models and storing the results::
 
     # solve models and store result in database
-    store.solve_models(ignore_solver_errors=True, store_result=True)
+    pstore.solve_models(ignore_solver_errors=True, store_result=True)

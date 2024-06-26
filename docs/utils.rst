@@ -10,8 +10,6 @@ all its contents or copying all data to a new database:
 * :meth:`pastastore.util.delete_pastastore`
 * :meth:`pastastore.util.delete_dict_connector`
 * :meth:`pastastore.util.delete_pas_connector`
-* :meth:`pastastore.util.delete_pystore_connector`
-* :meth:`pastastore.util.delete_arctic_connector`
 * :meth:`pastastore.util.delete_arcticdb_connector`
 * :meth:`pastastore.util.copy_database`
 
