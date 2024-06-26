@@ -30,11 +30,10 @@ classifiers = [
     "Operating System :: MacOS",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3 :: Only",
     "Topic :: Scientific/Engineering :: Hydrology",
 ]
@@ -58,7 +57,17 @@ test = [
     "pytest-dependency",
     "pytest-benchmark",
     "codacy-coverage",
-    "lxml",
+]
+test_py312 = [
+    "pastastore[lint,optional]",
+    "hydropandas[full]",
+    "coverage",
+    "codecov",
+    "pytest",
+    "pytest-cov",
+    "pytest-dependency",
+    "pytest-benchmark",
+    "codacy-coverage",
 ]
 arcticdb = ["arcticdb"]
 docs = [
@@ -97,3 +106,28 @@ select = [
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+[tool.pytest.ini_options]
+addopts = "--durations=0 --cov-report xml:coverage.xml --cov pastastore -v"
+markers = ["bgmap: test tile download for background map"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = [
+    'matplotlib.*',
+    'scipy.stats.*',
+    'mypy-setuptools.*',
+    'mypy-pypandoc.*',
+    'mypy-numpy.*',
+    'mypy-pandas.*',
+    'mypy-pystore.*',
+    'mypy-arctic.*',
+    'mypy-art_tools.*',
+    'mypy-tqdm.*',
+    'mypy-pastas.*',
+]
+ignore_missing_imports = true
