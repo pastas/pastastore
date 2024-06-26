@@ -1251,7 +1251,7 @@ class ConnectorUtil:
         return meta
 
     def _parse_model_dict(self, mdict: dict, update_ts_settings: bool = False):
-        """Internal method to parse dictionary describing pastas models.
+        """Parse dictionary describing pastas models (internal method).
 
         Parameters
         ----------
@@ -1276,7 +1276,7 @@ class ConnectorUtil:
             if name not in self.oseries.index:
                 msg = "oseries '{}' not present in library".format(name)
                 raise LookupError(msg)
-            mdict["oseries"]["series"] = self.get_oseries(name)
+            mdict["oseries"]["series"] = self.get_oseries(name).squeeze()
             # update tmin/tmax from time series
             if update_ts_settings:
                 mdict["oseries"]["settings"]["tmin"] = mdict["oseries"]["series"].index[
@@ -1296,7 +1296,7 @@ class ConnectorUtil:
                         if "series" not in stress:
                             name = str(stress["name"])
                             if name in self.stresses.index:
-                                stress["series"] = self.get_stresses(name)
+                                stress["series"] = self.get_stresses(name).squeeze()
                                 # update tmin/tmax from time series
                                 if update_ts_settings:
                                     stress["settings"]["tmin"] = stress["series"].index[
@@ -1311,7 +1311,7 @@ class ConnectorUtil:
                         if "series" not in stress:
                             name = str(stress["name"])
                             if name in self.stresses.index:
-                                stress["series"] = self.get_stresses(name)
+                                stress["series"] = self.get_stresses(name).squeeze()
                                 # update tmin/tmax from time series
                                 if update_ts_settings:
                                     stress["settings"]["tmin"] = stress["series"].index[
@@ -1327,7 +1327,7 @@ class ConnectorUtil:
                     if "series" not in stress:
                         name = str(stress["name"])
                         if name in self.stresses.index:
-                            stress["series"] = self.get_stresses(name)
+                            stress["series"] = self.get_stresses(name).squeeze()
                             # update tmin/tmax from time series
                             if update_ts_settings:
                                 stress["settings"]["tmin"] = stress["series"].index[0]
@@ -1717,23 +1717,27 @@ class ConnectorUtil:
             archive.writestr(f"models/{n}.pas", jsondict)
 
     @staticmethod
-    def _series_from_json(fjson: str):
+    def _series_from_json(fjson: str, squeeze: bool = True):
         """Load time series from JSON.
 
         Parameters
         ----------
         fjson : str
             path to file
+        squeeze : bool, optional
+            squeeze time series object to obtain pandas Series
 
         Returns
         -------
         s : pd.DataFrame
             DataFrame containing time series
         """
-        s = pd.read_json(fjson, orient="columns", precise_float=True)
+        s = pd.read_json(fjson, orient="columns", precise_float=True, dtype=False)
         if not isinstance(s.index, pd.DatetimeIndex):
             s.index = pd.to_datetime(s.index, unit="ms")
         s = s.sort_index()  # needed for some reason ...
+        if squeeze:
+            return s.squeeze()
         return s
 
     @staticmethod
