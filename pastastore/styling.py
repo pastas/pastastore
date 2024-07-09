@@ -1,3 +1,5 @@
+"""Module containing dataframe styling functions."""
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -25,7 +27,6 @@ def float_styler(val, norm, cmap=None):
     Given some dataframe
 
     >>> df.map(float_styler, subset=["some column"], norm=norm, cmap=cmap)
-
     """
     if cmap is None:
         cmap = plt.get_cmap("RdYlBu")

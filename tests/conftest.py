@@ -1,15 +1,19 @@
+# ruff: noqa: D100 D103
 import importlib
 from importlib import metadata
+from platform import python_version
 
-# import arcticdb_ext
 import pandas as pd
 import pastas as ps
 import pytest
+from packaging.version import parse as parse_version
 
 import pastastore as pst
 
+IS_PY312 = parse_version(python_version()) >= parse_version("3.12.0")
+
 # "arctic" and "pystore" removed for CI, can be tested locally
-params = ["dict", "pas", "arcticdb"]
+params = ["dict", "pas", "arcticdb"] if not IS_PY312 else ["dict", "pas"]
 
 
 def initialize_project(conn):
@@ -78,7 +82,7 @@ def conn(request):
     else:
         raise ValueError("Unrecognized parameter!")
     conn.type = request.param  # added here for defining test dependencies
-    yield conn
+    return conn
 
 
 @pytest.fixture(scope="module", params=params)
@@ -133,7 +137,7 @@ _has_pkg_cache = {}
 
 def has_pkg(pkg: str, strict: bool = True) -> bool:
     """
-    Determines if the given Python package is installed.
+    Determine if the given Python package is installed.
 
     Parameters
     ----------

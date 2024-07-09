@@ -1,3 +1,5 @@
+"""Module containing YAML interface for Pastas models using PastaStore."""
+
 import datetime
 import logging
 import os
@@ -11,14 +13,11 @@ import yaml
 
 from pastastore.version import PASTAS_LEQ_022
 
-ps.logger.setLevel("ERROR")
-
-logging.basicConfig(level="INFO")
 logger = logging.getLogger(__name__)
 
 
 def _convert_dict_dtypes_for_yaml(d: Dict[str, Any]):
-    """Internal method to convert dictionary values for storing in YAML format.
+    """Convert dictionary values for storing in YAML format (internal function).
 
     Parameters
     ----------
@@ -95,7 +94,6 @@ def reduce_to_minimal_dict(d, keys=None):
         ["name", "oseries", "settings", "tmin", "tmax", "noise",
         "stressmodels", "rfunc", "stress", "prec", "evap", "stressmodel"]
     """
-
     if keys is None:
         keys = [
             "name",
@@ -170,7 +168,7 @@ class PastastoreYAML:
     """
 
     def __init__(self, pstore):
-        """Constructor for PastasstoreYAML class.
+        """Create for PastasstoreYAML class.
 
         Parameters
         ----------
@@ -181,7 +179,7 @@ class PastastoreYAML:
         self.pstore = pstore
 
     def _parse_rechargemodel_dict(self, d: Dict, onam: Optional[str] = None) -> Dict:
-        """Internal method to parse RechargeModel dictionary.
+        """Parse RechargeModel dictionary (internal method).
 
         Note: supports 'nearest' as input to 'prec' and 'evap',
         which will automatically select nearest stress with kind="prec" or
@@ -208,7 +206,7 @@ class PastastoreYAML:
         if isinstance(prec_val, dict):
             pnam = prec_val["name"]
             p = self.pstore.get_stresses(pnam)
-            prec_val["series"] = p
+            prec_val["series"] = p.squeeze()
             prec = prec_val
         elif prec_val.startswith("nearest"):
             if onam is None:
@@ -224,7 +222,7 @@ class PastastoreYAML:
                 "name": pnam,
                 "settings": "prec",
                 "metadata": pmeta,
-                "series": p,
+                "series": p.squeeze(),
             }
         elif isinstance(prec_val, str):
             pnam = d["prec"]
@@ -233,7 +231,7 @@ class PastastoreYAML:
                 "name": pnam,
                 "settings": "prec",
                 "metadata": pmeta,
-                "series": p,
+                "series": p.squeeze(),
             }
         else:
             raise NotImplementedError(f"Could not parse prec value: '{prec_val}'")
@@ -244,7 +242,7 @@ class PastastoreYAML:
         if isinstance(evap_val, dict):
             enam = evap_val["name"]
             e = self.pstore.get_stresses(enam)
-            evap_val["series"] = e
+            evap_val["series"] = e.squeeze()
             evap = evap_val
         elif evap_val.startswith("nearest"):
             if onam is None:
@@ -260,7 +258,7 @@ class PastastoreYAML:
                 "name": enam,
                 "settings": "evap",
                 "metadata": emeta,
-                "series": e,
+                "series": e.squeeze(),
             }
         elif isinstance(evap_val, str):
             enam = d["evap"]
@@ -269,7 +267,7 @@ class PastastoreYAML:
                 "name": enam,
                 "settings": "evap",
                 "metadata": emeta,
-                "series": e,
+                "series": e.squeeze(),
             }
         else:
             raise NotImplementedError(f"Could not parse evap value: '{evap_val}'")
@@ -310,12 +308,12 @@ class PastastoreYAML:
             onam = d["oseries"]
             if isinstance(onam, str):
                 o = self.pstore.get_oseries(onam)
-                d["oseries"] = o
+                d["oseries"] = o.squeeze()
 
         return d
 
     def _parse_stressmodel_dict(self, d: Dict, onam: Optional[str] = None) -> Dict:
-        """Internal method to parse StressModel dictionary.
+        """Parse StressModel dictionary (internal method).
 
         Note: supports 'nearest' or 'nearest <kind>' as input to 'stress',
         which will automatically select nearest stress with kind=<kind>.
@@ -337,7 +335,6 @@ class PastastoreYAML:
             containing stresses obtained from PastaStore, and setting
             defaults if they were not already provided.
         """
-
         # get stress
         snam = d.pop("stress")
 
@@ -361,7 +358,7 @@ class PastastoreYAML:
             "name": snam,
             "settings": d.pop("settings", None),
             "metadata": smeta,
-            "series": s,
+            "series": s.squeeze(),
         }
         d["stress"] = [s] if PASTAS_LEQ_022 else s
 
@@ -380,7 +377,7 @@ class PastastoreYAML:
         return d
 
     def _parse_wellmodel_dict(self, d: Dict, onam: Optional[str] = None) -> Dict:
-        """Internal method to parse WellModel dictionary.
+        """Parse WellModel dictionary (internal method).
 
         Note: supports 'nearest' or 'nearest <number> <kind>' as input to
         'stress', which will automatically select nearest or <number> of
@@ -402,7 +399,6 @@ class PastastoreYAML:
             containing stresses obtained from PastaStore, and setting
             defaults if they were not already provided.
         """
-
         # parse stress
         snames = d.pop("stress")
 
@@ -415,12 +411,12 @@ class PastastoreYAML:
                 elif len(snames.split()) == 2:
                     try:
                         n = int(snames.split()[1])
-                    except ValueError:
+                    except ValueError as e:
                         raise ValueError(
                             f"Could not parse: '{snames}'! "
                             "When using option 'nearest' for WellModel,  "
                             "use 'nearest <n>' or 'nearest <n> <kind>'!"
-                        )
+                        ) from e
                     kind = "well"
                 elif len(snames.split()) == 1:
                     n = 1
@@ -444,7 +440,7 @@ class PastastoreYAML:
                 "name": snam,
                 "settings": "well",
                 "metadata": smeta,
-                "series": s,
+                "series": s.squeeze(),
             }
             slist.append(sdict)
         d["stress"] = slist
@@ -479,6 +475,20 @@ class PastastoreYAML:
         return d
 
     def construct_mldict(self, mlyml: dict, mlnam: str) -> dict:
+        """Create Pastas.Model dictionary from YAML dictionary.
+
+        Parameters
+        ----------
+        mlyml : dict
+            YAML dictionary
+        mlnam : str
+            model name
+
+        Returns
+        -------
+        dict
+            dictionary of pastas.Model that can be read by Pastas
+        """
         # get oseries + metadata
         if isinstance(mlyml["oseries"], dict):
             onam = str(mlyml["oseries"]["name"])
@@ -490,7 +500,7 @@ class PastastoreYAML:
         o, ometa = self.pstore.get_oseries(onam, return_metadata=True)
 
         # create model to obtain default model settings
-        ml = ps.Model(o, name=mlnam, metadata=ometa)
+        ml = ps.Model(o.squeeze(), name=mlnam, metadata=ometa)
         mldict = ml.to_dict(series=True)
 
         # update with stored model settings
@@ -608,7 +618,6 @@ class PastastoreYAML:
         NotImplementedError
             if unsupported stressmodel is encountered
         """
-
         with open(fyaml, "r") as f:
             yml = yaml.load(f, Loader=yaml.CFullLoader)
 
@@ -654,7 +663,6 @@ class PastastoreYAML:
             the time series are actually the nearest ones! Only used
             when minimal_yaml=True. Default is False.
         """
-
         onames = self.pstore.conn._parse_names(oseries, "oseries")
 
         for onam in onames:
