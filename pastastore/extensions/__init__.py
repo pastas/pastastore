@@ -1,3 +1,4 @@
+# ruff: noqa: D104 F401
 from pastastore.extensions.accessor import (
     register_pastastore_accessor as register_pastastore_accessor,
 )

@@ -1,3 +1,12 @@
+"""HydroPandas extension for PastaStore.
+
+Features:
+
+- Add `hpd.Obs` and `hpd.ObsCollection` to PastaStore.
+- Download and store meteorological data from KNMI or groundwater observations from BRO.
+- Update currently stored (KNMI or BRO) time series from last observation to tmax.
+"""
+
 import logging
 from typing import Optional, Union
 
