@@ -1,4 +1,4 @@
-# ruff: noqa: D103
+# ruff: noqa: D100 D103
 import pytest
 
 import pastastore as pst
