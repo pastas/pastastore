@@ -45,7 +45,7 @@ documentation = "https://pastastore.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
 full = ["pastastore[arcticdb,optional]"]
-lint = ["black", "flake8", "isort"]
+lint = ["ruff"]
 optional = ["contextily", "pyproj", "adjustText"]
 test = [
     "pastastore[arcticdb,lint,optional]",
