@@ -6,7 +6,7 @@ from pastastore.extensions.accessor import (
 
 def activate_hydropandas_extension():
     """Register Plotly extension for pastas.Model class for interactive plotting."""
-    from pastastore.extensions.hpd import HydroPandasExtension as HpdExt
+    from pastastore.extensions.hpd import HydroPandasExtension as _
 
     print(
         "Registered HydroPandas extension in PastaStore class, "

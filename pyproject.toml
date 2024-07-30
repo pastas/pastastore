@@ -109,7 +109,10 @@ convention = "numpy"
 
 [tool.pytest.ini_options]
 addopts = "--durations=0 --cov-report xml:coverage.xml --cov pastastore -v"
-markers = ["bgmap: test tile download for background map"]
+markers = [
+    "bgmap: test tile download for background map",
+    "pastas150: tests only working for pastas>=1.5.0",
+]
 
 [tool.mypy]
 python_version = "3.9"

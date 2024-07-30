@@ -5,7 +5,7 @@ import pastastore as pst
 from pastastore.extensions import activate_hydropandas_extension
 
 
-@pytest.mark.slow()
+@pytest.mark.pastas150()
 def test_hpd_download_from_bro():
     activate_hydropandas_extension()
     pstore = pst.PastaStore()
@@ -15,6 +15,7 @@ def test_hpd_download_from_bro():
     assert pstore.n_oseries == 3
 
 
+@pytest.mark.pastas150()
 def test_hpd_download_precipitation_from_knmi():
     activate_hydropandas_extension()
     pstore = pst.PastaStore()
@@ -24,6 +25,7 @@ def test_hpd_download_precipitation_from_knmi():
     assert pstore.n_stresses == 1
 
 
+@pytest.mark.pastas150()
 def test_hpd_download_evaporation_from_knmi():
     activate_hydropandas_extension()
     pstore = pst.PastaStore()
