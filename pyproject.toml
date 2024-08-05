@@ -45,8 +45,10 @@ documentation = "https://pastastore.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
 full = ["pastastore[arcticdb,optional]"]
-lint = ["ruff"]
+extensions = ["hydropandas"]
 optional = ["contextily", "pyproj", "adjustText"]
+arcticdb = ["arcticdb"]
+lint = ["ruff"]
 test = [
     "pastastore[arcticdb,lint,optional]",
     "hydropandas[full]",
@@ -69,7 +71,6 @@ test_py312 = [
     "pytest-benchmark",
     "codacy-coverage",
 ]
-arcticdb = ["arcticdb"]
 docs = [
     "pastastore[optional]",
     "sphinx_rtd_theme",
