@@ -9,7 +9,7 @@ PASTAS_VERSION = parse_version(ps.__version__)
 PASTAS_LEQ_022 = PASTAS_VERSION <= parse_version("0.22.0")
 PASTAS_GEQ_150 = PASTAS_VERSION >= parse_version("1.5.0")
 
-__version__ = "1.5.0"
+__version__ = "1.6.0"
 
 
 def show_versions(optional=False) -> None:
@@ -34,5 +34,7 @@ def show_versions(optional=False) -> None:
             msg += f"{metadata.version('arctidb')}"
         except ImportError:
             msg += "Not Installed"
+
+    msg += f"\nPastastore version     : {__version__}"
 
     print(msg)
