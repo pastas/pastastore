@@ -8,7 +8,7 @@ Features:
 """
 
 import logging
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 import hydropandas as hpd
 import numpy as np
@@ -50,6 +50,7 @@ class HydroPandasExtension:
         kind: Optional[str] = None,
         data_column: Optional[str] = None,
         unit_multiplier: float = 1.0,
+        update: bool = False,
     ):
         """Add an ObsCollection to the PastaStore.
 
@@ -66,12 +67,20 @@ class HydroPandasExtension:
             name of column containing observation values, by default None.
         unit_multiplier : float, optional
             multiply unit by this value before saving it in the store
+        update : bool, optional
+            if True, update currently stored time series with new data
         """
         for name, row in oc.iterrows():
             obs = row["obs"]
             # metadata = row.drop("obs").to_dict()
             self.add_observation(
-                libname, obs, name=name, kind=kind, data_column=data_column
+                libname,
+                obs,
+                name=name,
+                kind=kind,
+                data_column=data_column,
+                unit_multiplier=unit_multiplier,
+                update=update,
             )
 
     def add_observation(
@@ -82,6 +91,7 @@ class HydroPandasExtension:
         kind: Optional[str] = None,
         data_column: Optional[str] = None,
         unit_multiplier: float = 1.0,
+        update: bool = False,
     ):
         """Add an hydropandas observation series to the PastaStore.
 
@@ -101,6 +111,8 @@ class HydroPandasExtension:
             name of column containing observation values, by default None.
         unit_multiplier : float, optional
             multiply unit by this value before saving it in the store
+        update : bool, optional
+            if True, update currently stored time series with new data
         """
         # if data_column is not None, use data_column
         if data_column is not None:
@@ -126,6 +138,13 @@ class HydroPandasExtension:
         # gather metadata from obs object
         metadata = {key: getattr(obs, key) for key in obs._metadata}
 
+        # convert np dtypes to builtins
+        for k, v in metadata.items():
+            if isinstance(v, np.integer):
+                metadata[k] = int(v)
+            elif isinstance(v, np.floating):
+                metadata[k] = float(v)
+
         metadata.pop("name", None)
         metadata.pop("meta", None)
         unit = metadata.get("unit", None)
@@ -138,18 +157,28 @@ class HydroPandasExtension:
         if len(source) > 0:
             source = f"{source} "
 
+        if update:
+            action_msg = "updated in"
+        else:
+            action_msg = "added to"
+
         if libname == "oseries":
-            self._store.add_oseries(o, name, metadata=metadata)
-            logger.info("%sobservation '%s' added to oseries library.", source, name)
+            self._store.upsert_oseries(o, name, metadata=metadata)
+            logger.info(
+                "%sobservation '%s' %s oseries library.", source, name, action_msg
+            )
         elif libname == "stresses":
             if kind is None:
                 raise ValueError("`kind` must be specified for stresses!")
-            self._store.add_stress(o * unit_multiplier, name, kind, metadata=metadata)
+            self._store.upsert_stress(
+                o * unit_multiplier, name, kind, metadata=metadata
+            )
             logger.info(
-                "%sstress '%s' (kind='%s') added to stresses library.",
+                "%sstress '%s' (kind='%s') %s stresses library.",
                 source,
                 name,
                 kind,
+                action_msg,
             )
         else:
             raise ValueError("libname must be 'oseries' or 'stresses'.")
@@ -161,7 +190,6 @@ class HydroPandasExtension:
         tmin: TimeType = None,
         tmax: TimeType = None,
         unit_multiplier: float = 1e3,
-        update: bool = False,
         **kwargs,
     ):
         """Download precipitation data from KNMI and store in PastaStore.
@@ -179,8 +207,6 @@ class HydroPandasExtension:
         unit_multiplier : float, optional
             multiply unit by this value before saving it in the store,
             by default 1e3 to convert m to mm
-        update : bool, optional
-            if True, update currently stored precipitation time series with new data
         """
         self.download_knmi_meteo(
             meteo_var=meteo_var,
@@ -189,7 +215,6 @@ class HydroPandasExtension:
             tmin=tmin,
             tmax=tmax,
             unit_multiplier=unit_multiplier,
-            update=update,
             **kwargs,
         )
 
@@ -200,7 +225,6 @@ class HydroPandasExtension:
         tmin: TimeType = None,
         tmax: TimeType = None,
         unit_multiplier: float = 1e3,
-        update: bool = False,
         **kwargs,
     ):
         """Download evaporation data from KNMI and store in PastaStore.
@@ -218,8 +242,6 @@ class HydroPandasExtension:
         unit_multiplier : float, optional
             multiply unit by this value before saving it in the store,
             by default 1e3 to convert m to mm
-        update : bool, optional
-            if True, update currently stored evaporation time series with new data
         """
         self.download_knmi_meteo(
             meteo_var=meteo_var,
@@ -228,7 +250,6 @@ class HydroPandasExtension:
             tmin=tmin,
             tmax=tmax,
             unit_multiplier=unit_multiplier,
-            update=update,
             **kwargs,
         )
 
@@ -240,7 +261,6 @@ class HydroPandasExtension:
         tmin: TimeType = None,
         tmax: TimeType = None,
         unit_multiplier: float = 1.0,
-        update: bool = False,
         **kwargs,
     ):
         """Download meteorological data from KNMI and store in PastaStore.
@@ -261,41 +281,15 @@ class HydroPandasExtension:
         unit_multiplier : float, optional
             multiply unit by this value before saving it in the store,
             by default 1.0 (no conversion)
-        update : bool, optional
-            if True, update currently stored precipitation time series with new data
         """
         # get tmin/tmax if not specified
-        if update:
-            stressnames = self._store.stresses.loc[
-                self._store.stresses["kind"] == kind
-            ].index.tolist()
-            tmintmax = self._store.get_tmin_tmax("stresses", names=stressnames)
-            if tmin is None:
-                tmin = tmintmax.loc[:, "tmax"].min()
-            if tmax is None:
-                tmax = Timestamp.now().normalize()
-        else:
-            tmintmax = self._store.get_tmin_tmax("oseries")
-            if tmin is None:
-                tmin = tmintmax.loc[:, "tmin"].min() - Timedelta(days=10 * 365)
-            if tmax is None:
-                tmax = tmintmax.loc[:, "tmax"].max()
+        tmintmax = self._store.get_tmin_tmax("oseries")
+        if tmin is None:
+            tmin = tmintmax.loc[:, "tmin"].min() - Timedelta(days=10 * 365)
+        if tmax is None:
+            tmax = tmintmax.loc[:, "tmax"].max()
 
-        # if update, only download data for stations in store
-        if update:
-            locations = None
-            if stns is None:
-                stns = self._store.stresses.loc[stressnames, "station"].tolist()
-            else:
-                check = np.isin(
-                    stns, self._store.stresses.loc[stressnames, "station"].values
-                )
-                if not check.all():
-                    raise ValueError(
-                        "Not all specified stations are in the store: "
-                        f"{np.array(stns)[~check]}"
-                    )
-        elif stns is None:
+        if stns is None:
             locations = self._store.oseries.loc[:, ["x", "y"]]
         else:
             locations = None
@@ -317,14 +311,71 @@ class HydroPandasExtension:
             kind=kind,
             data_column=meteo_var,
             unit_multiplier=unit_multiplier,
+            update=False,
         )
+
+    def update_knmi_meteo(
+        self,
+        names: Optional[List[str]] = None,
+        tmin: TimeType = None,
+        tmax: TimeType = None,
+    ):
+        """Update meteorological data from KNMI in PastaStore.
+
+        Parameters
+        ----------
+        names : list of str, optional
+            list of names of observations to update, by default None
+        tmin : TimeType, optional
+            start time, by default None, which uses current last observation timestamp
+            as tmin
+        tmax : TimeType, optional
+            end time, by default None, which defaults to today
+        """
+        if names is None:
+            names = self._store.stresses.loc[
+                self._store.stresses["source"] == "KNMI"
+            ].index.tolist()
+
+        tmintmax = self._store.get_tmin_tmax("stresses", names=names)
+
+        for name in tqdm(names, desc="Updating KNMI meteo stresses"):
+            stn = self._store.stresses.loc[name, "station"]
+            meteo_var = self._store.stresses.loc[name, "meteo_var"]
+            unit = self._store.stresses.loc[name, "unit"]
+            kind = self._store.stresses.loc[name, "kind"]
+
+            if unit == "mm":
+                unit_multiplier = 1e3
+            else:
+                unit_multiplier = 1.0
+
+            if tmin is None:
+                tmin = tmintmax.loc[name, "tmax"]
+
+            knmi = hpd.read_knmi(
+                stns=[stn],
+                meteo_vars=[meteo_var],
+                starts=tmin,
+                ends=tmax,
+            )
+
+            self.add_observation(
+                "stresses",
+                knmi["obs"].iloc[0],
+                name=name,
+                kind=kind,
+                data_column=meteo_var,
+                unit_multiplier=unit_multiplier,
+                update=True,
+            )
 
     def download_bro_gmw(
         self,
-        extent=None,
-        tmin=None,
-        tmax=None,
-        update=False,
+        extent: Optional[List[float | int]] = None,
+        tmin: TimeType = None,
+        tmax: TimeType = None,
+        update: bool = False,
         **kwargs,
     ):
         """Download groundwater monitoring well observations from BRO.
@@ -337,32 +388,53 @@ class HydroPandasExtension:
             Start date of the observations to download.
         tmax: pandas.Timestamp, optional
             End date of the observations to download.
-        update: bool, optional
-            If True, update existing observations in the store.
         **kwargs: dict, optional
             Additional keyword arguments to pass to `hpd.read_bro()`
         """
-        if extent is not None and update:
-            raise ValueError("Cannot specify extent AND update=True.")
-        elif extent is None and not update:
-            raise ValueError("Either extent or update=True must be specified.")
+        bro = hpd.read_bro(
+            extent=extent,
+            tmin=tmin,
+            tmax=tmax,
+            **kwargs,
+        )
+        self.add_obscollection("oseries", bro, data_column="values", update=update)
 
-        if update:
-            tmintmax = self._store.get_tmin_tmax("oseries")
-            for obsnam in tqdm(
-                self._store.oseries.index, desc="Updating oseries from BRO"
-            ):
-                bro_id, tube_number = obsnam.split("_")
-                tmin, tmax = tmintmax.loc[obsnam]
-                obs = hpd.GroundWaterObs.from_bro(
-                    bro_id, int(tube_number), tmin=tmin, tmax=tmax, **kwargs
-                )
-                self.add_observation("oseries", obs, name=obsnam, data_column="values")
-        else:
-            bro = hpd.read_bro(
-                extent=extent,
-                tmin=tmin,
-                tmax=tmax,
-                **kwargs,
+    def update_bro_gmw(
+        self,
+        names: Optional[List[str]] = None,
+        tmin: TimeType = None,
+        tmax: TimeType = None,
+        **kwargs,
+    ):
+        """Update groundwater monitoring well observations from BRO.
+
+        Parameters
+        ----------
+        names : list of str, optional
+            list of names of observations to update, by default None which updates all
+            stored oseries.
+        tmin : TimeType, optional
+            start time, by default None, which uses current last observation timestamp
+            as tmin
+        tmax : TimeType, optional
+            end time, by default None, which defaults to today
+        **kwargs : dict, optional
+            Additional keyword arguments to pass to `hpd.GroundwaterObs.from_bro()`
+        """
+        if names is None:
+            names = self._store.oseries.index.to_list()
+
+        tmintmax = self._store.get_tmin_tmax("oseries")
+
+        for obsnam in tqdm(names, desc="Updating BRO oseries"):
+            bro_id, tube_number = obsnam.split("_")
+
+            if tmin is None:
+                _, tmin = tmintmax.loc[obsnam]  # tmin is stored tmax
+
+            obs = hpd.GroundwaterObs.from_bro(
+                bro_id, int(tube_number), tmin=tmin, tmax=tmax, **kwargs
             )
-            self.add_obscollection("oseries", bro, data_column="values")
+            self.add_observation(
+                "oseries", obs, name=obsnam, data_column="values", update=True
+            )
