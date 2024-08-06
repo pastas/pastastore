@@ -10,5 +10,5 @@ def activate_hydropandas_extension():
 
     print(
         "Registered HydroPandas extension in PastaStore class, "
-        "e.g. `pstore.hpd.download_bro()`."
+        "e.g. `pstore.hpd.download_bro_gmw()`."
     )
