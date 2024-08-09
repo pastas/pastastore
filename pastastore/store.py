@@ -813,50 +813,349 @@ class PastaStore:
         recharge_name : str
             name of the RechargeModel
         """
-        # get nearest prec and evap stns
-        if "prec" not in self.stresses.kind.values:
-            raise ValueError(
-                "No stresses with kind='prec' found in store. "
-                "add_recharge() requires stresses with kind='prec'!"
-            )
-        if "evap" not in self.stresses.kind.values:
-            raise ValueError(
-                "No stresses with kind='evap' found in store. "
-                "add_recharge() requires stresses with kind='evap'!"
-            )
-        names = []
-        for var in ("prec", "evap"):
-            try:
-                name = self.get_nearest_stresses(ml.oseries.name, kind=var).iloc[0, 0]
-            except AttributeError as e:
-                msg = "No precipitation or evaporation time series found!"
-                raise Exception(msg) from e
-            if isinstance(name, float):
-                if np.isnan(name):
-                    raise ValueError(
-                        f"Unable to find nearest '{var}' stress! "
-                        "Check x and y coordinates."
-                    )
-            else:
-                names.append(name)
-        if len(names) == 0:
-            msg = "No precipitation or evaporation time series found!"
-            raise Exception(msg)
+        if recharge is None:
+            recharge = ps.rch.Linear()
+        if rfunc is None:
+            rfunc = ps.Exponential
 
-        # get data
-        tsdict = self.conn.get_stresses(names)
-        metadata = self.conn.get_metadata("stresses", names, as_frame=False)
-        # add recharge to model
-        rch = ps.RechargeModel(
-            tsdict[names[0]],
-            tsdict[names[1]],
+        self.add_stressmodel(
+            ml,
+            stresses={"prec": "nearest", "evap": "nearest"},
             rfunc=rfunc,
-            name=recharge_name,
+            stressmodel=ps.RechargeModel,
+            stressmodel_name=recharge_name,
             recharge=recharge,
-            settings=("prec", "evap"),
-            metadata=metadata,
         )
-        ml.add_stressmodel(rch)
+
+    def _parse_stresses(
+        self,
+        stresses: Union[str, List[str], Dict[str, str]],
+        kind: Optional[str],
+        stressmodel,
+        oseries: Optional[str] = None,
+    ):
+        # parse stresses for RechargeModel, allow list of len 2 or 3 and
+        # set correct kwarg names
+        if stressmodel._name == "RechargeModel":
+            if isinstance(stresses, list):
+                if len(stresses) == 2:
+                    stresses = {
+                        "prec": stresses[0],
+                        "evap": stresses[1],
+                    }
+                elif len(stresses) == 3:
+                    stresses = {
+                        "prec": stresses[0],
+                        "evap": stresses[1],
+                        "temp": stresses[2],
+                    }
+                else:
+                    raise ValueError(
+                        "RechargeModel requires 2 or 3 stress names, "
+                        f"got: {len(stresses)}!"
+                    )
+        # if stresses is list, create dictionary normally
+        elif isinstance(stresses, list):
+            stresses = {"stress": stresses}
+        # if stresses is str, make it a list of len 1
+        elif isinstance(stresses, str):
+            stresses = {"stress": [stresses]}
+
+        # check if stresses is a dictionary, else raise TypeError
+        if not isinstance(stresses, dict):
+            raise TypeError("stresses must be a list, string or dictionary!")
+
+        # if no kind specified, set to well for WellModel
+        if stressmodel._name == "WellModel":
+            if kind is None:
+                kind = "well"
+
+        # store a copy of the user input for kind
+        if isinstance(kind, list):
+            _kind = kind.copy()
+        else:
+            _kind = kind
+
+        # create empty list for gathering metadata
+        metadata = []
+        # loop over stresses keys/values
+        for i, (k, v) in enumerate(stresses.items()):
+            # if entry in dictionary is str, make it list of len 1
+            if isinstance(v, str):
+                v = [v]
+            # parse value
+            if isinstance(v, list):
+                for item in v:
+                    names = []  # empty list for names
+                    # parse nearest
+                    if item.startswith("nearest"):
+                        # check oseries defined if nearest option is used
+                        if not oseries:
+                            raise ValueError(
+                                "Getting nearest stress(es) requires oseries name!"
+                            )
+                        try:
+                            if len(item.split()) == 3:  # nearest <n> <kind>
+                                n = int(item.split()[1])
+                                kind = item.split()[2]
+                            elif len(item.split()) == 2:  # nearest <n> | <kind>
+                                try:
+                                    n = int(item.split()[1])  # try converting to <n>
+                                except ValueError:
+                                    n = 1
+                                    kind = item.split()[1]  # interpret as <kind>
+                            else:  # nearest
+                                n = 1
+                                # if RechargeModel, we can infer kind
+                                if (
+                                    _kind is None
+                                    and stressmodel._name == "RechargeModel"
+                                ):
+                                    kind = k
+                                elif _kind is None:  # catch no kind with bare nearest
+                                    raise ValueError(
+                                        "Bare 'nearest' found but no kind specified."
+                                    )
+                                elif isinstance(_kind, list):
+                                    kind = _kind[i]  # if multiple kind, select i-th
+                        except Exception as e:
+                            # raise if nearest parsing failed
+                            raise ValueError(
+                                f"Could not parse stresses: '{item}'! "
+                                "When using option 'nearest', use 'nearest' and specify"
+                                " kind, or 'nearest <kind>' or 'nearest <n> <kind>'!"
+                            ) from e
+                        # check if kind exists at all
+                        if kind not in self.stresses.kind.values:
+                            raise ValueError(
+                                f"Could not find stresses with kind='{kind}'!"
+                            )
+                        # get stress names of <n> nearest <kind> stresses
+                        inames = self.get_nearest_stresses(
+                            oseries, kind=kind, n=n
+                        ).iloc[0]
+                        # check if any NaNs in result
+                        if inames.isna().any():
+                            nkind = (self.stresses.kind == kind).sum()
+                            raise ValueError(
+                                f"Could not find {n} nearest stress(es) for '{kind}'! "
+                                f"There are only {nkind} '{kind}' stresses."
+                            )
+                        # append names
+                        names += inames.tolist()
+                    else:
+                        # assume name is name of stress
+                        names.append(item)
+                # get stresses and metadata
+                stress_series, imeta = self.get_stresses(
+                    names, return_metadata=True, squeeze=True
+                )
+                # replace stress name(s) with time series
+                if len(names) > 1:
+                    stresses[k] = list(stress_series.values())
+                else:
+                    stresses[k] = stress_series
+                # gather metadata
+                if isinstance(imeta, list):
+                    metadata += imeta
+                else:
+                    metadata.append(imeta)
+
+        return stresses, metadata
+
+    def get_stressmodel(
+        self,
+        stresses: Union[str, List[str], Dict[str, str]],
+        stressmodel=ps.StressModel,
+        stressmodel_name: Optional[str] = None,
+        rfunc=ps.Exponential,
+        rfunc_kwargs: Optional[dict] = None,
+        kind: Optional[Union[List[str], str]] = None,
+        oseries: Optional[str] = None,
+        **kwargs,
+    ):
+        """Get a Pastas stressmodel from stresses time series in Pastastore.
+
+        Supports "nearest" selection. Any stress name can be replaced by
+        "nearest [<n>] <kind>" where <n> is optional and represents the number of
+        nearest stresses and <kind> and represents the kind of stress to
+        consider. <kind> can also be specified directly with the `kind` kwarg.
+
+        Note: the 'nearest' option requires the oseries name to be provided.
+        Additionally, 'x' and 'y' metadata must be stored for oseries and stresses.
+
+        Parameters
+        ----------
+        stresses : str, list of str, or dict
+            name(s) of the time series to use for the stressmodel, or dictionary
+            with key(s) and value(s) as time series name(s). Options include:
+               - name of stress: `"prec_stn"`
+               - list of stress names: `["prec_stn", "evap_stn"]`
+               - dict for RechargeModel: `{"prec": "prec_stn", "evap": "evap_stn"}`
+               - dict for StressModel: `{"stress": "well1"}`
+               - nearest, specifying kind: `"nearest well"`
+               - nearest specifying number and kind: `"nearest 2 well"`
+        stressmodel : str or class
+            stressmodel class to use, by default ps.StressModel
+        stressmodel_name : str, optional
+            name of the stressmodel, by default None, which uses the stress name,
+            if there is 1 stress otherwise the name of the stressmodel type. For
+            RechargeModels, the name defaults to 'recharge'.
+        rfunc : str or class
+            response function class to use, by default ps.Exponential
+        rfunc_kwargs : dict, optional
+            keyword arguments to pass to the response function, by default None
+        kind : str or list of str, optional
+            specify kind of stress(es) to use, by default None, useful in combination
+            with 'nearest' option for defining stresses
+        oseries : str, optional
+            name of the oseries to use for the stressmodel, by default None, used when
+            'nearest' option is used for defining stresses.
+        **kwargs
+            additional keyword arguments to pass to the stressmodel
+
+        Returns
+        -------
+        stressmodel : pastas.StressModel
+            pastas StressModel that can be added to pastas Model.
+        """
+        # get stressmodel class, if str was provided
+        if isinstance(stressmodel, str):
+            stressmodel = getattr(ps, stressmodel)
+
+        # parse stresses names to get time series and metadata
+        stresses, metadata = self._parse_stresses(
+            stresses=stresses, stressmodel=stressmodel, kind=kind, oseries=oseries
+        )
+
+        # get stressmodel name if not provided
+        if stressmodel_name is None:
+            if stressmodel._name == "RechargeModel":
+                stressmodel_name = "recharge"
+            elif len(metadata) == 1:
+                stressmodel_name = stresses["stress"].squeeze().name
+            else:
+                stressmodel_name = stressmodel._name
+
+        # check if metadata is list of len 1 and unpack
+        if isinstance(metadata, list) and len(metadata) == 1:
+            metadata = metadata[0]
+
+        # get stressmodel time series settings
+        if kind and "settings" not in kwargs:
+            # try using kind to get predefined settings options
+            if isinstance(kind, str):
+                kwargs["settings"] = ps.rcParams["timeseries"].get(kind, None)
+            else:
+                kwargs["settings"] = [
+                    ps.rcParams["timeseries"].get(ikind, None) for ikind in kind
+                ]
+        elif kind is None and "settings" not in kwargs:
+            # try using kind stored in metadata to get predefined settings options
+            if isinstance(metadata, list):
+                kwargs["settings"] = [
+                    ps.rcParams["timeseries"].get(imeta.get("kind", None), None)
+                    for imeta in metadata
+                ]
+            elif isinstance(metadata, dict):
+                kwargs["settings"] = ps.rcParams["timeseries"].get(
+                    metadata.get("kind", None), None
+                )
+
+        # get rfunc class if str was provided
+        if isinstance(rfunc, str):
+            rfunc = getattr(ps, rfunc)
+
+        # create empty rfunc_kwargs if not provided
+        if rfunc_kwargs is None:
+            rfunc_kwargs = {}
+
+        # special for WellModels
+        if stressmodel._name == "WellModel":
+            names = [s.squeeze().name for s in stresses["stress"]]
+            # check oseries is provided
+            if oseries is None:
+                raise ValueError("WellModel requires 'oseries' to compute distances!")
+            # compute distances and add to kwargs
+            distances = (
+                self.get_distances(oseries=oseries, stresses=names).T.squeeze().values
+            )
+            kwargs["distances"] = distances
+            # set settings to well
+            if "settings" not in kwargs:
+                kwargs["settings"] = "well"
+            # override rfunc and set to HantushWellModel
+            rfunc = ps.HantushWellModel
+
+        return stressmodel(
+            **stresses,
+            rfunc=rfunc(**rfunc_kwargs),
+            name=stressmodel_name,
+            metadata=metadata,
+            **kwargs,
+        )
+
+    def add_stressmodel(
+        self,
+        ml: ps.Model,
+        stresses: Union[str, List[str], Dict[str, str]],
+        stressmodel=ps.StressModel,
+        stressmodel_name: Optional[str] = None,
+        rfunc=ps.Exponential,
+        rfunc_kwargs: Optional[dict] = None,
+        kind: Optional[Union[List[str], str]] = None,
+        **kwargs,
+    ):
+        """Add a pastas StressModel from stresses time series in Pastastore.
+
+        Supports "nearest" selection. Any stress name can be replaced by
+        "nearest [<n>] <kind>" where <n> is optional and represents the number of
+        nearest stresses and <kind> and represents the kind of stress to
+        consider. <kind> can also be specified directly with the `kind` kwarg.
+
+        Note: the 'nearest' option requires the oseries name to be provided.
+        Additionally, 'x' and 'y' metadata must be stored for oseries and stresses.
+
+        Parameters
+        ----------
+        ml : pastas.Model
+            pastas.Model object to add StressModel to
+        stresses : str, list of str, or dict
+            name(s) of the time series to use for the stressmodel, or dictionary
+            with key(s) and value(s) as time series name(s). Options include:
+               - name of stress: `"prec_stn"`
+               - list of stress names: `["prec_stn", "evap_stn"]`
+               - dict for RechargeModel: `{"prec": "prec_stn", "evap": "evap_stn"}`
+               - dict for StressModel: `{"stress": "well1"}`
+               - nearest, specifying kind: `"nearest well"`
+               - nearest specifying number and kind: `"nearest 2 well"`
+        stressmodel : str or class
+            stressmodel class to use, by default ps.StressModel
+        stressmodel_name : str, optional
+            name of the stressmodel, by default None, which uses the stress name,
+            if there is 1 stress otherwise the name of the stressmodel type. For
+            RechargeModels, the name defaults to 'recharge'.
+        rfunc : str or class
+            response function class to use, by default ps.Exponential
+        rfunc_kwargs : dict, optional
+            keyword arguments to pass to the response function, by default None
+        kind : str or list of str, optional
+            specify kind of stress(es) to use, by default None, useful in combination
+            with 'nearest' option for defining stresses
+        **kwargs
+            additional keyword arguments to pass to the stressmodel
+        """
+        sm = self.get_stressmodel(
+            stresses=stresses,
+            stressmodel=stressmodel,
+            stressmodel_name=stressmodel_name,
+            rfunc=rfunc,
+            rfunc_kwargs=rfunc_kwargs,
+            kind=kind,
+            oseries=ml.oseries.name,
+            **kwargs,
+        )
+        ml.add_stressmodel(sm)
 
     def solve_models(
         self,
