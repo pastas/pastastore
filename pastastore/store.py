@@ -3,7 +3,7 @@
 import json
 import os
 import warnings
-from typing import List, Literal, Optional, Tuple, Union
+from typing import Dict, List, Literal, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -669,7 +669,7 @@ class PastaStore:
     def create_model(
         self,
         name: str,
-        modelname: str = None,
+        modelname: Optional[str] = None,
         add_recharge: bool = True,
         add_ar_noisemodel: bool = False,
         recharge_name: str = "recharge",
@@ -686,7 +686,7 @@ class PastaStore:
             add recharge to the model by looking for the closest
             precipitation and evaporation time series in the stresses
             library, by default True
-        add_ar1_noisemodel : bool, optional
+        add_ar_noisemodel : bool, optional
             add AR(1) noise model to the model, by default False
         recharge_name : str
             name of the RechargeModel

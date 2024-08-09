@@ -61,17 +61,15 @@ def delete_arcticdb_connector(
         libs = []
         for ilib in arc.list_libraries():
             if ilib.split(".")[0] == name:
-                # TODO: remove replace when arcticdb is able to delete
-                libs.append(ilib.replace(".", "/"))
+                libs.append(ilib)
     elif name is not None:
-        # TODO: replace / with . when arcticdb is able to delete
-        libs = [name + "/" + ilib for ilib in libraries]
+        libs = [name + "." + ilib for ilib in libraries]
     else:
         raise ValueError("Provide 'name' and 'uri' OR 'conn'!")
 
     for lib in libs:
-        # arc.delete_library(lib)  # TODO: not working at the moment.
-        shutil.rmtree(os.path.join(conn.uri.split("//")[-1], lib))
+        arc.delete_library(lib)
+        # shutil.rmtree(os.path.join(conn.uri.split("//")[-1], lib))
 
         if libraries is not None:
             print()
