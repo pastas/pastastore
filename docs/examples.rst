@@ -19,7 +19,7 @@ is stored in-memory (in dictionaries)::
    import pastastore as pst
 
    # define dict connector
-   conn = pst.DictConnect("my_db")
+   conn = pst.DictConnector("my_db")
 
    # create project for managing Pastas data and models
    store = pst.PastaStore(conn)
