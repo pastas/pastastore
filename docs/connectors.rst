@@ -43,7 +43,7 @@ the other directories when the model is loaded from the database.
 
 ArcticDB
 --------
-Note: this Connector uses ArcticDB the next-generation version of Arctic. Requires arcticdb Python package.
+Note: this Connector uses ArcticDB. Requires arcticdb Python package.
 
 The :ref:`ArcticDBConnector` is an object that creates a
 local database. This can be an existing or a new database.

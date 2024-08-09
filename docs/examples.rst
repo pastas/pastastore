@@ -50,7 +50,7 @@ a `PastaStore` object::
 
    import pastastore as pst
 
-   # define arctic connector
+   # define ArcticDB connector
    uri = "lmdb://./my_path_here/"
    conn = pst.ArcticDBConnector("my_db", uri)
 
