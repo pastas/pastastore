@@ -30,9 +30,8 @@ class PastaStore:
     the database. Different Connectors are available, e.g.:
 
     - PasConnector for storing all data as .pas (JSON) files on disk (recommended)
-    - DictConenctor for storing all data in dictionaries (in-memory)
-    - ArcticConnector for saving data to MongoDB using the Arctic module
-    - PystoreConnector for saving data to disk using the Pystore module
+    - ArcticDBConnector for saving data on disk using arcticdb package
+    - DictConnector for storing all data in dictionaries (in-memory)
 
     Parameters
     ----------

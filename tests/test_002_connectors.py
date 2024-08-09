@@ -269,12 +269,9 @@ def test_empty_library(request, conn):
 @pytest.mark.dependency()
 def test_delete(request, conn):
     # no need to delete dictconnector (in memory)
-    if conn.conn_type == "arctic":
-        pst.util.delete_arctic_connector(conn, libraries=["oseries"])
-        pst.util.delete_arctic_connector(conn)
-    elif conn.conn_type == "pystore":
-        pst.util.delete_pystore_connector(conn, libraries=["oseries"])
-        pst.util.delete_pystore_connector(conn)
+    if conn.conn_type == "arcticdb":
+        pst.util.delete_arcticdb_connector(conn, libraries=["oseries"])
+        pst.util.delete_arcticdb_connector(conn)
     elif conn.conn_type == "pas":
         pst.util.delete_pas_connector(conn, libraries=["oseries"])
         pst.util.delete_pas_connector(conn)

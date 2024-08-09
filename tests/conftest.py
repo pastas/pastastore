@@ -66,15 +66,9 @@ def conn(request):
     """Fixture that yields connection object."""
     name = f"test_{request.param}"
     # connect to dbase
-    if request.param == "arctic":
-        connstr = "mongodb://localhost:27017/"
-        conn = pst.ArcticConnector(name, connstr)
-    elif request.param == "arcticdb":
+    if request.param == "arcticdb":
         uri = "lmdb://./arctic_db/"
         conn = pst.ArcticDBConnector(name, uri)
-    elif request.param == "pystore":
-        path = "./tests/data/pystore"
-        conn = pst.PystoreConnector(name, path)
     elif request.param == "dict":
         conn = pst.DictConnector(name)
     elif request.param == "pas":
@@ -87,21 +81,10 @@ def conn(request):
 
 @pytest.fixture(scope="module", params=params)
 def pstore(request):
-    if request.param == "arctic":
-        connstr = "mongodb://localhost:27017/"
-        name = "test_project"
-        connector = pst.ArcticConnector(name, connstr)
-    elif request.param == "arcticdb":
+    if request.param == "arcticdb":
         name = "test_project"
         uri = "lmdb://./arctic_db/"
         connector = pst.ArcticDBConnector(name, uri)
-    elif request.param == "pystore":
-        name = "test_project"
-        path = "./tests/data/pystore"
-        import pystore
-
-        pystore.set_path(path)
-        connector = pst.PystoreConnector(name, path)
     elif request.param == "dict":
         name = "test_project"
         connector = pst.DictConnector(name)
@@ -114,14 +97,6 @@ def pstore(request):
     pstore.type = request.param  # added here for defining test dependencies
     yield pstore
     pst.util.delete_pastastore(pstore)
-
-
-def delete_arctic_test_db():
-    connstr = "mongodb://localhost:27017/"
-    name = "test_project"
-    connector = pst.ArcticConnector(name, connstr)
-    pst.util.delete_arctic_connector(connector)
-    print("ArcticConnector 'test_project' deleted.")
 
 
 def delete_arcticdb_test_db():

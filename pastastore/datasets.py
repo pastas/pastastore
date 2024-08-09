@@ -176,8 +176,7 @@ def _default_connector(conntype: str):
     Parameters
     ----------
     conntype : str
-        name of connector (DictConnector, PasConnector,
-        ArcticConnector, ArcticDBConnector or PystoreConnector)
+        name of connector (DictConnector, PasConnector, ArcticDBConnector)
 
     Returns
     -------
@@ -185,14 +184,9 @@ def _default_connector(conntype: str):
         default Connector based on type.
     """
     Conn = getattr(pst, conntype)
-    if Conn.conn_type == "arctic":
-        connstr = "mongodb://localhost:27017/"
-        conn = Conn("my_db", connstr)
-    elif Conn.conn_type == "arcticdb":
+    if Conn.conn_type == "arcticdb":
         uri = "lmdb://./arctic_db"
         conn = Conn("my_db", uri)
-    elif Conn.conn_type == "pystore":
-        conn = Conn("my_db", "./pystore_db")
     elif Conn.conn_type == "dict":
         conn = Conn("my_db")
     elif Conn.conn_type == "pas":
