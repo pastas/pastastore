@@ -12,7 +12,6 @@ import pastastore as pst
 
 IS_PY312 = parse_version(python_version()) >= parse_version("3.12.0")
 
-# "arctic" and "pystore" removed for CI, can be tested locally
 params = ["dict", "pas", "arcticdb"] if not IS_PY312 else ["dict", "pas"]
 
 
@@ -57,6 +56,10 @@ def initialize_project(conn):
         # pastas<=0.22.0
         pass
     pstore.add_stress(s, "well1", kind="well", metadata={"x": 164691, "y": 423579})
+    # add second well
+    pstore.add_stress(
+        s + 10, "well2", kind="well", metadata={"x": 164691 + 200, "y": 423579_200}
+    )
 
     return pstore
 

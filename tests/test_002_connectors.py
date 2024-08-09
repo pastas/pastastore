@@ -263,7 +263,7 @@ def test_empty_library(request, conn):
     )
     s1.name = "test_series"
     conn.add_oseries(s1, "test_series", metadata=None)
-    conn.empty_library("stresses", prompt=False, progressbar=False)
+    conn.empty_library("oseries", prompt=False, progressbar=False)
 
 
 @pytest.mark.dependency()
