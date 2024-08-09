@@ -128,8 +128,6 @@ module = [
     'mypy-pypandoc.*',
     'mypy-numpy.*',
     'mypy-pandas.*',
-    'mypy-pystore.*',
-    'mypy-arctic.*',
     'mypy-art_tools.*',
     'mypy-tqdm.*',
     'mypy-pastas.*',

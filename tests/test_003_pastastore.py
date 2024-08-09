@@ -214,12 +214,8 @@ def test_apply(request, pstore):
 
 @pytest.mark.dependency()
 def test_save_and_load_model(request, pstore):
-    ml = pstore.create_model("oseries2")
-    sm = ps.StressModel(
-        pstore.get_stresses("well1"), ps.Gamma(), name="well1", settings="well"
-    )
-    ml.add_stressmodel(sm)
-    ml.solve(tmin="1993-1-1")
+    ml = pstore.create_model("oseries1")
+    ml.solve()
     evp_ml = ml.stats.evp()
     pstore.add_model(ml, overwrite=True)
     ml2 = pstore.get_models(ml.name)
