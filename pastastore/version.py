@@ -21,6 +21,7 @@ def show_versions(optional=False) -> None:
         Print the version of optional dependencies, by default False
     """
     msg = (
+        f"Pastastore version : {__version__}\n\n"
         f"Python version     : {python_version()}\n"
         f"Pandas version     : {metadata.version('pandas')}\n"
         f"Matplotlib version : {metadata.version('matplotlib')}\n"
@@ -34,7 +35,5 @@ def show_versions(optional=False) -> None:
             msg += f"{metadata.version('arctidb')}"
         except ImportError:
             msg += "Not Installed"
-
-    msg += f"\nPastastore version     : {__version__}"
 
     print(msg)
