@@ -372,7 +372,7 @@ class HydroPandasExtension:
 
     def download_bro_gmw(
         self,
-        extent: Optional[List[float | int]] = None,
+        extent: Optional[List[float]] = None,
         tmin: TimeType = None,
         tmax: TimeType = None,
         update: bool = False,
