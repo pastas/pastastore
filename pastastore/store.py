@@ -43,6 +43,8 @@ class PastaStore:
         name of the PastaStore, by default takes the name of the Connector object
     """
 
+    _accessors = set()
+
     def __init__(
         self,
         connector: Optional[BaseConnector] = None,
@@ -706,7 +708,7 @@ class PastaStore:
         meta = self.conn.get_metadata("oseries", name, as_frame=False)
         ts = self.conn.get_oseries(name)
 
-        # convert to Timeseries and create model
+        # convert to time series and create model
         if not ts.dropna().empty:
             if modelname is None:
                 modelname = name

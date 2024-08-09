@@ -9,7 +9,7 @@ PASTAS_VERSION = parse_version(ps.__version__)
 PASTAS_LEQ_022 = PASTAS_VERSION <= parse_version("0.22.0")
 PASTAS_GEQ_150 = PASTAS_VERSION >= parse_version("1.5.0")
 
-__version__ = "1.5.0"
+__version__ = "1.6.0"
 
 
 def show_versions(optional=False) -> None:
@@ -21,6 +21,7 @@ def show_versions(optional=False) -> None:
         Print the version of optional dependencies, by default False
     """
     msg = (
+        f"Pastastore version : {__version__}\n\n"
         f"Python version     : {python_version()}\n"
         f"Pandas version     : {metadata.version('pandas')}\n"
         f"Matplotlib version : {metadata.version('matplotlib')}\n"
