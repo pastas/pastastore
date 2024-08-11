@@ -16,7 +16,7 @@ from pastastore.base import BaseConnector
 from pastastore.connectors import DictConnector
 from pastastore.plotting import Maps, Plots
 from pastastore.util import _custom_warning
-from pastastore.version import PASTAS_GEQ_150
+from pastastore.version import PASTAS_GEQ_150, PASTAS_LEQ_022
 from pastastore.yaml_interface import PastastoreYAML
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
@@ -1086,11 +1086,14 @@ class PastaStore:
             # override rfunc and set to HantushWellModel
             rfunc = ps.HantushWellModel
 
+        # do not add metadata for pastas 0.22 and WellModel
+        if not PASTAS_LEQ_022 and (stressmodel._name != "WellModel"):
+            kwargs["metadata"] = metadata
+
         return stressmodel(
             **stresses,
             rfunc=rfunc(**rfunc_kwargs),
             name=stressmodel_name,
-            metadata=metadata,
             **kwargs,
         )
 
