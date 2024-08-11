@@ -47,11 +47,12 @@ def initialize_project(conn):
     pstore.add_stress(s, "evap2", kind="evap", metadata={"x": 164000, "y": 423030})
 
     # well 1
-    s = pd.read_csv("./tests/data/well.csv", index_col=0, parse_dates=True)
+    s = pd.read_csv("./tests/data/well_month_end.csv", index_col=0, parse_dates=True)
     try:
         s = ps.ts.timestep_weighted_resample(
-            s, pd.date_range(s.index[0], s.index[-1], freq="D")
-        )
+            s,
+            pd.date_range(s.index[0] - pd.offsets.MonthBegin(), s.index[-1], freq="D"),
+        ).bfill()
     except AttributeError:
         # pastas<=0.22.0
         pass
