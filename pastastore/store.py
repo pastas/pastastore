@@ -1,6 +1,7 @@
 """Module containing the PastaStore object for managing time series and models."""
 
 import json
+import logging
 import os
 import warnings
 from typing import Dict, List, Literal, Optional, Tuple, Union
@@ -21,6 +22,8 @@ from pastastore.yaml_interface import PastastoreYAML
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning
+
+logger = logging.getLogger(__name__)
 
 
 class PastaStore:
@@ -1099,7 +1102,7 @@ class PastaStore:
 
     def add_stressmodel(
         self,
-        ml: ps.Model,
+        ml: Union[ps.Model, str],
         stresses: Union[str, List[str], Dict[str, str]],
         stressmodel=ps.StressModel,
         stressmodel_name: Optional[str] = None,
@@ -1120,8 +1123,10 @@ class PastaStore:
 
         Parameters
         ----------
-        ml : pastas.Model
-            pastas.Model object to add StressModel to
+        ml : pastas.Model or str
+            pastas.Model object to add StressModel to, if passed as string,
+            model is loaded from store, the stressmodel is added and then written
+            back to the store.
         stresses : str, list of str, or dict
             name(s) of the time series to use for the stressmodel, or dictionary
             with key(s) and value(s) as time series name(s). Options include:
@@ -1157,7 +1162,16 @@ class PastaStore:
             oseries=ml.oseries.name,
             **kwargs,
         )
-        ml.add_stressmodel(sm)
+        if isinstance(ml, str):
+            ml = self.get_model(ml)
+            ml.add_stressmodel(sm)
+            self.conn.add_model(ml, overwrite=True)
+            logger.info(
+                f"Stressmodel '{sm.name}' added to model '{ml.name}' "
+                "and stored in database."
+            )
+        else:
+            ml.add_stressmodel(sm)
 
     def solve_models(
         self,
