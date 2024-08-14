@@ -19,7 +19,7 @@ is stored in-memory (in dictionaries)::
    import pastastore as pst
 
    # define dict connector
-   conn = pst.DictConnect("my_db")
+   conn = pst.DictConnector("my_db")
 
    # create project for managing Pastas data and models
    store = pst.PastaStore(conn)
@@ -50,7 +50,7 @@ a `PastaStore` object::
 
    import pastastore as pst
 
-   # define arctic connector
+   # define ArcticDB connector
    uri = "lmdb://./my_path_here/"
    conn = pst.ArcticDBConnector("my_db", uri)
 

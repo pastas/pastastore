@@ -86,7 +86,8 @@ jobs:
         if: ${{ matrix.python-version == '3.12'}}  
         run: |
           pip install --upgrade pip
-          pip install numpy
+          # TODO: remove numpy pin when numba or ? doesn't crash on NaN being deprecated
+          pip install "numpy<2.0"  
           pip install ${{ matrix.pastas-version }}
           pip install -e .[test_py312]
 
