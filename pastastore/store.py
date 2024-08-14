@@ -1159,7 +1159,7 @@ class PastaStore:
             rfunc=rfunc,
             rfunc_kwargs=rfunc_kwargs,
             kind=kind,
-            oseries=ml.oseries.name,
+            oseries=ml if isinstance(ml, str) else ml.oseries.name,
             **kwargs,
         )
         if isinstance(ml, str):
