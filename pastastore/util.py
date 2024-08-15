@@ -1,7 +1,6 @@
 """Useful utilities for pastastore."""
 
 import os
-import warnings
 from typing import Dict, List, Optional, Union
 
 import numpy as np
@@ -22,111 +21,6 @@ class ItemInLibraryException(Exception):
     """Exception when item is already in library."""
 
     pass
-
-
-# TODO: remove in future version
-def delete_pystore_connector(
-    conn=None,
-    path: Optional[str] = None,
-    name: Optional[str] = None,
-    libraries: Optional[List[str]] = None,
-) -> None:  # pragma: no cover
-    """Delete libraries from pystore.
-
-    Parameters
-    ----------
-    conn : PystoreConnector, optional
-        PystoreConnector object
-    path : str, optional
-        path to pystore
-    name : str, optional
-        name of the pystore
-    libraries : Optional[List[str]], optional
-        list of library names to delete, by default None which deletes
-        all libraries
-    """
-    warnings.warn(
-        "This function is deprecated. We recommend to migrate to a different "
-        "Connector, e.g. `pst.PasConnector`.",
-        DeprecationWarning,
-        stacklevel=1,
-    )
-    import pystore
-
-    if conn is not None:
-        name = conn.name
-        path = conn.path
-    elif name is None or path is None:
-        raise ValueError("Please provide 'name' and 'path' OR 'conn'!")
-
-    print(f"Deleting PystoreConnector database: '{name}' ...", end="")
-    pystore.set_path(path)
-    if libraries is None:
-        pystore.delete_store(name)
-        print(" Done!")
-    else:
-        store = pystore.store(name)
-        for lib in libraries:
-            print()
-            store.delete_collection(lib)
-            print(f" - deleted: {lib}")
-
-
-# TODO: remove in future version
-def delete_arctic_connector(
-    conn=None,
-    connstr: Optional[str] = None,
-    name: Optional[str] = None,
-    libraries: Optional[List[str]] = None,
-) -> None:  # pragma: no cover
-    """Delete libraries from arctic database.
-
-    Parameters
-    ----------
-    conn : pastastore.ArcticConnector
-        ArcticConnector object
-    connstr : str, optional
-        connection string to the database
-    name : str, optional
-        name of the database
-    libraries : Optional[List[str]], optional
-        list of library names to delete, by default None which deletes
-        all libraries
-    """
-    warnings.warn(
-        "This function is deprecated. We recommend to migrate to a different "
-        "Connector, e.g. `pst.ArcticDBConnector`.",
-        DeprecationWarning,
-        stacklevel=1,
-    )
-    import arctic
-
-    if conn is not None:
-        name = conn.name
-        connstr = conn.connstr
-    elif name is None or connstr is None:
-        raise ValueError("Provide 'name' and 'connstr' OR 'conn'!")
-
-    arc = arctic.Arctic(connstr)
-
-    print(f"Deleting ArcticConnector database: '{name}' ... ", end="")
-    # get library names
-    if libraries is None:
-        libs = []
-        for ilib in arc.list_libraries():
-            if ilib.split(".")[0] == name:
-                libs.append(ilib)
-    elif name is not None:
-        libs = [name + "." + ilib for ilib in libraries]
-    else:
-        raise ValueError("Provide 'name' and 'connstr' OR 'conn'!")
-
-    for lib in libs:
-        arc.delete_library(lib)
-        if libraries is not None:
-            print()
-            print(f" - deleted: {lib}")
-    print("Done!")
 
 
 def delete_arcticdb_connector(
@@ -167,17 +61,15 @@ def delete_arcticdb_connector(
         libs = []
         for ilib in arc.list_libraries():
             if ilib.split(".")[0] == name:
-                # TODO: remove replace when arcticdb is able to delete
-                libs.append(ilib.replace(".", "/"))
+                libs.append(ilib)
     elif name is not None:
-        # TODO: replace / with . when arcticdb is able to delete
-        libs = [name + "/" + ilib for ilib in libraries]
+        libs = [name + "." + ilib for ilib in libraries]
     else:
         raise ValueError("Provide 'name' and 'uri' OR 'conn'!")
 
     for lib in libs:
-        # arc.delete_library(lib)  # TODO: not working at the moment.
-        shutil.rmtree(os.path.join(conn.uri.split("//")[-1], lib))
+        arc.delete_library(lib)
+        # shutil.rmtree(os.path.join(conn.uri.split("//")[-1], lib))
 
         if libraries is not None:
             print()
@@ -243,14 +135,8 @@ def delete_pastastore(pstore, libraries: Optional[List[str]] = None) -> None:
     TypeError
         when Connector type is not recognized
     """
-    # TODO: remove in future version
-    if pstore.conn.conn_type == "pystore":
-        delete_pystore_connector(conn=pstore.conn, libraries=libraries)
-    elif pstore.conn.conn_type == "dict":
+    if pstore.conn.conn_type == "dict":
         delete_dict_connector(pstore)
-    # TODO: remove in future version
-    elif pstore.conn.conn_type == "arctic":
-        delete_arctic_connector(conn=pstore.conn, libraries=libraries)
     elif pstore.conn.conn_type == "arcticdb":
         delete_arcticdb_connector(conn=pstore.conn, libraries=libraries)
     elif pstore.conn.conn_type == "pas":

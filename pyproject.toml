@@ -45,8 +45,10 @@ documentation = "https://pastastore.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
 full = ["pastastore[arcticdb,optional]"]
-lint = ["black", "flake8", "isort"]
+extensions = ["hydropandas"]
 optional = ["contextily", "pyproj", "adjustText"]
+arcticdb = ["arcticdb"]
+lint = ["ruff"]
 test = [
     "pastastore[arcticdb,lint,optional]",
     "hydropandas[full]",
@@ -69,7 +71,6 @@ test_py312 = [
     "pytest-benchmark",
     "codacy-coverage",
 ]
-arcticdb = ["arcticdb"]
 docs = [
     "pastastore[optional]",
     "sphinx_rtd_theme",
@@ -109,7 +110,10 @@ convention = "numpy"
 
 [tool.pytest.ini_options]
 addopts = "--durations=0 --cov-report xml:coverage.xml --cov pastastore -v"
-markers = ["bgmap: test tile download for background map"]
+markers = [
+    "bgmap: test tile download for background map",
+    "pastas150: tests only working for pastas>=1.5.0",
+]
 
 [tool.mypy]
 python_version = "3.9"
@@ -124,8 +128,6 @@ module = [
     'mypy-pypandoc.*',
     'mypy-numpy.*',
     'mypy-pandas.*',
-    'mypy-pystore.*',
-    'mypy-arctic.*',
     'mypy-art_tools.*',
     'mypy-tqdm.*',
     'mypy-pastas.*',

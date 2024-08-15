@@ -1471,6 +1471,7 @@ class ConnectorUtil:
                         else:
                             msg = "stress '{}' not present in library".format(name)
                             raise KeyError(msg)
+
         # hack for pcov w dtype object (when filled with NaNs on store?)
         if "fit" in mdict:
             if "pcov" in mdict["fit"]:
@@ -1534,7 +1535,7 @@ class ConnectorUtil:
         if isinstance(series, pd.Series):
             series.name = name
             # empty string on index name causes trouble when reading
-            # data from Arctic VersionStores
+            # data from ArcticDB: TODO: check if still an issue?
             if series.index.name == "":
                 series.index.name = None
 
