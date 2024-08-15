@@ -22,7 +22,7 @@ def test_plot_stresses_availability(pstore):
     plt.close(ax.figure)
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_cumulative_hist(request, pstore):
     ml1 = pstore.create_model("oseries1")
     pstore.add_model(ml1)
@@ -35,7 +35,7 @@ def test_cumulative_hist(request, pstore):
 # %% maps
 
 
-@pytest.mark.bgmap()
+@pytest.mark.bgmap
 def test_map_oseries_w_bgmap(pstore):
     ax = pstore.maps.oseries()
     # only test bgmap once for pas
@@ -57,25 +57,25 @@ def test_map_stresslinks(pstore):
     plt.close(ax.figure)
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_map_models(request, pstore):
     ax = pstore.maps.models()
     plt.close(ax.figure)
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_map_model(request, pstore):
     depends(request, [f"test_map_models[{pstore.type}]"])
     ax = pstore.maps.model("oseries1")
     plt.close(ax.figure)
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_map_modelstat(request, pstore):
     ax = pstore.maps.modelstat("evp")
     plt.close(ax.figure)
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_list_ctx_providers(request, pstore):
     pstore.maps._list_contextily_providers()

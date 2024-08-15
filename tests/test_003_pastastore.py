@@ -12,17 +12,17 @@ from pytest_dependency import depends
 import pastastore as pst
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_iter_oseries(pstore):
     _ = list(pstore.iter_oseries())
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_iter_stresses(pstore):
     _ = list(pstore.iter_stresses())
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_get_tmintmax(pstore):
     ostt = pstore.get_tmin_tmax("oseries")
     assert ostt.at["oseries1", "tmin"] == pd.Timestamp("2010-01-14")
@@ -36,19 +36,19 @@ def test_get_tmintmax(pstore):
     pstore.del_model("oseries1")
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_search(pstore):
     results = pstore.search("oseries", "OSER", case_sensitive=False)
     assert len(results) == 3
     assert len(set(results) - {"oseries1", "oseries2", "oseries3"}) == 0
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_create_model(pstore):
     _ = pstore.create_model("oseries1")
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_properties(pstore):
     pstore.add_oseries(pd.Series(dtype=np.float64), "deleteme", validate=False)
     pstore.add_stress(
@@ -67,14 +67,14 @@ def test_properties(pstore):
         pstore.del_stress("deleteme")
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_store_model(request, pstore):
     depends(request, [f"test_create_model[{pstore.type}]"])
     ml = pstore.create_model("oseries1")
     pstore.conn.add_model(ml)
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_model_accessor(request, pstore):
     depends(request, [f"test_store_model[{pstore.type}]"])
     # repr
@@ -93,7 +93,7 @@ def test_model_accessor(request, pstore):
         pstore.del_models("oseries1_2")
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_oseries_model_accessor(request, pstore):
     depends(request, [f"test_store_model[{pstore.type}]"])
     # repr
@@ -114,7 +114,7 @@ def test_oseries_model_accessor(request, pstore):
     assert len(ml_list3) == 1
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_store_model_missing_series(request, pstore):
     depends(
         request,
@@ -135,7 +135,7 @@ def test_store_model_missing_series(request, pstore):
         pstore.add_model(ml)
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_get_model(request, pstore):
     depends(
         request,
@@ -148,7 +148,7 @@ def test_get_model(request, pstore):
     _ = pstore.conn.get_models("oseries1")
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_del_model(request, pstore):
     depends(
         request,
@@ -162,7 +162,7 @@ def test_del_model(request, pstore):
     pstore.conn.del_models("oseries1")
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_create_models(pstore):
     _ = pstore.create_models_bulk(
         ["oseries1", "oseries2"], store=True, progressbar=False
@@ -170,7 +170,7 @@ def test_create_models(pstore):
     _ = pstore.conn.models
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_get_parameters(request, pstore):
     depends(request, [f"test_create_models[{pstore.type}]"])
     p = pstore.get_parameters(progressbar=False, param_value="initial")
@@ -178,20 +178,20 @@ def test_get_parameters(request, pstore):
     assert p.isna().sum().sum() == 0
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_get_signatures(request, pstore):
     depends(request, [f"test_create_models[{pstore.type}]"])
     s = pstore.get_signatures(progressbar=False)
     assert s.shape[1] == len(ps.stats.signatures.__all__)
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_iter_models(request, pstore):
     depends(request, [f"test_create_models[{pstore.type}]"])
     _ = list(pstore.iter_models())
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_solve_models_and_get_stats(request, pstore):
     depends(request, [f"test_create_models[{pstore.type}]"])
     _ = pstore.solve_models(
@@ -201,7 +201,7 @@ def test_solve_models_and_get_stats(request, pstore):
     assert stats.index.size == 2
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_apply(request, pstore):
     depends(request, [f"test_solve_models_and_get_stats[{pstore.type}]"])
 
@@ -212,7 +212,7 @@ def test_apply(request, pstore):
     assert len(result) == 2
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_save_and_load_model(request, pstore):
     ml = pstore.create_model("oseries1")
     ml.solve()

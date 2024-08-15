@@ -178,7 +178,7 @@ def test_update_metadata(request, conn):
         conn.del_oseries("test_df")
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_add_oseries(conn):
     o = pd.read_csv("./tests/data/obs.csv", index_col=0, parse_dates=True)
     conn.add_oseries(
@@ -189,7 +189,7 @@ def test_add_oseries(conn):
     )
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_add_stress(conn):
     s = pd.read_csv("./tests/data/rain.csv", index_col=0, parse_dates=True)
     conn.add_stress(
@@ -200,39 +200,39 @@ def test_add_stress(conn):
     )
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_get_oseries(request, conn):
     depends(request, [f"test_add_oseries[{conn.type}]"])
     _ = conn.get_oseries("oseries1")
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_get_oseries_and_metadata(request, conn):
     depends(request, [f"test_add_oseries[{conn.type}]"])
     _ = conn.get_oseries("oseries1", return_metadata=True)
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_get_stress(request, conn):
     depends(request, [f"test_add_stress[{conn.type}]"])
     s = conn.get_stresses("prec")
     s.name = "prec"
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_get_stress_and_metadata(request, conn):
     depends(request, [f"test_add_stress[{conn.type}]"])
     s, _ = conn.get_stresses("prec", return_metadata=True)
     s.name = "prec"
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_oseries_prop(request, conn):
     depends(request, [f"test_add_oseries[{conn.type}]"])
     _ = conn.oseries
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_stresses_prop(request, conn):
     depends(request, [f"test_add_stress[{conn.type}]"])
     _ = conn.stresses
@@ -242,19 +242,19 @@ def test_repr(conn):
     conn.__repr__()
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_del_oseries(request, conn):
     depends(request, [f"test_add_oseries[{conn.type}]"])
     conn.del_oseries("oseries1")
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_del_stress(request, conn):
     depends(request, [f"test_add_stress[{conn.type}]"])
     conn.del_stress("prec")
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_empty_library(request, conn):
     s1 = pd.Series(
         index=pd.date_range("2000", periods=10, freq="D"),
@@ -266,7 +266,7 @@ def test_empty_library(request, conn):
     conn.empty_library("oseries", prompt=False, progressbar=False)
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_delete(request, conn):
     # no need to delete dictconnector (in memory)
     if conn.conn_type == "arcticdb":

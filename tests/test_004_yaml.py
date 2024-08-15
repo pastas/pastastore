@@ -20,7 +20,7 @@ def tempyaml(yaml):
         os.unlink(temp.name)
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_load_yaml_rechargemodel(pstore):
     yamlstr = """
     my_first_model:                   # model name
@@ -38,7 +38,7 @@ def test_load_yaml_rechargemodel(pstore):
     pstore.add_model(ml)
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_load_yaml_stressmodel(pstore):
     yamlstr = """
     my_second_model:                  # model name
@@ -54,7 +54,7 @@ def test_load_yaml_stressmodel(pstore):
     pstore.add_model(ml)
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_load_yaml_wellmodel(pstore):
     yamlstr = """
     my_third_model:                   # model name
@@ -71,7 +71,7 @@ def test_load_yaml_wellmodel(pstore):
     pstore.add_model(ml)
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_write_load_compare_yaml(request, pstore):
     depends(
         request,
@@ -90,7 +90,7 @@ def test_write_load_compare_yaml(request, pstore):
     os.remove("my_first_model.yaml")
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_write_yaml_per_oseries(request, pstore):
     depends(
         request,
@@ -105,7 +105,7 @@ def test_write_yaml_per_oseries(request, pstore):
     os.remove("oseries2.yaml")
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_write_yaml_minimal(request, pstore):
     depends(
         request,
@@ -120,7 +120,7 @@ def test_write_yaml_minimal(request, pstore):
     os.remove("my_first_model.yaml")
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_write_yaml_minimal_nearest(request, pstore):
     depends(
         request,
