@@ -17,6 +17,7 @@ def test_hpd_download_from_bro():
     assert pstore.n_oseries == 3
 
 
+@pytest.mark.xfail(reason="KNMI is being flaky, so allow this test to xfail/xpass.")
 @pytest.mark.pastas150
 def test_hpd_download_precipitation_from_knmi():
     from pastastore.extensions import activate_hydropandas_extension
@@ -29,6 +30,7 @@ def test_hpd_download_precipitation_from_knmi():
     assert pstore.n_stresses == 1
 
 
+@pytest.mark.xfail(reason="KNMI is being flaky, so allow this test to xfail/xpass.")
 @pytest.mark.pastas150
 def test_hpd_download_evaporation_from_knmi():
     from pastastore.extensions import activate_hydropandas_extension
@@ -54,6 +56,7 @@ def test_update_oseries():
     assert tmintmax.loc["GMW000000036327_1", "tmax"] >= Timestamp("2024-01-20")
 
 
+@pytest.mark.xfail(reason="KNMI is being flaky, so allow this test to xfail/xpass.")
 @pytest.mark.pastas150
 def test_update_stresses():
     from pastastore.extensions import activate_hydropandas_extension
