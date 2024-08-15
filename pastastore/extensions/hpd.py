@@ -12,7 +12,7 @@ from typing import List, Optional, Union
 
 import hydropandas as hpd
 import numpy as np
-from hydropandas.io.knmi import _check_latest_measurement_date_de_bilt, get_stations
+from hydropandas.io.knmi import get_stations
 from pandas import DataFrame, Series, Timedelta, Timestamp
 from pastas.timeseries_utils import timestep_weighted_resample
 from tqdm.auto import tqdm
@@ -145,7 +145,7 @@ class HydroPandasExtension:
             return
 
         if normalize_datetime_index and o.index.size > 1:
-            o = self._normalize_datetime_index(o).dropna()
+            o = self._normalize_datetime_index(o).iloc[1:]  # remove first nan
         elif normalize_datetime_index and o.index.size <= 1:
             raise ValueError(
                 "Must have minimum of 2 observations for timestep_weighted_resample."
