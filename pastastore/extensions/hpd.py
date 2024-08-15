@@ -12,12 +12,14 @@ from typing import List, Optional, Union
 
 import hydropandas as hpd
 import numpy as np
+from hydropandas.io.knmi import _check_latest_measurement_date_de_bilt, get_stations
 from pandas import DataFrame, Series, Timedelta, Timestamp
+from pastas.timeseries_utils import timestep_weighted_resample
 from tqdm.auto import tqdm
 
 from pastastore.extensions.accessor import register_pastastore_accessor
 
-logger = logging.getLogger("hydropandas")
+logger = logging.getLogger("hydropandas_extension")
 
 
 TimeType = Optional[Union[str, Timestamp]]
@@ -51,6 +53,7 @@ class HydroPandasExtension:
         data_column: Optional[str] = None,
         unit_multiplier: float = 1.0,
         update: bool = False,
+        normalize_datetime_index: bool = True,
     ):
         """Add an ObsCollection to the PastaStore.
 
@@ -81,6 +84,7 @@ class HydroPandasExtension:
                 data_column=data_column,
                 unit_multiplier=unit_multiplier,
                 update=update,
+                normalize_datetime_index=normalize_datetime_index,
             )
 
     def add_observation(
@@ -92,6 +96,7 @@ class HydroPandasExtension:
         data_column: Optional[str] = None,
         unit_multiplier: float = 1.0,
         update: bool = False,
+        normalize_datetime_index: bool = False,
     ):
         """Add an hydropandas observation series to the PastaStore.
 
@@ -113,27 +118,35 @@ class HydroPandasExtension:
             multiply unit by this value before saving it in the store
         update : bool, optional
             if True, update currently stored time series with new data
+        normalize_datetime_index : bool, optional
+            if True, normalize the datetime so stress value at midnight represents
+            the daily total, by default True.
         """
         # if data_column is not None, use data_column
         if data_column is not None:
             if not obs.empty:
-                o = obs[data_column]
+                o = obs[[data_column]]
             else:
                 o = Series()
-        # if data_column is None, check no. of columns in obs
-        # if only one column, use that column
-        elif isinstance(obs, DataFrame) and obs.columns.size == 1:
-            o = obs.iloc[:, 0]
         elif isinstance(obs, Series):
             o = obs
         # else raise error
-        else:
+        elif isinstance(obs, DataFrame) and (obs.columns.size > 1):
             raise ValueError("No data_column specified and obs has multiple columns.")
+        else:
+            raise TypeError("obs must be a Series or DataFrame with a single column.")
 
         # break if obs is empty
         if o.empty:
             logger.info("Observation '%s' is empty, not adding to store.", name)
             return
+
+        if normalize_datetime_index and o.index.size > 1:
+            o = self._normalize_datetime_index(o)
+        else:
+            raise ValueError(
+                "Must have minimum of 2 observations for timestep_weighted_resample."
+            )
 
         # gather metadata from obs object
         metadata = {key: getattr(obs, key) for key in obs._metadata}
@@ -163,7 +176,7 @@ class HydroPandasExtension:
             action_msg = "added to"
 
         if libname == "oseries":
-            self._store.upsert_oseries(o, name, metadata=metadata)
+            self._store.upsert_oseries(o.squeeze(), name, metadata=metadata)
             logger.info(
                 "%sobservation '%s' %s oseries library.", source, name, action_msg
             )
@@ -171,7 +184,7 @@ class HydroPandasExtension:
             if kind is None:
                 raise ValueError("`kind` must be specified for stresses!")
             self._store.upsert_stress(
-                o * unit_multiplier, name, kind, metadata=metadata
+                (o * unit_multiplier).squeeze(), name, kind, metadata=metadata
             )
             logger.info(
                 "%sstress '%s' (kind='%s') %s stresses library.",
@@ -190,6 +203,8 @@ class HydroPandasExtension:
         tmin: TimeType = None,
         tmax: TimeType = None,
         unit_multiplier: float = 1e3,
+        fill_missing_obs: bool = True,
+        normalize_datetime_index: bool = True,
         **kwargs,
     ):
         """Download precipitation data from KNMI and store in PastaStore.
@@ -215,6 +230,8 @@ class HydroPandasExtension:
             tmin=tmin,
             tmax=tmax,
             unit_multiplier=unit_multiplier,
+            fill_missing_obs=fill_missing_obs,
+            normalize_datetime_index=normalize_datetime_index,
             **kwargs,
         )
 
@@ -225,6 +242,8 @@ class HydroPandasExtension:
         tmin: TimeType = None,
         tmax: TimeType = None,
         unit_multiplier: float = 1e3,
+        fill_missing_obs: bool = True,
+        normalize_datetime_index: bool = True,
         **kwargs,
     ):
         """Download evaporation data from KNMI and store in PastaStore.
@@ -242,6 +261,12 @@ class HydroPandasExtension:
         unit_multiplier : float, optional
             multiply unit by this value before saving it in the store,
             by default 1e3 to convert m to mm
+        fill_missing_obs : bool, optional
+            if True, fill missing observations by getting observations from nearest
+            station with data.
+        normalize_datetime_index : bool, optional
+            if True, normalize the datetime so stress value at midnight represents
+            the daily total, by default True.
         """
         self.download_knmi_meteo(
             meteo_var=meteo_var,
@@ -250,6 +275,8 @@ class HydroPandasExtension:
             tmin=tmin,
             tmax=tmax,
             unit_multiplier=unit_multiplier,
+            fill_missing_obs=fill_missing_obs,
+            normalize_datetime_index=normalize_datetime_index,
             **kwargs,
         )
 
@@ -261,6 +288,8 @@ class HydroPandasExtension:
         tmin: TimeType = None,
         tmax: TimeType = None,
         unit_multiplier: float = 1.0,
+        normalize_datetime_index: bool = True,
+        fill_missing_obs: bool = True,
         **kwargs,
     ):
         """Download meteorological data from KNMI and store in PastaStore.
@@ -281,6 +310,12 @@ class HydroPandasExtension:
         unit_multiplier : float, optional
             multiply unit by this value before saving it in the store,
             by default 1.0 (no conversion)
+        fill_missing_obs : bool, optional
+            if True, fill missing observations by getting observations from nearest
+            station with data.
+        normalize_datetime_index : bool, optional
+            if True, normalize the datetime so stress value at midnight represents
+            the daily total, by default True.
         """
         # get tmin/tmax if not specified
         tmintmax = self._store.get_tmin_tmax("oseries")
@@ -301,6 +336,7 @@ class HydroPandasExtension:
             meteo_vars=[meteo_var],
             starts=tmin,
             ends=tmax,
+            fill_missing_obs=fill_missing_obs,
             **kwargs,
         )
 
@@ -312,6 +348,7 @@ class HydroPandasExtension:
             data_column=meteo_var,
             unit_multiplier=unit_multiplier,
             update=False,
+            normalize_datetime_index=normalize_datetime_index,
         )
 
     def update_knmi_meteo(
@@ -319,6 +356,10 @@ class HydroPandasExtension:
         names: Optional[List[str]] = None,
         tmin: TimeType = None,
         tmax: TimeType = None,
+        fill_missing_obs=True,
+        normalize_datetime_index=True,
+        raise_on_error=False,
+        **kwargs,
     ):
         """Update meteorological data from KNMI in PastaStore.
 
@@ -331,6 +372,16 @@ class HydroPandasExtension:
             as tmin
         tmax : TimeType, optional
             end time, by default None, which defaults to today
+        fill_missing_obs : bool, optional
+            if True, fill missing observations by getting observations from nearest
+            station with data.
+        normalize_datetime_index : bool, optional
+            if True, normalize the datetime so stress value at midnight represents
+            the daily total, by default True.
+        raise_on_error : bool, optional
+            if True, raise error if an error occurs, by default False
+        **kwargs : dict, optional
+            Additional keyword arguments to pass to `hpd.read_knmi()`
         """
         if names is None:
             names = self._store.stresses.loc[
@@ -339,36 +390,115 @@ class HydroPandasExtension:
 
         tmintmax = self._store.get_tmin_tmax("stresses", names=names)
 
+        if tmax is not None:
+            if tmintmax["tmax"].min() > tmax:
+                logger.info(f"All KNMI stresses are up to date to {tmax}.")
+                return
+
+        maxtmax_rd = _check_latest_measurement_date_de_bilt("RD")
+        maxtmax_ev24 = _check_latest_measurement_date_de_bilt("EV24")
+
         for name in tqdm(names, desc="Updating KNMI meteo stresses"):
-            stn = self._store.stresses.loc[name, "station"]
             meteo_var = self._store.stresses.loc[name, "meteo_var"]
+            if meteo_var == "RD":
+                maxtmax = maxtmax_rd
+            elif meteo_var == "EV24":
+                maxtmax = maxtmax_ev24
+            else:
+                maxtmax = maxtmax_rd
+
+            if tmin is None:
+                # 1 days extra to ensure computation of daily totals using
+                # timestep_weighted_resample
+                itmin = tmintmax.loc[name, "tmax"] - Timedelta(days=1)
+            else:
+                itmin = tmin
+
+            # ensure 2 observations at least
+            if itmin >= (maxtmax + Timedelta(days=1)):
+                logger.debug("KNMI %s is already up to date." % name)
+                continue
+
+            if tmax is None:
+                itmax = maxtmax
+            else:
+                itmax = tmax
+
             unit = self._store.stresses.loc[name, "unit"]
             kind = self._store.stresses.loc[name, "kind"]
+            if "station" in self._store.stresses.columns and ~np.isnan(
+                self._store.stresses.loc[name, "station"]
+            ):
+                stn = self._store.stresses.loc[name, "station"]
+            else:
+                stns = get_stations(meteo_var)
+                stn_name = name.split("_")[-1].lower()
+                mask = stns["name"].str.lower().str.replace(" ", "-") == stn_name
+                if not mask.any():
+                    logger.warning(
+                        f"Station '%s' not found in list of KNMI {meteo_var} stations."
+                        % stn_name
+                    )
+                    continue
+                stn = stns.loc[mask].index[0]
 
             if unit == "mm":
                 unit_multiplier = 1e3
             else:
                 unit_multiplier = 1.0
 
-            if tmin is None:
-                tmin = tmintmax.loc[name, "tmax"]
-
+            logger.debug("Updating KNMI %s from %s to %s" % (name, itmin, itmax))
             knmi = hpd.read_knmi(
                 stns=[stn],
                 meteo_vars=[meteo_var],
-                starts=tmin,
-                ends=tmax,
+                starts=itmin,
+                ends=itmax,
+                fill_missing_obs=fill_missing_obs,
+                **kwargs,
             )
+            obs = knmi["obs"].iloc[0]
 
-            self.add_observation(
-                "stresses",
-                knmi["obs"].iloc[0],
-                name=name,
-                kind=kind,
-                data_column=meteo_var,
-                unit_multiplier=unit_multiplier,
-                update=True,
-            )
+            try:
+                self.add_observation(
+                    "stresses",
+                    obs.loc[tmintmax.loc[name, "tmax"] :],
+                    name=name,
+                    kind=kind,
+                    data_column=meteo_var,
+                    unit_multiplier=unit_multiplier,
+                    update=True,
+                    normalize_datetime_index=normalize_datetime_index,
+                )
+            except ValueError as e:
+                logger.error("Error updating KNMI %s: %s" % (name, str(e)))
+                if raise_on_error:
+                    raise e
+
+    @staticmethod
+    def _normalize_datetime_index(obs):
+        """Normalize observation datetime index (i.e. set observation time to midnight).
+
+        Parameters
+        ----------
+        obs : pandas.Series
+            observation series to normalize
+
+        Returns
+        -------
+        hpd.Obs
+            observation series with normalized datetime index
+        """
+        if isinstance(obs, hpd.Obs):
+            metadata = {k: getattr(obs, k) for k in obs._metadata}
+        else:
+            metadata = {}
+        return obs.__class__(
+            timestep_weighted_resample(
+                obs,
+                obs.index.normalize(),
+            ).rename(obs.name),
+            **metadata,
+        )
 
     def download_bro_gmw(
         self,
