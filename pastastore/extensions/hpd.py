@@ -145,8 +145,8 @@ class HydroPandasExtension:
             return
 
         if normalize_datetime_index and o.index.size > 1:
-            o = self._normalize_datetime_index(o)
-        else:
+            o = self._normalize_datetime_index(o).dropna()
+        elif normalize_datetime_index and o.index.size <= 1:
             raise ValueError(
                 "Must have minimum of 2 observations for timestep_weighted_resample."
             )
@@ -202,7 +202,7 @@ class HydroPandasExtension:
     def download_knmi_precipitation(
         self,
         stns: Optional[list[int]] = None,
-        meteo_var: str = "RH",
+        meteo_var: str = "RD",
         tmin: TimeType = None,
         tmax: TimeType = None,
         unit_multiplier: float = 1e3,
@@ -217,7 +217,7 @@ class HydroPandasExtension:
         stns : list of int/str, optional
             list of station numbers to download data for, by default None
         meteo_var : str, optional
-            variable to download, by default "RH", valid options are ["RD", "RH"].
+            variable to download, by default "RD", valid options are ["RD", "RH"].
         tmin : TimeType, optional
             start time, by default None
         tmax : TimeType, optional
@@ -359,9 +359,9 @@ class HydroPandasExtension:
         names: Optional[List[str]] = None,
         tmin: TimeType = None,
         tmax: TimeType = None,
-        fill_missing_obs=True,
-        normalize_datetime_index=True,
-        raise_on_error=False,
+        fill_missing_obs: bool = True,
+        normalize_datetime_index: bool = True,
+        raise_on_error: bool = False,
         **kwargs,
     ):
         """Update meteorological data from KNMI in PastaStore.
@@ -398,24 +398,27 @@ class HydroPandasExtension:
                 logger.info(f"All KNMI stresses are up to date to {tmax}.")
                 return
 
-        maxtmax_rd = _check_latest_measurement_date_de_bilt("RD")
-        maxtmax_ev24 = _check_latest_measurement_date_de_bilt("EV24")
+        # NOTE: this check is very flaky (15 august 2024), perhaps I annoyed the
+        # KNMI server... Trying to skip this check and just attempt downloading data.
+        # maxtmax_rd = _check_latest_measurement_date_de_bilt("RD")
+        # maxtmax_ev24 = _check_latest_measurement_date_de_bilt("EV24")
+        maxtmax = Timestamp.today() - Timedelta(days=1)
 
         for name in tqdm(names, desc="Updating KNMI meteo stresses"):
             meteo_var = self._store.stresses.loc[name, "meteo_var"]
-            if meteo_var == "RD":
-                maxtmax = maxtmax_rd
-            elif meteo_var == "EV24":
-                maxtmax = maxtmax_ev24
-            else:
-                maxtmax = maxtmax_rd
+            # if meteo_var == "RD":
+            #     maxtmax = maxtmax_rd
+            # elif meteo_var == "EV24":
+            #     maxtmax = maxtmax_ev24
+            # else:
+            #     maxtmax = maxtmax_rd
 
+            # 1 days extra to ensure computation of daily totals using
+            # timestep_weighted_resample
             if tmin is None:
-                # 1 days extra to ensure computation of daily totals using
-                # timestep_weighted_resample
                 itmin = tmintmax.loc[name, "tmax"] - Timedelta(days=1)
             else:
-                itmin = tmin
+                itmin = tmin - Timedelta(days=1)
 
             # ensure 2 observations at least
             if itmin >= (maxtmax + Timedelta(days=1)):
@@ -425,7 +428,7 @@ class HydroPandasExtension:
             if tmax is None:
                 itmax = maxtmax
             else:
-                itmax = tmax
+                itmax = Timestamp(tmax)
 
             unit = self._store.stresses.loc[name, "unit"]
             kind = self._store.stresses.loc[name, "kind"]
@@ -464,7 +467,7 @@ class HydroPandasExtension:
             try:
                 self.add_observation(
                     "stresses",
-                    obs.loc[tmintmax.loc[name, "tmax"] :],
+                    obs,
                     name=name,
                     kind=kind,
                     data_column=meteo_var,

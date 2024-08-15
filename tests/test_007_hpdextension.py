@@ -61,6 +61,6 @@ def test_update_stresses():
     activate_hydropandas_extension()
 
     pstore = pst.PastaStore.from_zip("tests/data/test_hpd_update.zip")
-    pstore.hpd.update_knmi_meteo(tmax="2024-01-31")
+    pstore.hpd.update_knmi_meteo(tmax="2024-01-31", normalize_datetime_index=False)
     tmintmax = pstore.get_tmin_tmax("stresses")
     assert (tmintmax["tmax"] >= Timestamp("2024-01-31")).all()
