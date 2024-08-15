@@ -53,7 +53,7 @@ class HydroPandasExtension:
         data_column: Optional[str] = None,
         unit_multiplier: float = 1.0,
         update: bool = False,
-        normalize_datetime_index: bool = True,
+        normalize_datetime_index: bool = False,
     ):
         """Add an ObsCollection to the PastaStore.
 
@@ -72,6 +72,9 @@ class HydroPandasExtension:
             multiply unit by this value before saving it in the store
         update : bool, optional
             if True, update currently stored time series with new data
+        normalize_datetime_index : bool, optional
+            if True, normalize the datetime so stress value at midnight represents
+            the daily total, by default True.
         """
         for name, row in oc.iterrows():
             obs = row["obs"]
@@ -391,7 +394,7 @@ class HydroPandasExtension:
         tmintmax = self._store.get_tmin_tmax("stresses", names=names)
 
         if tmax is not None:
-            if tmintmax["tmax"].min() > tmax:
+            if tmintmax["tmax"].min() > Timestamp(tmax):
                 logger.info(f"All KNMI stresses are up to date to {tmax}.")
                 return
 
