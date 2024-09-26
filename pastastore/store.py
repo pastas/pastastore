@@ -78,6 +78,11 @@ class PastaStore:
         self.plots = Plots(self)
         self.yaml = PastastoreYAML(self)
 
+    @property
+    def empty(self) -> bool:
+        """Check if the PastaStore is empty."""
+        return self.conn.empty
+
     def _register_connector_methods(self):
         """Register connector methods (internal method)."""
         methods = [
