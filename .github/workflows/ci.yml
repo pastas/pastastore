@@ -74,11 +74,19 @@ jobs:
           cache: "pip"
           cache-dependency-path: pyproject.toml
 
-      - name: Install dependencies
+      - name: Install dependencies < PY312
+        if: ${{ matrix.python-version != '3.12'}}  
         run: |
           pip install --upgrade pip
           pip install ${{ matrix.pastas-version }}
           pip install -e .[test]
+
+      - name: Install dependencies == PY312
+        if: ${{ matrix.python-version == '3.12'}}  
+        run: |
+          pip install --upgrade pip
+          pip install ${{ matrix.pastas-version }}
+          pip install -e .[test_py312]
 
       - name: Run pytest
         run: |
