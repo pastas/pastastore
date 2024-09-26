@@ -23,7 +23,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: 3.11
           cache: "pip"
           cache-dependency-path: pyproject.toml
 
@@ -47,7 +47,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12"]
         pastas-version:
           [
             "git+https://github.com/pastas/pastas.git@v0.22.0",
@@ -74,22 +74,11 @@ jobs:
           cache: "pip"
           cache-dependency-path: pyproject.toml
 
-      - name: Install dependencies < PY312
-        if: ${{ matrix.python-version != '3.12'}}  
+      - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install numpy
           pip install ${{ matrix.pastas-version }}
           pip install -e .[test]
-
-      - name: Install dependencies == PY312
-        if: ${{ matrix.python-version == '3.12'}}  
-        run: |
-          pip install --upgrade pip
-          # TODO: remove numpy pin when numba or ? doesn't crash on NaN being deprecated
-          pip install "numpy<2.0"  
-          pip install ${{ matrix.pastas-version }}
-          pip install -e .[test_py312]
 
       - name: Run pytest
         run: |
