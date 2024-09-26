@@ -1,8 +1,8 @@
 """Module containing dataframe styling functions."""
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import rgb2hex
 
 
 def float_styler(val, norm, cmap=None):
@@ -26,12 +26,12 @@ def float_styler(val, norm, cmap=None):
     -----
     Given some dataframe
 
-    >>> df.map(float_styler, subset=["some column"], norm=norm, cmap=cmap)
+    >>> df.style.map(float_styler, subset=["some column"], norm=norm, cmap=cmap)
     """
     if cmap is None:
         cmap = plt.get_cmap("RdYlBu")
     bg = cmap(norm(val))
-    color = mpl.colors.rgb2hex(bg)
+    color = rgb2hex(bg)
     c = "White" if np.mean(bg[:3]) < 0.4 else "Black"
     return f"background-color: {color}; color: {c}"
 
@@ -53,15 +53,48 @@ def boolean_styler(b):
     -----
     Given some dataframe
 
-    >>> df.map(boolean_styler, subset=["some column"])
+    >>> df.style.map(boolean_styler, subset=["some column"])
     """
     if b:
         return (
-            f"background-color: {mpl.colors.rgb2hex((231/255, 255/255, 239/255))}; "
+            f"background-color: {rgb2hex((231/255, 255/255, 239/255))}; "
             "color: darkgreen"
         )
     else:
         return (
-            f"background-color: {mpl.colors.rgb2hex((255/255, 238/255, 238/255))}; "
+            f"background-color: {rgb2hex((255/255, 238/255, 238/255))}; "
             "color: darkred"
         )
+
+
+def boolean_row_styler(row, column):
+    """Styler function to color rows based on the value in column.
+
+    Parameters
+    ----------
+    row : pd.Series
+        row in dataframe
+    column : str
+        column name to get boolean value for styling
+
+    Returns
+    -------
+    str
+        css for styling dataframe row
+
+    Usage
+    -----
+    Given some dataframe
+
+    >>> df.style.apply(boolean_row_styler, column="boolean_column", axis=1)
+    """
+    if row[column]:
+        return (
+            f"background-color: {rgb2hex((231/255, 255/255, 239/255))}; "
+            "color: darkgreen",
+        ) * row.size
+    else:
+        return (
+            f"background-color: {rgb2hex((255/255, 238/255, 238/255))}; "
+            "color: darkred",
+        ) * row.size
