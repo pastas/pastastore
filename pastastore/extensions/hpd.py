@@ -12,7 +12,7 @@ from typing import List, Optional, Union
 
 import hydropandas as hpd
 import numpy as np
-from hydropandas.io.knmi import get_stations
+from hydropandas.io.knmi import _check_latest_measurement_date_de_bilt, get_stations
 from pandas import DataFrame, Series, Timedelta, Timestamp
 from pastas.timeseries_utils import timestep_weighted_resample
 from tqdm.auto import tqdm
@@ -179,7 +179,7 @@ class HydroPandasExtension:
             action_msg = "added to"
 
         if libname == "oseries":
-            self._store.upsert_oseries(o.squeeze(), name, metadata=metadata)
+            self._store.upsert_oseries(o.squeeze(axis=1), name, metadata=metadata)
             logger.info(
                 "%sobservation '%s' %s oseries library.", source, name, action_msg
             )
@@ -187,7 +187,7 @@ class HydroPandasExtension:
             if kind is None:
                 raise ValueError("`kind` must be specified for stresses!")
             self._store.upsert_stress(
-                (o * unit_multiplier).squeeze(), name, kind, metadata=metadata
+                (o * unit_multiplier).squeeze(axis=1), name, kind, metadata=metadata
             )
             logger.info(
                 "%sstress '%s' (kind='%s') %s stresses library.",
@@ -394,24 +394,32 @@ class HydroPandasExtension:
         tmintmax = self._store.get_tmin_tmax("stresses", names=names)
 
         if tmax is not None:
-            if tmintmax["tmax"].min() > Timestamp(tmax):
-                logger.info(f"All KNMI stresses are up to date to {tmax}.")
+            if tmintmax["tmax"].min() >= Timestamp(tmax):
+                logger.info(f"All KNMI stresses are up to date till {tmax}.")
                 return
 
-        # NOTE: this check is very flaky (15 august 2024), perhaps I annoyed the
-        # KNMI server... Trying to skip this check and just attempt downloading data.
-        # maxtmax_rd = _check_latest_measurement_date_de_bilt("RD")
-        # maxtmax_ev24 = _check_latest_measurement_date_de_bilt("EV24")
-        maxtmax = Timestamp.today() - Timedelta(days=1)
+        try:
+            maxtmax_rd = _check_latest_measurement_date_de_bilt("RD")
+            maxtmax_ev24 = _check_latest_measurement_date_de_bilt("EV24")
+        except Exception as e:
+            # otherwise use maxtmax 28 days (4 weeks) prior to today
+            logger.warning(
+                "Could not check latest measurement date in De Bilt: %s" % str(e)
+            )
+            maxtmax_rd = maxtmax_ev24 = Timestamp.today() - Timedelta(days=28)
+            logger.info(
+                "Using 28 days (4 weeks) prior to today as maxtmax: %s."
+                % str(maxtmax_rd)
+            )
 
         for name in tqdm(names, desc="Updating KNMI meteo stresses"):
             meteo_var = self._store.stresses.loc[name, "meteo_var"]
-            # if meteo_var == "RD":
-            #     maxtmax = maxtmax_rd
-            # elif meteo_var == "EV24":
-            #     maxtmax = maxtmax_ev24
-            # else:
-            #     maxtmax = maxtmax_rd
+            if meteo_var == "RD":
+                maxtmax = maxtmax_rd
+            elif meteo_var == "EV24":
+                maxtmax = maxtmax_ev24
+            else:
+                maxtmax = maxtmax_rd
 
             # 1 days extra to ensure computation of daily totals using
             # timestep_weighted_resample
@@ -421,7 +429,7 @@ class HydroPandasExtension:
                 itmin = tmin - Timedelta(days=1)
 
             # ensure 2 observations at least
-            if itmin >= (maxtmax + Timedelta(days=1)):
+            if itmin >= (maxtmax - Timedelta(days=1)):
                 logger.debug("KNMI %s is already up to date." % name)
                 continue
 
@@ -430,20 +438,29 @@ class HydroPandasExtension:
             else:
                 itmax = Timestamp(tmax)
 
+            # fix for duplicate station entry in metadata:
+            stress_station = (
+                self._store.stresses.at[name, "station"]
+                if "station" in self._store.stresses.columns
+                else None
+            )
+            if stress_station is not None and not isinstance(
+                stress_station, (int, np.integer)
+            ):
+                stress_station = stress_station.squeeze().unique().item()
+
             unit = self._store.stresses.loc[name, "unit"]
             kind = self._store.stresses.loc[name, "kind"]
-            if "station" in self._store.stresses.columns and ~np.isnan(
-                self._store.stresses.loc[name, "station"]
-            ):
-                stn = self._store.stresses.loc[name, "station"]
+            if stress_station is not None:
+                stn = stress_station
             else:
                 stns = get_stations(meteo_var)
                 stn_name = name.split("_")[-1].lower()
                 mask = stns["name"].str.lower().str.replace(" ", "-") == stn_name
                 if not mask.any():
                     logger.warning(
-                        f"Station '%s' not found in list of KNMI {meteo_var} stations."
-                        % stn_name
+                        "Station '%s' not found in list of KNMI %s stations."
+                        % (stn_name, meteo_var)
                     )
                     continue
                 stn = stns.loc[mask].index[0]
