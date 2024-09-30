@@ -6,6 +6,7 @@ import os
 import warnings
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
+from platform import system as os_system
 from typing import Dict, List, Literal, Optional, Tuple, Union
 
 import numpy as np
@@ -1226,7 +1227,21 @@ class PastaStore:
             ignore_solve_errors=ignore_solve_errors,
             **kwargs,
         )
+        if self.conn.__class__.__name__ != "PasConnector":
+            parallel = False
+            logger.error(
+                "Parallel solving only supported for PasConnector databases."
+                "Setting parallel to `False`"
+            )
+
         if parallel:
+            if os_system() != "Linux":
+                logger.warning(
+                    "Parallel solving is experimental on other operating "
+                    "systems than Linux. Please use an "
+                    "`if __name__==__main__:` statement before the "
+                    "`solve_models` method."
+                )
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
                 if progressbar:
                     _ = list(
