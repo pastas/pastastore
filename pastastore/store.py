@@ -14,6 +14,7 @@ import pastas as ps
 from packaging.version import parse as parse_version
 from pastas.io.pas import pastas_hook
 from tqdm.auto import tqdm
+from tqdm.contrib.concurrent import process_map
 
 from pastastore.base import BaseConnector
 from pastastore.connectors import DictConnector
@@ -1245,17 +1246,11 @@ class PastaStore:
                 "Setting parallel to `False`"
             )
 
+        if parallel and progressbar:
+            process_map(solve_model, modelnames, max_workers=max_workers)
+        elif parallel and not progressbar:
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
-                if progressbar:
-                    _ = list(
-                        tqdm(
-                            executor.map(solve_model, modelnames),
-                            total=len(modelnames),
-                            desc="Solving models",
-                        )
-                    )
-                else:
-                    executor.map(solve_model, modelnames)
+                executor.map(solve_model, modelnames)
         else:
             for ml_name in (
                 tqdm(modelnames, desc="Solving models") if progressbar else modelnames
