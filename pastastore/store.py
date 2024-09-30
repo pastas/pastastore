@@ -6,7 +6,6 @@ import os
 import warnings
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
-from platform import system as os_system
 from typing import Dict, List, Literal, Optional, Tuple, Union
 
 import numpy as np
@@ -1214,6 +1213,18 @@ class PastaStore:
             None which will use the number of cores available on the machine
         **kwargs : dictionary
             arguments are passed to the solve method.
+
+        Notes
+        -----
+        Users of operating systems other than Linux should be aware that
+        parallel solving is experimental and may not work as expected.
+        To use parallel solving on Windows, the following code should be used:
+
+        >>> from multiprocessing import freeze_support
+
+        >>> if __name__ == "__main__":
+        >>>    freeze_support()
+        >>>    pstore.solve_models(parallel=True)
         """
         if "mls" in kwargs:
             modelnames = kwargs.pop("mls")
@@ -1234,14 +1245,6 @@ class PastaStore:
                 "Setting parallel to `False`"
             )
 
-        if parallel:
-            if os_system() != "Linux":
-                logger.warning(
-                    "Parallel solving is experimental on other operating "
-                    "systems than Linux. Please use an "
-                    "`if __name__==__main__:` statement before the "
-                    "`solve_models` method."
-                )
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
                 if progressbar:
                     _ = list(
