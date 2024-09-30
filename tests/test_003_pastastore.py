@@ -195,7 +195,7 @@ def test_iter_models(request, pstore):
 def test_solve_models_and_get_stats(request, pstore):
     depends(request, [f"test_create_models[{pstore.type}]"])
     _ = pstore.solve_models(
-        ignore_solve_errors=False, progressbar=False, store_result=True, parallel=False
+        ignore_solve_errors=False, progressbar=False, parallel=False
     )
     stats = pstore.get_statistics(["evp", "aic"], progressbar=False)
     assert stats.index.size == 2
@@ -205,7 +205,7 @@ def test_solve_models_and_get_stats(request, pstore):
 def test_solve_models_parallel(request, pstore):
     depends(request, [f"test_create_models[{pstore.type}]"])
     _ = pstore.solve_models(
-        ignore_solve_errors=False, progressbar=False, store_result=True, parallel=True
+        ignore_solve_errors=False, progressbar=False, parallel=True
     )
 
 
