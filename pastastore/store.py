@@ -1,4 +1,5 @@
 """Module containing the PastaStore object for managing time series and models."""
+
 import json
 import logging
 import os
