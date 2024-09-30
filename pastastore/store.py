@@ -1220,31 +1220,29 @@ class PastaStore:
 
         modelnames = self.conn.model_names if modelnames is None else modelnames
 
+        solve_model = partial(
+            self._solve_model,
+            report=report,
+            ignore_solve_errors=ignore_solve_errors,
+            **kwargs,
+        )
         if parallel:
-            solve_model_partial = partial(
-                self._solve_model,
-                report=report,
-                ignore_solve_errors=ignore_solve_errors,
-                **kwargs,
-            )
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
-                _ = list(
-                    tqdm(
-                        executor.map(solve_model_partial, modelnames),
-                        total=len(modelnames),
-                        desc="Solving models",
+                if progressbar:
+                    _ = list(
+                        tqdm(
+                            executor.map(solve_model, modelnames),
+                            total=len(modelnames),
+                            desc="Solving models",
+                        )
                     )
-                )
+                else:
+                    executor.map(solve_model, modelnames)
         else:
             for ml_name in (
                 tqdm(modelnames, desc="Solving models") if progressbar else modelnames
             ):
-                self._solve_model(
-                    ml_name=ml_name,
-                    report=report,
-                    ignore_solve_errors=ignore_solve_errors,
-                    **kwargs,
-                )
+                solve_model(ml_name=ml_name)
 
     def _solve_model(
         self,

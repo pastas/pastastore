@@ -204,9 +204,7 @@ def test_solve_models_and_get_stats(request, pstore):
 @pytest.mark.dependency
 def test_solve_models_parallel(request, pstore):
     depends(request, [f"test_create_models[{pstore.type}]"])
-    _ = pstore.solve_models(
-        ignore_solve_errors=False, progressbar=False, parallel=True
-    )
+    _ = pstore.solve_models(ignore_solve_errors=False, progressbar=False, parallel=True)
 
 
 def test_apply(request, pstore):
