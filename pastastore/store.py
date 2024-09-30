@@ -1217,11 +1217,12 @@ class PastaStore:
 
         Notes
         -----
-        Users of operating systems other than Linux should be aware that
-        parallel solving is experimental and may not work as expected.
-        To use parallel solving on Windows, the following code should be used:
+        Users should be aware that parallel solving is platform dependent
+        and may not always work. The current implementation works well for Linux users.
+        For Windows users, parallel solving does not work when called directly from
+        Jupyter Notebooks or IPython. To use parallel solving on Windows, the following
+        code should be used in a Python file::
 
-        .. code-block:: python
             from multiprocessing import freeze_support
 
             if __name__ == "__main__":
