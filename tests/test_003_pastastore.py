@@ -201,7 +201,7 @@ def test_solve_models_and_get_stats(request, pstore):
     assert stats.index.size == 2
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency
 def test_solve_models_parallel(request, pstore):
     depends(request, [f"test_create_models[{pstore.type}]"])
     _ = pstore.solve_models(
