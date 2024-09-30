@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import warnings
+from concurrent.futures import ProcessPoolExecutor
 from typing import Dict, List, Literal, Optional, Tuple, Union
 
 import numpy as np
@@ -1185,6 +1186,8 @@ class PastaStore:
         ignore_solve_errors: bool = False,
         store_result: bool = True,
         progressbar: bool = True,
+        parallel: bool = False,
+        max_workers: Optional[int] = None,
         **kwargs,
     ) -> None:
         """Solves the models in the store.
@@ -1204,7 +1207,12 @@ class PastaStore:
         store_result : bool, optional
             if True save optimized models, default is True
         progressbar : bool, optional
-            show progressbar, default is True
+            show progressbar, default is True. Does not work (yet) for parallel.
+        parralel: bool, optional
+            if True, solve models in parallel using ProcessPoolExecutor
+        max_workers: int, optional
+            maximum number of workers to use in parallel solving, default is
+            None which will use the number of cores available on the machine
         **kwargs :
             arguments are passed to the solve method.
         """
@@ -1213,10 +1221,7 @@ class PastaStore:
         elif isinstance(mls, ps.Model):
             mls = [mls.name]
 
-        desc = "Solving models"
-        for ml_name in tqdm(mls, desc=desc) if progressbar else mls:
-            ml = self.conn.get_models(ml_name)
-
+        def solve_model(ml: ps.Model) -> None:
             m_kwargs = {}
             for key, value in kwargs.items():
                 if isinstance(value, pd.Series):
@@ -1238,6 +1243,15 @@ class PastaStore:
                     ps.logger.warning(warning)
                 else:
                     raise e
+
+        if parallel:
+            models = self.conn.get_models(mls, progressbar=False)
+            with ProcessPoolExecutor(max_workers=max_workers) as executor:
+                executor.map(solve_model, models)
+        else:
+            for ml_name in tqdm(mls, desc="Solving models") if progressbar else mls:
+                ml = self.conn.get_models(ml_name, progressbar=False)
+                solve_model(ml)
 
     def model_results(
         self,
