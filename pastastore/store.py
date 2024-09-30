@@ -1221,7 +1221,8 @@ class PastaStore:
         elif isinstance(mls, ps.Model):
             mls = [mls.name]
 
-        def solve_model(ml: ps.Model) -> None:
+        def solve_model(ml_name: str) -> None:
+            ml = self.conn.get_models(ml_name, progressbar=False)
             m_kwargs = {}
             for key, value in kwargs.items():
                 if isinstance(value, pd.Series):
@@ -1245,13 +1246,11 @@ class PastaStore:
                     raise e
 
         if parallel:
-            models = self.conn.get_models(mls, progressbar=False)
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
-                executor.map(solve_model, models)
+                executor.map(solve_model, mls)
         else:
             for ml_name in tqdm(mls, desc="Solving models") if progressbar else mls:
-                ml = self.conn.get_models(ml_name, progressbar=False)
-                solve_model(ml)
+                solve_model(ml_name)
 
     def model_results(
         self,
