@@ -1239,7 +1239,7 @@ class PastaStore:
             ignore_solve_errors=ignore_solve_errors,
             **kwargs,
         )
-        if self.conn.__class__.__name__ != "PasConnector":
+        if self.conn.conn_type != "pas":
             parallel = False
             logger.error(
                 "Parallel solving only supported for PasConnector databases."
