@@ -1294,8 +1294,8 @@ class PastaStore:
             ml.solve(report=report, **m_kwargs)
         except Exception as e:
             if ignore_solve_errors:
-                warning = "solve error ignored for -> {}".format(ml.name)
-                ps.logger.warning(warning)
+                warning = "Solve error ignored for '%s': %s " %(ml.name, e)
+                logger.warning(warning)
             else:
                 raise e
 
