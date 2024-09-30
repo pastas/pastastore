@@ -1,10 +1,10 @@
 """Module containing the PastaStore object for managing time series and models."""
-
 import json
 import logging
 import os
 import warnings
 from concurrent.futures import ProcessPoolExecutor
+from functools import partial
 from typing import Dict, List, Literal, Optional, Tuple, Union
 
 import numpy as np
@@ -1181,10 +1181,9 @@ class PastaStore:
 
     def solve_models(
         self,
-        mls: Optional[Union[ps.Model, list, str]] = None,
+        modelnames: Union[List[str], None] = None,
         report: bool = False,
         ignore_solve_errors: bool = False,
-        store_result: bool = True,
         progressbar: bool = True,
         parallel: bool = False,
         max_workers: Optional[int] = None,
@@ -1194,7 +1193,7 @@ class PastaStore:
 
         Parameters
         ----------
-        mls : list of str, optional
+        modelnames : list of str, optional
             list of model names, if None all models in the pastastore
             are solved.
         report : boolean, optional
@@ -1204,53 +1203,91 @@ class PastaStore:
             if True, errors emerging from the solve method are ignored,
             default is False which will raise an exception when a model
             cannot be optimized
-        store_result : bool, optional
-            if True save optimized models, default is True
         progressbar : bool, optional
-            show progressbar, default is True. Does not work (yet) for parallel.
+            show progressbar, default is True.
         parralel: bool, optional
             if True, solve models in parallel using ProcessPoolExecutor
         max_workers: int, optional
             maximum number of workers to use in parallel solving, default is
             None which will use the number of cores available on the machine
-        **kwargs :
+        **kwargs : dictionary
             arguments are passed to the solve method.
         """
-        if mls is None:
-            mls = self.conn.model_names
-        elif isinstance(mls, ps.Model):
-            mls = [mls.name]
+        if "mls" in kwargs:
+            modelnames = kwargs.pop("mls")
+            logger.warning("Argument `mls` is deprecated, use `modelnames` instead.")
 
-        def solve_model(ml_name: str) -> None:
-            ml = self.conn.get_models(ml_name, progressbar=False)
-            m_kwargs = {}
-            for key, value in kwargs.items():
-                if isinstance(value, pd.Series):
-                    m_kwargs[key] = value.loc[ml_name]
-                else:
-                    m_kwargs[key] = value
-            # Convert timestamps
-            for tstamp in ["tmin", "tmax"]:
-                if tstamp in m_kwargs:
-                    m_kwargs[tstamp] = pd.Timestamp(m_kwargs[tstamp])
-
-            try:
-                ml.solve(report=report, **m_kwargs)
-                if store_result:
-                    self.conn.add_model(ml, overwrite=True)
-            except Exception as e:
-                if ignore_solve_errors:
-                    warning = "solve error ignored for -> {}".format(ml.name)
-                    ps.logger.warning(warning)
-                else:
-                    raise e
+        modelnames = self.conn.model_names if modelnames is None else modelnames
 
         if parallel:
+            solve_model_partial = partial(
+                self._solve_model,
+                report=report,
+                ignore_solve_errors=ignore_solve_errors,
+                **kwargs,
+            )
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
-                executor.map(solve_model, mls)
+                _ = list(
+                    tqdm(
+                        executor.map(solve_model_partial, modelnames),
+                        total=len(modelnames),
+                        desc="Solving models",
+                    )
+                )
         else:
-            for ml_name in tqdm(mls, desc="Solving models") if progressbar else mls:
-                solve_model(ml_name)
+            for ml_name in (
+                tqdm(modelnames, desc="Solving models") if progressbar else modelnames
+            ):
+                self._solve_model(
+                    ml_name=ml_name,
+                    report=report,
+                    ignore_solve_errors=ignore_solve_errors,
+                    **kwargs,
+                )
+
+    def _solve_model(
+        self,
+        ml_name: str,
+        report: bool = False,
+        ignore_solve_errors: bool = False,
+        **kwargs,
+    ) -> None:
+        """Solve a model in the store (internal method).
+
+        ml_name : list of str, optional
+            name of a model in the pastastore
+        report : boolean, optional
+            determines if a report is printed when the model is solved,
+            default is False
+        ignore_solve_errors : boolean, optional
+            if True, errors emerging from the solve method are ignored,
+            default is False which will raise an exception when a model
+            cannot be optimized
+        **kwargs : dictionary
+            arguments are passed to the solve method.
+        """
+        ml = self.conn.get_models(ml_name)
+        m_kwargs = {}
+        for key, value in kwargs.items():
+            if isinstance(value, pd.Series):
+                m_kwargs[key] = value.loc[ml.name]
+            else:
+                m_kwargs[key] = value
+        # Convert timestamps
+        for tstamp in ["tmin", "tmax"]:
+            if tstamp in m_kwargs:
+                m_kwargs[tstamp] = pd.Timestamp(m_kwargs[tstamp])
+
+        try:
+            ml.solve(report=report, **m_kwargs)
+        except Exception as e:
+            if ignore_solve_errors:
+                warning = "solve error ignored for -> {}".format(ml.name)
+                ps.logger.warning(warning)
+            else:
+                raise e
+
+        self.conn.add_model(ml, overwrite=True)
 
     def model_results(
         self,
