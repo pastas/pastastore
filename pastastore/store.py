@@ -1183,7 +1183,7 @@ class PastaStore:
 
     def solve_models(
         self,
-        modelnames: Union[List[str], None] = None,
+        modelnames: Union[List[str], str, None] = None,
         report: bool = False,
         ignore_solve_errors: bool = False,
         progressbar: bool = True,
@@ -1231,7 +1231,7 @@ class PastaStore:
             modelnames = kwargs.pop("mls")
             logger.warning("Argument `mls` is deprecated, use `modelnames` instead.")
 
-        modelnames = self.conn.model_names if modelnames is None else modelnames
+        modelnames = self.conn._parse_names(modelnames, libname="models")
 
         solve_model = partial(
             self._solve_model,
