@@ -1207,7 +1207,7 @@ class PastaStore:
             cannot be optimized
         progressbar : bool, optional
             show progressbar, default is True.
-        parralel: bool, optional
+        parallel: bool, optional
             if True, solve models in parallel using ProcessPoolExecutor
         max_workers: int, optional
             maximum number of workers to use in parallel solving, default is
@@ -1221,11 +1221,12 @@ class PastaStore:
         parallel solving is experimental and may not work as expected.
         To use parallel solving on Windows, the following code should be used:
 
-        >>> from multiprocessing import freeze_support
+        .. code-block:: python
+            from multiprocessing import freeze_support
 
-        >>> if __name__ == "__main__":
-        >>>    freeze_support()
-        >>>    pstore.solve_models(parallel=True)
+            if __name__ == "__main__":
+                freeze_support()
+                pstore.solve_models(parallel=True)
         """
         if "mls" in kwargs:
             modelnames = kwargs.pop("mls")
