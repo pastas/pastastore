@@ -56,6 +56,11 @@ class BaseConnector(ABC):
             f"{self.n_models} models"
         )
 
+    @property
+    def empty(self):
+        """Check if the database is empty."""
+        return not any([self.n_oseries > 0, self.n_stresses > 0, self.n_models > 0])
+
     @abstractmethod
     def _get_library(self, libname: str):
         """Get library handle.
