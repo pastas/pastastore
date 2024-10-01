@@ -33,4 +33,4 @@ Bulk operations are also provided for:
 * Optimizing pastas Models and storing the results::
 
     # solve models and store result in database
-    pstore.solve_models(ignore_solver_errors=True, store_result=True)
+    pstore.solve_models(ignore_solver_errors=True)
