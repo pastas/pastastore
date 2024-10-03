@@ -80,9 +80,6 @@ docs = [
     "nbsphinx_link",
 ]
 
-[tool.setuptools]
-packages = ["pastastore"]
-
 [tool.setuptools.dynamic]
 version = { attr = "pastastore.version.__version__" }
 
