@@ -675,22 +675,27 @@ class BaseConnector(ABC):
         metadata["kind"] = kind
         self._upsert_series("stresses", series, name, metadata=metadata)
 
-    def del_models(self, names: Union[list, str]) -> None:
+    def del_models(self, names: Union[list, str], verbose: bool = True) -> None:
         """Delete model(s) from the database.
 
         Parameters
         ----------
         names : str or list of str
             name(s) of the model to delete
+        verbose : bool, optional
+            print information about deleted models, by default True
         """
-        for n in self._parse_names(names, libname="models"):
+        names = self._parse_names(names, libname="models")
+        for n in names:
             mldict = self.get_models(n, return_dict=True)
             oname = mldict["oseries"]["name"]
             self._del_item("models", n)
             self._del_oseries_model_link(oname, n)
         self._clear_cache("_modelnames_cache")
+        if verbose:
+            print(f"Deleted {len(names)} model(s) from database.")
 
-    def del_model(self, names: Union[list, str]) -> None:
+    def del_model(self, names: Union[list, str], verbose: bool = True) -> None:
         """Delete model(s) from the database.
 
         Alias for del_models().
@@ -699,10 +704,14 @@ class BaseConnector(ABC):
         ----------
         names : str or list of str
             name(s) of the model to delete
+        verbose : bool, optional
+            print information about deleted models, by default True
         """
-        self.del_models(names=names)
+        self.del_models(names=names, verbose=verbose)
 
-    def del_oseries(self, names: Union[list, str], remove_models: bool = False):
+    def del_oseries(
+        self, names: Union[list, str], remove_models: bool = False, verbose: bool = True
+    ):
         """Delete oseries from the database.
 
         Parameters
@@ -711,29 +720,38 @@ class BaseConnector(ABC):
             name(s) of the oseries to delete
         remove_models : bool, optional
             also delete models for deleted oseries, default is False
+        verbose : bool, optional
+            print information about deleted oseries, by default True
         """
         names = self._parse_names(names, libname="oseries")
         for n in names:
             self._del_item("oseries", n)
         self._clear_cache("oseries")
+        if verbose:
+            print(f"Deleted {len(names)} oseries from database.")
         # remove associated models from database
         if remove_models:
             modelnames = list(
                 chain.from_iterable([self.oseries_models.get(n, []) for n in names])
             )
-            self.del_models(modelnames)
+            self.del_models(modelnames, verbose=verbose)
 
-    def del_stress(self, names: Union[list, str]):
+    def del_stress(self, names: Union[list, str], verbose: bool = True):
         """Delete stress from the database.
 
         Parameters
         ----------
         names : str or list of str
             name(s) of the stress to delete
+        verbose : bool, optional
+            print information about deleted stresses, by default True
         """
-        for n in self._parse_names(names, libname="stresses"):
+        names = self._parse_names(names, libname="stresses")
+        for n in names:
             self._del_item("stresses", n)
         self._clear_cache("stresses")
+        if verbose:
+            print(f"Deleted {len(names)} stress(es) from database.")
 
     def _get_series(
         self,
