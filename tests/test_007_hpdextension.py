@@ -67,3 +67,19 @@ def test_update_stresses():
     pstore.hpd.update_knmi_meteo(tmax="2024-01-31", normalize_datetime_index=False)
     tmintmax = pstore.get_tmin_tmax("stresses")
     assert (tmintmax["tmax"] >= Timestamp("2024-01-31")).all()
+
+
+@pytest.mark.xfail(reason="KNMI is being flaky, so allow this test to xfail/xpass.")
+@pytest.mark.pastas150
+def test_nearest_stresses():
+    from pastastore.extensions import activate_hydropandas_extension
+
+    activate_hydropandas_extension()
+
+    pstore = pst.PastaStore.from_zip("tests/data/test_hpd_update.zip")
+    pstore.hpd.download_nearest_knmi_precipitation(
+        "GMW000000036319_1", tmin="2024-01-01"
+    )
+    assert "RD_GROOT-AMMERS" in pstore.stresses_names
+    pstore.hpd.download_nearest_knmi_evaporation("GMW000000036319_1", tmin="2024-01-01")
+    assert "EV24_CABAUW-MAST" in pstore.stresses_names
