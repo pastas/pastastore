@@ -331,7 +331,7 @@ class HydroPandasExtension:
             variable to download, by default "RH", valid options are
             e.g. ["RD", "RH", "EV24", "T", "Q"].
         kind : str
-            kind identifier for observations, usually "prec" or "evap".
+            kind identifier for observations in pastastore, usually "prec" or "evap".
         stns : list of int/str, optional
             list of station numbers to download data for, by default None
         tmin : TimeType, optional
@@ -348,12 +348,7 @@ class HydroPandasExtension:
             if True, normalize the datetime so stress value at midnight represents
             the daily total, by default True.
         """
-        # get tmin/tmax if not specified
-        tmintmax = self._store.get_tmin_tmax("oseries")
-        if tmin is None:
-            tmin = tmintmax.loc[:, "tmin"].min() - Timedelta(days=10 * 365)
-        if tmax is None:
-            tmax = tmintmax.loc[:, "tmax"].max()
+        tmin, tmax = self._get_tmin_tmax(tmin, tmax)
 
         if stns is None:
             locations = self._store.oseries.loc[:, ["x", "y"]]
