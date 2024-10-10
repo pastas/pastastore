@@ -199,6 +199,34 @@ class HydroPandasExtension:
         else:
             raise ValueError("libname must be 'oseries' or 'stresses'.")
 
+    def _get_tmin_tmax(self, tmin, tmax, oseries=None):
+        """Get tmin and tmax from store if not specified.
+
+        Parameters
+        ----------
+        tmin : TimeType
+            start time
+        tmax : TimeType
+            end time
+        oseries : str, optional
+            name of the observation series to get tmin/tmax for, by default None
+
+        Returns
+        -------
+        tmin, tmax : TimeType, TimeType
+            tmin and tmax
+        """
+        # get tmin/tmax if not specified
+        if tmin is None or tmax is None:
+            tmintmax = self._store.get_tmin_tmax(
+                "oseries", names=[oseries] if oseries else None
+            )
+        if tmin is None:
+            tmin = tmintmax.loc[:, "tmin"].min() - Timedelta(days=10 * 365)
+        if tmax is None:
+            tmax = tmintmax.loc[:, "tmax"].max()
+        return tmin, tmax
+
     def download_knmi_precipitation(
         self,
         stns: Optional[list[int]] = None,
