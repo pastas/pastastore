@@ -403,6 +403,151 @@ class HydroPandasExtension:
             normalize_datetime_index=normalize_datetime_index,
         )
 
+    def download_nearest_knmi_precipitation(
+        self,
+        oseries: str,
+        meteo_var: str = "RD",
+        tmin: Optional[TimeType] = None,
+        tmax: Optional[TimeType] = None,
+        unit_multiplier: float = 1e-3,
+        normalize_datetime_index: bool = True,
+        fill_missing_obs: bool = True,
+        **kwargs,
+    ):
+        """Download precipitation time series data from nearest KNMI station.
+
+        Parameters
+        ----------
+        oseries : str
+            download nearest precipitation information for this observation well
+        meteo_var : str, optional
+            variable to download, by default "RD", valid options are ["RD", "RH"].
+        tmin : TimeType
+            start time
+        tmax : TimeType
+            end time
+        unit_multiplier : float, optional
+            multiply unit by this value before saving it in the store,
+            by default 1.0 (no conversion)
+        fill_missing_obs : bool, optional
+            if True, fill missing observations by getting observations from nearest
+            station with data.
+        fill_missing_obs : bool, optional
+            if True, fill missing observations by getting observations from nearest
+            station with data.
+        """
+        self.download_nearest_knmi_meteo(
+            oseries=oseries,
+            meteo_var=meteo_var,
+            kind="prec",
+            tmin=tmin,
+            tmax=tmax,
+            unit_multiplier=unit_multiplier,
+            normalize_datetime_index=normalize_datetime_index,
+            fill_missing_obs=fill_missing_obs,
+            **kwargs,
+        )
+
+    def download_nearest_knmi_evaporation(
+        self,
+        oseries: str,
+        tmin: Optional[TimeType] = None,
+        tmax: Optional[TimeType] = None,
+        unit_multiplier: float = 1e-3,
+        normalize_datetime_index: bool = True,
+        fill_missing_obs: bool = True,
+        **kwargs,
+    ):
+        """Download evaporation time series data from nearest KNMI station.
+
+        Parameters
+        ----------
+        oseries : str
+            download nearest evaporation information for this observation well
+        tmin : TimeType
+            start time
+        tmax : TimeType
+            end time
+        unit_multiplier : float, optional
+            multiply unit by this value before saving it in the store,
+            by default 1.0 (no conversion)
+        fill_missing_obs : bool, optional
+            if True, fill missing observations by getting observations from nearest
+            station with data.
+        fill_missing_obs : bool, optional
+            if True, fill missing observations by getting observations from nearest
+            station with data.
+        """
+        self.download_nearest_knmi_meteo(
+            oseries=oseries,
+            meteo_var="EV24",
+            kind="evap",
+            tmin=tmin,
+            tmax=tmax,
+            unit_multiplier=unit_multiplier,
+            normalize_datetime_index=normalize_datetime_index,
+            fill_missing_obs=fill_missing_obs,
+            **kwargs,
+        )
+
+    def download_nearest_knmi_meteo(
+        self,
+        oseries: str,
+        meteo_var: str,
+        kind: str,
+        tmin: Optional[TimeType] = None,
+        tmax: Optional[TimeType] = None,
+        unit_multiplier: float = 1.0,
+        normalize_datetime_index: bool = True,
+        fill_missing_obs: bool = True,
+        **kwargs,
+    ):
+        """Download meteorological data from nearest KNMI station.
+
+        Parameters
+        ----------
+        oseries : str
+            download nearest meteorological information for this observation well
+        meteo_var : str
+            meteorological variable to download, e.g. "RD", "RH", "EV24", "T", "Q"
+        kind : str
+            kind identifier for observations in pastastore, usually "prec" or "evap".
+        tmin : TimeType
+            start time
+        tmax : TimeType
+            end time
+        unit_multiplier : float, optional
+            multiply unit by this value before saving it in the store,
+            by default 1.0 (no conversion)
+        fill_missing_obs : bool, optional
+            if True, fill missing observations by getting observations from nearest
+            station with data.
+        fill_missing_obs : bool, optional
+            if True, fill missing observations by getting observations from nearest
+            station with data.
+        """
+        xy = self._store.oseries.loc[[oseries], ["x", "y"]].to_numpy()
+        # download data
+        tmin, tmax = self._get_tmin_tmax(tmin, tmax, oseries=oseries)
+        knmi = hpd.read_knmi(
+            xy=xy,
+            meteo_vars=[meteo_var],
+            starts=tmin,
+            ends=tmax,
+            fill_missing_obs=fill_missing_obs,
+            **kwargs,
+        )
+        # add to store
+        self.add_obscollection(
+            libname="stresses",
+            oc=knmi,
+            kind=kind,
+            data_column=meteo_var,
+            unit_multiplier=unit_multiplier,
+            update=False,
+            normalize_datetime_index=normalize_datetime_index,
+        )
+
     def update_knmi_meteo(
         self,
         names: Optional[List[str]] = None,
