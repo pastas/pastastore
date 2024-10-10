@@ -164,10 +164,10 @@ class HydroPandasExtension:
         metadata.pop("name", None)
         metadata.pop("meta", None)
         unit = metadata.get("unit", None)
-        if unit == "m" and unit_multiplier == 1e3:
+        if unit == "m" and np.allclose(unit_multiplier, 1e-3):
             metadata["unit"] = "mm"
         elif unit_multiplier != 1.0:
-            metadata["unit"] = f"{unit_multiplier:e}*{unit}"
+            metadata["unit"] = f"{unit_multiplier:.1e}*{unit}"
 
         source = metadata.get("source", "")
         if len(source) > 0:
