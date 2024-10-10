@@ -227,6 +227,32 @@ class HydroPandasExtension:
             tmax = tmintmax.loc[:, "tmax"].max()
         return tmin, tmax
 
+    @staticmethod
+    def _normalize_datetime_index(obs):
+        """Normalize observation datetime index (i.e. set observation time to midnight).
+
+        Parameters
+        ----------
+        obs : pandas.Series
+            observation series to normalize
+
+        Returns
+        -------
+        hpd.Obs
+            observation series with normalized datetime index
+        """
+        if isinstance(obs, hpd.Obs):
+            metadata = {k: getattr(obs, k) for k in obs._metadata}
+        else:
+            metadata = {}
+        return obs.__class__(
+            timestep_weighted_resample(
+                obs,
+                obs.index.normalize(),
+            ).rename(obs.name),
+            **metadata,
+        )
+
     def download_knmi_precipitation(
         self,
         stns: Optional[list[int]] = None,
@@ -519,32 +545,6 @@ class HydroPandasExtension:
                 logger.error("Error updating KNMI %s: %s" % (name, str(e)))
                 if raise_on_error:
                     raise e
-
-    @staticmethod
-    def _normalize_datetime_index(obs):
-        """Normalize observation datetime index (i.e. set observation time to midnight).
-
-        Parameters
-        ----------
-        obs : pandas.Series
-            observation series to normalize
-
-        Returns
-        -------
-        hpd.Obs
-            observation series with normalized datetime index
-        """
-        if isinstance(obs, hpd.Obs):
-            metadata = {k: getattr(obs, k) for k in obs._metadata}
-        else:
-            metadata = {}
-        return obs.__class__(
-            timestep_weighted_resample(
-                obs,
-                obs.index.normalize(),
-            ).rename(obs.name),
-            **metadata,
-        )
 
     def download_bro_gmw(
         self,
