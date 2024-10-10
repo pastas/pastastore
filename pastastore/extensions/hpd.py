@@ -580,6 +580,17 @@ class HydroPandasExtension:
         **kwargs : dict, optional
             Additional keyword arguments to pass to `hpd.read_knmi()`
         """
+        if "source" not in self._store.stresses.columns:
+            msg = (
+                "Cannot update KNMI stresses! "
+                "KNMI stresses cannot be identified if 'source' column is not defined."
+            )
+            logger.error(msg)
+            if raise_on_error:
+                raise ValueError(msg)
+            else:
+                return
+
         if names is None:
             names = self._store.stresses.loc[
                 self._store.stresses["source"] == "KNMI"
