@@ -164,10 +164,10 @@ class HydroPandasExtension:
         metadata.pop("name", None)
         metadata.pop("meta", None)
         unit = metadata.get("unit", None)
-        if unit == "m" and unit_multiplier == 1e3:
+        if unit == "m" and np.allclose(unit_multiplier, 1e-3):
             metadata["unit"] = "mm"
         elif unit_multiplier != 1.0:
-            metadata["unit"] = f"{unit_multiplier:e}*{unit}"
+            metadata["unit"] = f"{unit_multiplier:.1e}*{unit}"
 
         source = metadata.get("source", "")
         if len(source) > 0:
@@ -198,6 +198,60 @@ class HydroPandasExtension:
             )
         else:
             raise ValueError("libname must be 'oseries' or 'stresses'.")
+
+    def _get_tmin_tmax(self, tmin, tmax, oseries=None):
+        """Get tmin and tmax from store if not specified.
+
+        Parameters
+        ----------
+        tmin : TimeType
+            start time
+        tmax : TimeType
+            end time
+        oseries : str, optional
+            name of the observation series to get tmin/tmax for, by default None
+
+        Returns
+        -------
+        tmin, tmax : TimeType, TimeType
+            tmin and tmax
+        """
+        # get tmin/tmax if not specified
+        if tmin is None or tmax is None:
+            tmintmax = self._store.get_tmin_tmax(
+                "oseries", names=[oseries] if oseries else None
+            )
+        if tmin is None:
+            tmin = tmintmax.loc[:, "tmin"].min() - Timedelta(days=10 * 365)
+        if tmax is None:
+            tmax = tmintmax.loc[:, "tmax"].max()
+        return tmin, tmax
+
+    @staticmethod
+    def _normalize_datetime_index(obs):
+        """Normalize observation datetime index (i.e. set observation time to midnight).
+
+        Parameters
+        ----------
+        obs : pandas.Series
+            observation series to normalize
+
+        Returns
+        -------
+        hpd.Obs
+            observation series with normalized datetime index
+        """
+        if isinstance(obs, hpd.Obs):
+            metadata = {k: getattr(obs, k) for k in obs._metadata}
+        else:
+            metadata = {}
+        return obs.__class__(
+            timestep_weighted_resample(
+                obs,
+                obs.index.normalize(),
+            ).rename(obs.name),
+            **metadata,
+        )
 
     def download_knmi_precipitation(
         self,
@@ -303,7 +357,7 @@ class HydroPandasExtension:
             variable to download, by default "RH", valid options are
             e.g. ["RD", "RH", "EV24", "T", "Q"].
         kind : str
-            kind identifier for observations, usually "prec" or "evap".
+            kind identifier for observations in pastastore, usually "prec" or "evap".
         stns : list of int/str, optional
             list of station numbers to download data for, by default None
         tmin : TimeType, optional
@@ -320,12 +374,7 @@ class HydroPandasExtension:
             if True, normalize the datetime so stress value at midnight represents
             the daily total, by default True.
         """
-        # get tmin/tmax if not specified
-        tmintmax = self._store.get_tmin_tmax("oseries")
-        if tmin is None:
-            tmin = tmintmax.loc[:, "tmin"].min() - Timedelta(days=10 * 365)
-        if tmax is None:
-            tmax = tmintmax.loc[:, "tmax"].max()
+        tmin, tmax = self._get_tmin_tmax(tmin, tmax)
 
         if stns is None:
             locations = self._store.oseries.loc[:, ["x", "y"]]
@@ -343,6 +392,155 @@ class HydroPandasExtension:
             **kwargs,
         )
 
+        # add to store
+        self.add_obscollection(
+            libname="stresses",
+            oc=knmi,
+            kind=kind,
+            data_column=meteo_var,
+            unit_multiplier=unit_multiplier,
+            update=False,
+            normalize_datetime_index=normalize_datetime_index,
+        )
+
+    def download_nearest_knmi_precipitation(
+        self,
+        oseries: str,
+        meteo_var: str = "RD",
+        tmin: Optional[TimeType] = None,
+        tmax: Optional[TimeType] = None,
+        unit_multiplier: float = 1e-3,
+        normalize_datetime_index: bool = True,
+        fill_missing_obs: bool = True,
+        **kwargs,
+    ):
+        """Download precipitation time series data from nearest KNMI station.
+
+        Parameters
+        ----------
+        oseries : str
+            download nearest precipitation information for this observation well
+        meteo_var : str, optional
+            variable to download, by default "RD", valid options are ["RD", "RH"].
+        tmin : TimeType
+            start time
+        tmax : TimeType
+            end time
+        unit_multiplier : float, optional
+            multiply unit by this value before saving it in the store,
+            by default 1.0 (no conversion)
+        fill_missing_obs : bool, optional
+            if True, fill missing observations by getting observations from nearest
+            station with data.
+        fill_missing_obs : bool, optional
+            if True, fill missing observations by getting observations from nearest
+            station with data.
+        """
+        self.download_nearest_knmi_meteo(
+            oseries=oseries,
+            meteo_var=meteo_var,
+            kind="prec",
+            tmin=tmin,
+            tmax=tmax,
+            unit_multiplier=unit_multiplier,
+            normalize_datetime_index=normalize_datetime_index,
+            fill_missing_obs=fill_missing_obs,
+            **kwargs,
+        )
+
+    def download_nearest_knmi_evaporation(
+        self,
+        oseries: str,
+        meteo_var: str = "EV24",
+        tmin: Optional[TimeType] = None,
+        tmax: Optional[TimeType] = None,
+        unit_multiplier: float = 1e-3,
+        normalize_datetime_index: bool = True,
+        fill_missing_obs: bool = True,
+        **kwargs,
+    ):
+        """Download evaporation time series data from nearest KNMI station.
+
+        Parameters
+        ----------
+        oseries : str
+            download nearest evaporation information for this observation well
+        meteo_var : str, optional
+            variable to download, by default "EV24", valid options are:
+            ["EV24", "penman", "hargreaves", "makkink"].
+        tmin : TimeType
+            start time
+        tmax : TimeType
+            end time
+        unit_multiplier : float, optional
+            multiply unit by this value before saving it in the store,
+            by default 1.0 (no conversion)
+        fill_missing_obs : bool, optional
+            if True, fill missing observations by getting observations from nearest
+            station with data.
+        fill_missing_obs : bool, optional
+            if True, fill missing observations by getting observations from nearest
+            station with data.
+        """
+        self.download_nearest_knmi_meteo(
+            oseries=oseries,
+            meteo_var=meteo_var,
+            kind="evap",
+            tmin=tmin,
+            tmax=tmax,
+            unit_multiplier=unit_multiplier,
+            normalize_datetime_index=normalize_datetime_index,
+            fill_missing_obs=fill_missing_obs,
+            **kwargs,
+        )
+
+    def download_nearest_knmi_meteo(
+        self,
+        oseries: str,
+        meteo_var: str,
+        kind: str,
+        tmin: Optional[TimeType] = None,
+        tmax: Optional[TimeType] = None,
+        unit_multiplier: float = 1.0,
+        normalize_datetime_index: bool = True,
+        fill_missing_obs: bool = True,
+        **kwargs,
+    ):
+        """Download meteorological data from nearest KNMI station.
+
+        Parameters
+        ----------
+        oseries : str
+            download nearest meteorological information for this observation well
+        meteo_var : str
+            meteorological variable to download, e.g. "RD", "RH", "EV24", "T", "Q"
+        kind : str
+            kind identifier for observations in pastastore, usually "prec" or "evap".
+        tmin : TimeType
+            start time
+        tmax : TimeType
+            end time
+        unit_multiplier : float, optional
+            multiply unit by this value before saving it in the store,
+            by default 1.0 (no conversion)
+        fill_missing_obs : bool, optional
+            if True, fill missing observations by getting observations from nearest
+            station with data.
+        fill_missing_obs : bool, optional
+            if True, fill missing observations by getting observations from nearest
+            station with data.
+        """
+        xy = self._store.oseries.loc[[oseries], ["x", "y"]].to_numpy()
+        # download data
+        tmin, tmax = self._get_tmin_tmax(tmin, tmax, oseries=oseries)
+        knmi = hpd.read_knmi(
+            xy=xy,
+            meteo_vars=[meteo_var],
+            starts=tmin,
+            ends=tmax,
+            fill_missing_obs=fill_missing_obs,
+            **kwargs,
+        )
         # add to store
         self.add_obscollection(
             libname="stresses",
@@ -386,6 +584,17 @@ class HydroPandasExtension:
         **kwargs : dict, optional
             Additional keyword arguments to pass to `hpd.read_knmi()`
         """
+        if "source" not in self._store.stresses.columns:
+            msg = (
+                "Cannot update KNMI stresses! "
+                "KNMI stresses cannot be identified if 'source' column is not defined."
+            )
+            logger.error(msg)
+            if raise_on_error:
+                raise ValueError(msg)
+            else:
+                return
+
         if names is None:
             names = self._store.stresses.loc[
                 self._store.stresses["source"] == "KNMI"
@@ -496,32 +705,6 @@ class HydroPandasExtension:
                 logger.error("Error updating KNMI %s: %s" % (name, str(e)))
                 if raise_on_error:
                     raise e
-
-    @staticmethod
-    def _normalize_datetime_index(obs):
-        """Normalize observation datetime index (i.e. set observation time to midnight).
-
-        Parameters
-        ----------
-        obs : pandas.Series
-            observation series to normalize
-
-        Returns
-        -------
-        hpd.Obs
-            observation series with normalized datetime index
-        """
-        if isinstance(obs, hpd.Obs):
-            metadata = {k: getattr(obs, k) for k in obs._metadata}
-        else:
-            metadata = {}
-        return obs.__class__(
-            timestep_weighted_resample(
-                obs,
-                obs.index.normalize(),
-            ).rename(obs.name),
-            **metadata,
-        )
 
     def download_bro_gmw(
         self,
