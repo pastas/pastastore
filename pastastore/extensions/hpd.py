@@ -451,6 +451,7 @@ class HydroPandasExtension:
     def download_nearest_knmi_evaporation(
         self,
         oseries: str,
+        meteo_var: str = "EV24",
         tmin: Optional[TimeType] = None,
         tmax: Optional[TimeType] = None,
         unit_multiplier: float = 1e-3,
@@ -464,6 +465,9 @@ class HydroPandasExtension:
         ----------
         oseries : str
             download nearest evaporation information for this observation well
+        meteo_var : str, optional
+            variable to download, by default "EV24", valid options are:
+            ["EV24", "penman", "hargreaves", "makkink"].
         tmin : TimeType
             start time
         tmax : TimeType
@@ -480,7 +484,7 @@ class HydroPandasExtension:
         """
         self.download_nearest_knmi_meteo(
             oseries=oseries,
-            meteo_var="EV24",
+            meteo_var=meteo_var,
             kind="evap",
             tmin=tmin,
             tmax=tmax,
