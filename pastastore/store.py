@@ -1259,9 +1259,10 @@ class PastaStore:
             ):
                 solve_model(ml_name=ml_name)
 
+    @staticmethod
     def _solve_model(
-        self,
         ml_name: str,
+        connector: BaseConnector,
         report: bool = False,
         ignore_solve_errors: bool = False,
         **kwargs,
@@ -1280,7 +1281,15 @@ class PastaStore:
         **kwargs : dictionary
             arguments are passed to the solve method.
         """
-        ml = self.conn.get_models(ml_name)
+        # get connector, reinitialize if ArcticDBConnector and parallel=True
+        if isinstance(connector, tuple):
+            conn = ArcticDBConnector(*connector, verbose=False)
+            parallel = True
+        else:
+            conn = connector
+            parallel = False
+
+        ml = conn.get_models(ml_name)
         m_kwargs = {}
         for key, value in kwargs.items():
             if isinstance(value, pd.Series):
@@ -1301,7 +1310,11 @@ class PastaStore:
             else:
                 raise e
 
-        self.conn.add_model(ml, overwrite=True)
+        conn.add_model(ml, overwrite=True)
+
+        # prevent LMDB already opened in process warning
+        if parallel and conn.conn_type == "arcticdb":
+            delattr(conn, "arc")
 
     def model_results(
         self,
