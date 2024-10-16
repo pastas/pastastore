@@ -14,10 +14,10 @@ import pastas as ps
 from packaging.version import parse as parse_version
 from pastas.io.pas import pastas_hook
 from tqdm.auto import tqdm
-from tqdm.contrib.concurrent import process_map
+from tqdm.contrib.concurrent import cpu_count, process_map
 
 from pastastore.base import BaseConnector
-from pastastore.connectors import DictConnector
+from pastastore.connectors import ArcticDBConnector, DictConnector
 from pastastore.plotting import Maps, Plots
 from pastastore.util import _custom_warning
 from pastastore.version import PASTAS_GEQ_150, PASTAS_LEQ_022
