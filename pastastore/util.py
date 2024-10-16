@@ -385,7 +385,7 @@ def copy_database(
     conn2,
     libraries: Optional[List[str]] = None,
     overwrite: bool = False,
-    progressbar: bool = False,
+    progressbar: bool = True,
 ) -> None:
     """Copy libraries from one database to another.
 
