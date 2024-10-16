@@ -1235,24 +1235,43 @@ class PastaStore:
 
         modelnames = self.conn._parse_names(modelnames, libname="models")
 
+        if parallel:
+            max_workers = (
+                min(32, cpu_count() + 4) if max_workers is None else max_workers
+            )
+            # from: https://stackoverflow.com/a/42096963/10596229
+            num_chunks = max_workers * 14
+            chunksize = max(len(modelnames) // num_chunks, 1)
+
         solve_model = partial(
             self._solve_model,
+            connector=(self.conn.name, self.conn.uri)
+            if parallel and (self.conn.conn_type == "arcticdb")
+            else self.conn,
             report=report,
             ignore_solve_errors=ignore_solve_errors,
             **kwargs,
         )
-        if self.conn.conn_type != "pas":
+        if self.conn.conn_type == "dict":
             parallel = False
             logger.error(
                 "Parallel solving only supported for PasConnector databases."
                 "Setting parallel to `False`"
             )
+        elif self.conn.conn_type == "arcticdb":
+            logger.warning(
+                "Parallel solving is significantly slower with ArcticDBConnector as"
+                "compared to PasConnector. Each solve_model() call incurs a ~1s penalty"
+                " to initialize the ArcticDBConnector."
+            )
 
         if parallel and progressbar:
-            process_map(solve_model, modelnames, max_workers=max_workers)
+            process_map(
+                solve_model, modelnames, max_workers=max_workers, chunksize=chunksize
+            )
         elif parallel and not progressbar:
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
-                executor.map(solve_model, modelnames)
+                executor.map(solve_model, modelnames, chunksize=chunksize)
         else:
             for ml_name in (
                 tqdm(modelnames, desc="Solving models") if progressbar else modelnames
