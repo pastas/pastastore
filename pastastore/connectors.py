@@ -21,7 +21,7 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
 
     conn_type = "arcticdb"
 
-    def __init__(self, name: str, uri: str):
+    def __init__(self, name: str, uri: str, verbose: bool = True):
         """Create an ArcticDBConnector object using ArcticDB to store data.
 
         Parameters
@@ -30,6 +30,8 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
             name of the database
         uri : str
             URI connection string (e.g. 'lmdb://<your path here>')
+        verbose : bool, optional
+            whether to print message when database is initialized, by default True
         """
         try:
             import arcticdb
@@ -41,23 +43,24 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
 
         self.libs: dict = {}
         self.arc = arcticdb.Arctic(uri)
-        self._initialize()
+        self._initialize(verbose=verbose)
         self.models = ModelAccessor(self)
         # for older versions of PastaStore, if oseries_models library is empty
         # populate oseries - models database
         self._update_all_oseries_model_links()
 
-    def _initialize(self) -> None:
+    def _initialize(self, verbose: bool = True) -> None:
         """Initialize the libraries (internal method)."""
         for libname in self._default_library_names:
             if self._library_name(libname) not in self.arc.list_libraries():
                 self.arc.create_library(self._library_name(libname))
             else:
-                print(
-                    f"ArcticDBConnector: library "
-                    f"'{self._library_name(libname)}'"
-                    " already exists. Linking to existing library."
-                )
+                if verbose:
+                    print(
+                        f"ArcticDBConnector: library "
+                        f"'{self._library_name(libname)}'"
+                        " already exists. Linking to existing library."
+                    )
             self.libs[libname] = self._get_library(libname)
 
     def _library_name(self, libname: str) -> str:
@@ -347,7 +350,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
 
     conn_type = "pas"
 
-    def __init__(self, name: str, path: str):
+    def __init__(self, name: str, path: str, verbose: bool = True):
         """Create PasConnector object that stores data as JSON files on disk.
 
         Uses Pastas export format (pas-files) to store files.
@@ -359,28 +362,32 @@ class PasConnector(BaseConnector, ConnectorUtil):
             directory in which the data will be stored
         path : str
             path to directory for storing the data
+        verbose : bool, optional
+            whether to print message when database is initialized, by default True
         """
         self.name = name
         self.path = os.path.abspath(os.path.join(path, self.name))
         self.relpath = os.path.relpath(self.path)
-        self._initialize()
+        self._initialize(verbose=verbose)
         self.models = ModelAccessor(self)
         # for older versions of PastaStore, if oseries_models library is empty
         # populate oseries_models library
         self._update_all_oseries_model_links()
 
-    def _initialize(self) -> None:
+    def _initialize(self, verbose: bool = True) -> None:
         """Initialize the libraries (internal method)."""
         for val in self._default_library_names:
             libdir = os.path.join(self.path, val)
             if not os.path.exists(libdir):
-                print(f"PasConnector: library '{val}' created in '{libdir}'")
+                if verbose:
+                    print(f"PasConnector: library '{val}' created in '{libdir}'")
                 os.makedirs(libdir)
             else:
-                print(
-                    f"PasConnector: library '{val}' already exists. "
-                    f"Linking to existing directory: '{libdir}'"
-                )
+                if verbose:
+                    print(
+                        f"PasConnector: library '{val}' already exists. "
+                        f"Linking to existing directory: '{libdir}'"
+                    )
             setattr(self, f"lib_{val}", os.path.join(self.path, val))
 
     def _get_library(self, libname: str):
