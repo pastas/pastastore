@@ -1,19 +1,33 @@
 """Module containing classes for connecting to different data stores."""
 
 import json
+import logging
 import os
 import warnings
+
+# import weakref
+from collections.abc import Iterable
+from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
-from typing import Dict, Optional, Union
+from typing import Callable, Dict, List, Optional, Union
 
 import pandas as pd
+import pastas as ps
+from numpy import isin
+from packaging.version import parse as parse_version
+from pandas.testing import assert_series_equal
 from pastas.io.pas import PastasEncoder, pastas_hook
+from tqdm.auto import tqdm
+from tqdm.contrib.concurrent import process_map
 
-from pastastore.base import BaseConnector, ConnectorUtil, ModelAccessor
+from pastastore.base import BaseConnector, ModelAccessor
 from pastastore.util import _custom_warning
+from pastastore.version import PASTAS_LEQ_022
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning
+
+logger = logging.getLogger(__name__)
 
 
 class ConnectorUtil:
