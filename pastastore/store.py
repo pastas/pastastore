@@ -1542,9 +1542,7 @@ class PastaStore:
                     if case_sensitive:
                         m = np.append(m, [n for n in names if sub in n])
                     else:
-                        m = np.append(
-                            m, [n for n in names if sub.lower() in n.lower()]
-                        )
+                        m = np.append(m, [n for n in names if sub.lower() in n.lower()])
                 matches = list(np.unique(m))
             else:
                 raise TypeError("s must be str or list of str!")
