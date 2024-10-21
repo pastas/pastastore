@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import warnings
-from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 from typing import Dict, List, Literal, Optional, Tuple, Union
 
@@ -14,10 +13,10 @@ import pastas as ps
 from packaging.version import parse as parse_version
 from pastas.io.pas import pastas_hook
 from tqdm.auto import tqdm
-from tqdm.contrib.concurrent import cpu_count, process_map
+from tqdm.contrib.concurrent import cpu_count
 
 from pastastore.base import BaseConnector
-from pastastore.connectors import ArcticDBConnector, DictConnector
+from pastastore.connectors import DictConnector
 from pastastore.plotting import Maps, Plots
 from pastastore.util import _custom_warning
 from pastastore.version import PASTAS_GEQ_150, PASTAS_LEQ_022
