@@ -635,6 +635,56 @@ class ConnectorUtil:
                     d[onam] = [mlnam]
         return d
 
+    @staticmethod
+    def _solve_model(
+        ml_name: str,
+        connector: Optional[BaseConnector] = None,
+        report: bool = False,
+        ignore_solve_errors: bool = False,
+        **kwargs,
+    ) -> None:
+        """Solve a model in the store (internal method).
+
+        ml_name : list of str, optional
+            name of a model in the pastastore
+        report : boolean, optional
+            determines if a report is printed when the model is solved,
+            default is False
+        ignore_solve_errors : boolean, optional
+            if True, errors emerging from the solve method are ignored,
+            default is False which will raise an exception when a model
+            cannot be optimized
+        **kwargs : dictionary
+            arguments are passed to the solve method.
+        """
+        if connector is not None:
+            conn = connector
+        else:
+            conn = globals()["conn"]
+
+        ml = conn.get_models(ml_name)
+        m_kwargs = {}
+        for key, value in kwargs.items():
+            if isinstance(value, pd.Series):
+                m_kwargs[key] = value.loc[ml.name]
+            else:
+                m_kwargs[key] = value
+        # Convert timestamps
+        for tstamp in ["tmin", "tmax"]:
+            if tstamp in m_kwargs:
+                m_kwargs[tstamp] = pd.Timestamp(m_kwargs[tstamp])
+
+        try:
+            ml.solve(report=report, **m_kwargs)
+        except Exception as e:
+            if ignore_solve_errors:
+                warning = "Solve error ignored for '%s': %s " % (ml.name, e)
+                logger.warning(warning)
+            else:
+                raise e
+
+        conn.add_model(ml, overwrite=True)
+
 
 class ArcticDBConnector(BaseConnector, ConnectorUtil):
     """ArcticDBConnector object using ArcticDB to store data."""
