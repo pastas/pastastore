@@ -832,6 +832,54 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
         lib = self._get_library(libname)
         return lib.read_metadata(name).metadata
 
+    def _parallel(
+        self,
+        func: Callable,
+        names: List[str],
+        progressbar: Optional[bool] = True,
+        max_workers: Optional[int] = None,
+        chunksize: Optional[int] = None,
+        desc: str = "",
+    ):
+        """Parallel processing of function.
+
+        Does not return results, so function must store results in database.
+
+        Parameters
+        ----------
+        func : function
+            function to apply in parallel
+        names : list
+            list of names to apply function to
+        progressbar : bool, optional
+            show progressbar, by default True
+        max_workers : int, optional
+            maximum number of workers, by default None
+        chunksize : int, optional
+            chunksize for parallel processing, by default None
+        desc : str, optional
+            description for progressbar, by default ""
+        """
+
+        def initializer(*args):
+            global conn
+            conn = ArcticDBConnector(*args)
+
+        initargs = (self.name, self.uri, False)
+
+        if progressbar:
+            with tqdm(total=len(names), desc=desc) as pbar:
+                with ProcessPoolExecutor(
+                    max_workers=max_workers, initializer=initializer, initargs=initargs
+                ) as executor:
+                    for _ in executor.map(func, names, chunksize=chunksize):
+                        pbar.update()
+        else:
+            with ProcessPoolExecutor(
+                max_workers=max_workers, initializer=initializer, initargs=initargs
+            ) as executor:
+                executor.map(func, names, chunksize=chunksize)
+
     @property
     def oseries_names(self):
         """List of oseries names.
@@ -989,6 +1037,12 @@ class DictConnector(BaseConnector, ConnectorUtil):
         lib = self._get_library(libname)
         imeta = deepcopy(lib[name][0])
         return imeta
+
+    def _parallel(self, *args, **kwargs) -> None:
+        raise NotImplementedError(
+            "DictConnector does not support parallel processing,"
+            " use PasConnector or ArcticDBConnector."
+        )
 
     @property
     def oseries_names(self):
@@ -1199,6 +1253,47 @@ class PasConnector(BaseConnector, ConnectorUtil):
         else:
             imeta = {}
         return imeta
+
+    def _parallel(
+        self,
+        func: Callable,
+        names: List[str],
+        progressbar: Optional[bool] = True,
+        max_workers: Optional[int] = None,
+        chunksize: Optional[int] = None,
+        desc: str = "",
+    ):
+        """Parallel processing of function.
+
+        Does not return results, so function must store results in database.
+
+        Parameters
+        ----------
+        func : function
+            function to apply in parallel
+        names : list
+            list of names to apply function to
+        progressbar : bool, optional
+            show progressbar, by default True
+        max_workers : int, optional
+            maximum number of workers, by default None
+        chunksize : int, optional
+            chunksize for parallel processing, by default None
+        desc : str, optional
+            description for progressbar, by default ""
+        """
+        if progressbar:
+            process_map(
+                func,
+                names,
+                max_workers=max_workers,
+                chunksize=chunksize,
+                desc=desc,
+                total=len(names),
+            )
+        else:
+            with ProcessPoolExecutor(max_workers=max_workers) as executor:
+                executor.map(func, names, chunksize=chunksize)
 
     @property
     def oseries_names(self):
