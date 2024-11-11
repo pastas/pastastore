@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import warnings
-from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 from typing import Dict, List, Literal, Optional, Tuple, Union
 
@@ -14,7 +13,7 @@ import pastas as ps
 from packaging.version import parse as parse_version
 from pastas.io.pas import pastas_hook
 from tqdm.auto import tqdm
-from tqdm.contrib.concurrent import process_map
+from tqdm.contrib.concurrent import cpu_count
 
 from pastastore.base import BaseConnector
 from pastastore.connectors import DictConnector
@@ -1235,73 +1234,65 @@ class PastaStore:
 
         modelnames = self.conn._parse_names(modelnames, libname="models")
 
-        solve_model = partial(
-            self._solve_model,
-            report=report,
-            ignore_solve_errors=ignore_solve_errors,
-            **kwargs,
-        )
-        if self.conn.conn_type != "pas":
-            parallel = False
-            logger.error(
-                "Parallel solving only supported for PasConnector databases."
-                "Setting parallel to `False`"
+        # prepare parallel
+        if parallel:
+            max_workers = (
+                min(32, cpu_count() + 4) if max_workers is None else max_workers
             )
+            # from: https://stackoverflow.com/a/42096963/10596229
+            num_chunks = max_workers * 14
+            chunksize = max(len(modelnames) // num_chunks, 1)
 
-        if parallel and progressbar:
-            process_map(solve_model, modelnames, max_workers=max_workers)
-        elif parallel and not progressbar:
-            with ProcessPoolExecutor(max_workers=max_workers) as executor:
-                executor.map(solve_model, modelnames)
+            if self.conn.conn_type == "dict":
+                parallel = False
+                logger.error(
+                    "Parallel solving only supported for PasConnector and "
+                    "ArcticDBConnector databases. Setting parallel to `False`"
+                )
+
+            if self.conn.conn_type == "arcticdb":
+                solve_model = partial(
+                    self.conn._solve_model,
+                    report=report,
+                    ignore_solve_errors=ignore_solve_errors,
+                    **kwargs,
+                )
+                self.conn._parallel(
+                    solve_model,
+                    modelnames,
+                    max_workers=max_workers,
+                    chunksize=chunksize,
+                    progressbar=progressbar,
+                    desc="Solving models (parallel)",
+                )
+            elif self.conn.conn_type == "pas":
+                solve_model = partial(
+                    self.conn._solve_model,
+                    connector=self.conn,
+                    report=report,
+                    ignore_solve_errors=ignore_solve_errors,
+                    **kwargs,
+                )
+                self.conn._parallel(
+                    solve_model,
+                    modelnames,
+                    max_workers=max_workers,
+                    chunksize=chunksize,
+                    progressbar=progressbar,
+                    desc="Solving models (parallel)",
+                )
         else:
+            solve_model = partial(
+                self.conn._solve_model,
+                connector=self.conn,
+                report=report,
+                ignore_solve_errors=ignore_solve_errors,
+                **kwargs,
+            )
             for ml_name in (
                 tqdm(modelnames, desc="Solving models") if progressbar else modelnames
             ):
                 solve_model(ml_name=ml_name)
-
-    def _solve_model(
-        self,
-        ml_name: str,
-        report: bool = False,
-        ignore_solve_errors: bool = False,
-        **kwargs,
-    ) -> None:
-        """Solve a model in the store (internal method).
-
-        ml_name : list of str, optional
-            name of a model in the pastastore
-        report : boolean, optional
-            determines if a report is printed when the model is solved,
-            default is False
-        ignore_solve_errors : boolean, optional
-            if True, errors emerging from the solve method are ignored,
-            default is False which will raise an exception when a model
-            cannot be optimized
-        **kwargs : dictionary
-            arguments are passed to the solve method.
-        """
-        ml = self.conn.get_models(ml_name)
-        m_kwargs = {}
-        for key, value in kwargs.items():
-            if isinstance(value, pd.Series):
-                m_kwargs[key] = value.loc[ml.name]
-            else:
-                m_kwargs[key] = value
-        # Convert timestamps
-        for tstamp in ["tmin", "tmax"]:
-            if tstamp in m_kwargs:
-                m_kwargs[tstamp] = pd.Timestamp(m_kwargs[tstamp])
-
-        try:
-            ml.solve(report=report, **m_kwargs)
-        except Exception as e:
-            if ignore_solve_errors:
-                warning = "Solve error ignored for '%s': %s " % (ml.name, e)
-                logger.warning(warning)
-            else:
-                raise e
-
-        self.conn.add_model(ml, overwrite=True)
 
     def model_results(
         self,
