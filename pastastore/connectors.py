@@ -4,11 +4,12 @@ import json
 import logging
 import os
 import warnings
-
-# import weakref
 from collections.abc import Iterable
 from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
+from functools import partial
+
+# import weakref
 from typing import Callable, Dict, List, Optional, Union
 
 import pandas as pd
@@ -18,7 +19,7 @@ from packaging.version import parse as parse_version
 from pandas.testing import assert_series_equal
 from pastas.io.pas import PastasEncoder, pastas_hook
 from tqdm.auto import tqdm
-from tqdm.contrib.concurrent import process_map
+from tqdm.contrib.concurrent import cpu_count, process_map
 
 from pastastore.base import BaseConnector, ModelAccessor
 from pastastore.util import _custom_warning
@@ -699,6 +700,28 @@ class ConnectorUtil:
 
         conn.add_model(ml, overwrite=True)
 
+    @staticmethod
+    def _get_statistics(name, statistics, connector=None, **kwargs):
+        if connector is not None:
+            conn = connector
+        else:
+            conn = globals()["conn"]
+
+        ml = conn.get_model(name)
+        series = pd.Series(index=statistics, dtype=float)
+        for stat in statistics:
+            series.loc[stat] = getattr(ml.stats, stat)(**kwargs)
+        return series
+
+    @staticmethod
+    def _get_max_workers_and_chunksize(max_workers, njobs, chunksize=None):
+        max_workers = min(32, cpu_count() + 4) if max_workers is None else max_workers
+        # from: https://stackoverflow.com/a/42096963/10596229
+        if chunksize is None:
+            num_chunks = max_workers * 14
+            chunksize = max(njobs // num_chunks, 1)
+        return max_workers, chunksize
+
 
 class ArcticDBConnector(BaseConnector, ConnectorUtil):
     """ArcticDBConnector object using ArcticDB to store data."""
@@ -850,6 +873,7 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
         self,
         func: Callable,
         names: List[str],
+        kwargs: Optional[Dict] = None,
         progressbar: Optional[bool] = True,
         max_workers: Optional[int] = None,
         chunksize: Optional[int] = None,
@@ -865,6 +889,8 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
             function to apply in parallel
         names : list
             list of names to apply function to
+        kwargs : dict, optional
+            keyword arguments to pass to function
         progressbar : bool, optional
             show progressbar, by default True
         max_workers : int, optional
@@ -874,6 +900,9 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
         desc : str, optional
             description for progressbar, by default ""
         """
+        max_workers, chunksize = ConnectorUtil._get_max_workers_and_chunksize(
+            max_workers, len(names), chunksize
+        )
 
         def initializer(*args):
             global conn
@@ -881,18 +910,28 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
 
         initargs = (self.name, self.uri, False)
 
+        if kwargs is None:
+            kwargs = {}
+
         if progressbar:
+            result = []
             with tqdm(total=len(names), desc=desc) as pbar:
                 with ProcessPoolExecutor(
                     max_workers=max_workers, initializer=initializer, initargs=initargs
                 ) as executor:
-                    for _ in executor.map(func, names, chunksize=chunksize):
+                    for item in executor.map(
+                        partial(func, **kwargs), names, chunksize=chunksize
+                    ):
+                        result.append(item)
                         pbar.update()
         else:
             with ProcessPoolExecutor(
                 max_workers=max_workers, initializer=initializer, initargs=initargs
             ) as executor:
-                executor.map(func, names, chunksize=chunksize)
+                result = executor.map(
+                    partial(func, **kwargs), names, chunksize=chunksize
+                )
+        return result
 
     @property
     def oseries_names(self):
@@ -1272,6 +1311,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         self,
         func: Callable,
         names: List[str],
+        kwargs: Optional[dict] = None,
         progressbar: Optional[bool] = True,
         max_workers: Optional[int] = None,
         chunksize: Optional[int] = None,
@@ -1296,9 +1336,16 @@ class PasConnector(BaseConnector, ConnectorUtil):
         desc : str, optional
             description for progressbar, by default ""
         """
+        max_workers, chunksize = ConnectorUtil._get_max_workers_and_chunksize(
+            max_workers, len(names), chunksize
+        )
+
+        if kwargs is None:
+            kwargs = {}
+
         if progressbar:
-            process_map(
-                func,
+            return process_map(
+                partial(func, **kwargs),
                 names,
                 max_workers=max_workers,
                 chunksize=chunksize,
@@ -1307,7 +1354,10 @@ class PasConnector(BaseConnector, ConnectorUtil):
             )
         else:
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
-                executor.map(func, names, chunksize=chunksize)
+                result = executor.map(
+                    partial(func, **kwargs), names, chunksize=chunksize
+                )
+            return result
 
     @property
     def oseries_names(self):
