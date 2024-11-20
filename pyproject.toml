@@ -44,7 +44,7 @@ repository = "https://github.com/pastas/pastastore"
 documentation = "https://pastastore.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
-full = ["pastastore[arcticdb,optional]"]
+full = ["pastastore[arcticdb,optional]", "hydropandas"]
 extensions = ["hydropandas"]
 optional = ["contextily", "pyproj", "adjustText"]
 arcticdb = ["arcticdb"]
@@ -61,7 +61,7 @@ test = [
     "codacy-coverage",
 ]
 test_py312 = [
-    "pastastore[lint,optional]",  # no arcticdb
+    "pastastore[lint,optional]", # no arcticdb
     "hydropandas[full]",
     "coverage",
     "codecov",
