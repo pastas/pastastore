@@ -1501,7 +1501,7 @@ class PastaStore:
                     if not isinstance(s.index, pd.DatetimeIndex):
                         s.index = pd.to_datetime(s.index, unit="ms")
                     s = s.sort_index()
-                    meta = json.load(archive.open(f.replace(".json", "_meta.json")))
+                    meta = json.load(archive.open(f.replace(f".{ext}", f"_meta.{ext}")))
                     conn._add_series(libname, s, fjson.split(".")[0], metadata=meta)
                 elif libname in ["models"]:
                     ml = json.load(archive.open(f), object_hook=pastas_hook)
