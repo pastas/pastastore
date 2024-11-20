@@ -19,7 +19,7 @@ from packaging.version import parse as parse_version
 from pandas.testing import assert_series_equal
 from pastas.io.pas import PastasEncoder, pastas_hook
 from tqdm.auto import tqdm
-from tqdm.contrib.concurrent import cpu_count, process_map
+from tqdm.contrib.concurrent import process_map
 
 from pastastore.base import BaseConnector, ModelAccessor
 from pastastore.util import _custom_warning
@@ -730,7 +730,9 @@ class ConnectorUtil:
 
         From: https://stackoverflow.com/a/42096963/10596229
         """
-        max_workers = min(32, cpu_count() + 4) if max_workers is None else max_workers
+        max_workers = (
+            min(32, os.cpu_count() + 4) if max_workers is None else max_workers
+        )
         if chunksize is None:
             num_chunks = max_workers * 14
             chunksize = max(njobs // num_chunks, 1)
