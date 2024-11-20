@@ -671,6 +671,7 @@ class PastaStore:
                 self.conn._get_statistics,
                 modelnames,
                 kwargs=kwargs,
+                parallel=parallel,
                 progressbar=progressbar,
                 fancy_output=fancy_output,
             ).T  # transpose to match serial output
@@ -1737,6 +1738,8 @@ class PastaStore:
             if label is not None:
                 df.columns.name = label
             return df
+        elif result[0] is None:
+            return None  # return None if first result is None?
         else:
             return dict(zip(names, result))
 
