@@ -566,8 +566,8 @@ class ConnectorUtil:
             meta_json = self._stored_metadata_to_json(
                 libname, names=n, progressbar=False, squeeze=True
             )
-            archive.writestr(f"{libname}/{n}.json", sjson)
-            archive.writestr(f"{libname}/{n}_meta.json", meta_json)
+            archive.writestr(f"{libname}/{n}.pas", sjson)
+            archive.writestr(f"{libname}/{n}_meta.pas", meta_json)
 
     def _models_to_archive(self, archive, names=None, progressbar=True):
         """Write pastas.Model to zipfile (internal method).

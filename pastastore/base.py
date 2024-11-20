@@ -64,7 +64,7 @@ class BaseConnector(ABC):
     def _get_library(self, libname: str):
         """Get library handle.
 
-        Must be overriden by subclass.
+        Must be overridden by subclass.
 
         Parameters
         ----------
@@ -88,7 +88,7 @@ class BaseConnector(ABC):
     ) -> None:
         """Add item for both time series and pastas.Models (internal method).
 
-        Must be overriden by subclass.
+        Must be overridden by subclass.
 
         Parameters
         ----------
@@ -106,7 +106,7 @@ class BaseConnector(ABC):
     def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
         """Get item (series or pastas.Models) (internal method).
 
-        Must be overriden by subclass.
+        Must be overridden by subclass.
 
         Parameters
         ----------
@@ -125,7 +125,7 @@ class BaseConnector(ABC):
     def _del_item(self, libname: str, name: str) -> None:
         """Delete items (series or models) (internal method).
 
-        Must be overriden by subclass.
+        Must be overridden by subclass.
 
         Parameters
         ----------
@@ -139,7 +139,7 @@ class BaseConnector(ABC):
     def _get_metadata(self, libname: str, name: str) -> Dict:
         """Get metadata (internal method).
 
-        Must be overriden by subclass.
+        Must be overridden by subclass.
 
         Parameters
         ----------
@@ -159,7 +159,7 @@ class BaseConnector(ABC):
     def oseries_names(self):
         """List of oseries names.
 
-        Property must be overriden by subclass.
+        Property must be overridden by subclass.
         """
 
     @property
@@ -167,7 +167,7 @@ class BaseConnector(ABC):
     def stresses_names(self):
         """List of stresses names.
 
-        Property must be overriden by subclass.
+        Property must be overridden by subclass.
         """
 
     @property
@@ -175,7 +175,7 @@ class BaseConnector(ABC):
     def model_names(self):
         """List of model names.
 
-        Property must be overriden by subclass.
+        Property must be overridden by subclass.
         """
 
     @abstractmethod
@@ -190,7 +190,7 @@ class BaseConnector(ABC):
     ) -> None:
         """Parallel processing of function.
 
-        Must be overriden by subclass.
+        Must be overridden by subclass.
 
         Parameters
         ----------
@@ -1135,8 +1135,8 @@ class BaseConnector(ABC):
             time series contained in library
         """
         names = self._parse_names(names, libname)
-        for nam in names:
-            yield self._get_series(libname, nam, progressbar=False)
+        for name in names:
+            yield self._get_series(libname, name, progressbar=False)
 
     def iter_oseries(self, names: Optional[List[str]] = None):
         """Iterate over oseries in library.
