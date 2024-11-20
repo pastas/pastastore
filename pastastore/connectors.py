@@ -10,7 +10,7 @@ from copy import deepcopy
 from functools import partial
 
 # import weakref
-from typing import Callable, Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 import pastas as ps
@@ -662,6 +662,9 @@ class ConnectorUtil:
 
         ml_name : list of str, optional
             name of a model in the pastastore
+        connector : PasConnector, optional
+            Connector to use, by default None which gets the global ArcticDB
+            Connector. Otherwise parse a PasConnector.
         report : boolean, optional
             determines if a report is printed when the model is solved,
             default is False
@@ -701,7 +704,13 @@ class ConnectorUtil:
         conn.add_model(ml, overwrite=True)
 
     @staticmethod
-    def _get_statistics(name, statistics, connector=None, **kwargs):
+    def _get_statistics(
+        name: str,
+        statistics: List[str],
+        connector: Union[None, BaseConnector] = None,
+        **kwargs,
+    ) -> pd.Series:
+        """Get statistics for a model in the store (internal method)."""
         if connector is not None:
             conn = connector
         else:
@@ -714,9 +723,14 @@ class ConnectorUtil:
         return series
 
     @staticmethod
-    def _get_max_workers_and_chunksize(max_workers, njobs, chunksize=None):
+    def _get_max_workers_and_chunksize(
+        max_workers: int, njobs: int, chunksize: int = None
+    ) -> Tuple[int, int]:
+        """Get the maximum workers and chunksize for parallel processing.
+
+        From: https://stackoverflow.com/a/42096963/10596229
+        """
         max_workers = min(32, cpu_count() + 4) if max_workers is None else max_workers
-        # from: https://stackoverflow.com/a/42096963/10596229
         if chunksize is None:
             num_chunks = max_workers * 14
             chunksize = max(njobs // num_chunks, 1)
