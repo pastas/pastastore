@@ -210,7 +210,8 @@ def test_solve_models_parallel(request, pstore):
 def test_apply(request, pstore):
     depends(request, [f"test_solve_models_and_get_stats[{pstore.type}]"])
 
-    def func(ml):
+    def func(ml_name):
+        ml = pstore.conn.get_models(ml_name)
         return ml.parameters.loc["recharge_A", "optimal"]
 
     result = pstore.apply("models", func)
