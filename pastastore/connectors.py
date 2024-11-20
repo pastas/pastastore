@@ -710,7 +710,13 @@ class ConnectorUtil:
         connector: Union[None, BaseConnector] = None,
         **kwargs,
     ) -> pd.Series:
-        """Get statistics for a model in the store (internal method)."""
+        """Get statistics for a model in the store (internal method).
+
+        This function was made to be run in parallel mode. For the odd user
+        that wants to run this function directly in sequential model using
+        an ArcticDBDConnector the connector argument must be passed in the kwargs
+        of the apply method.
+        """
         if connector is not None:
             conn = connector
         else:
