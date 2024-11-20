@@ -1446,6 +1446,7 @@ class PastaStore:
         conn: Optional[BaseConnector] = None,
         storename: Optional[str] = None,
         progressbar: bool = True,
+        series_ext_json: bool = False,
     ):
         """Load PastaStore from zipfile.
 
@@ -1461,6 +1462,10 @@ class PastaStore:
             defaults to the name of the Connector.
         progressbar : bool, optional
             show progressbar, by default True
+        series_ext_json : bool, optional
+            if True, series are expected to have a .json extension, by default False,
+            which assumes a .pas extension. Set this option to true for reading
+            zipfiles created with older versions of pastastore <1.8.0.
 
         Returns
         -------
@@ -1472,9 +1477,22 @@ class PastaStore:
         if conn is None:
             conn = DictConnector("pastas_db")
 
+        if series_ext_json:
+            ext = "json"
+        else:
+            ext = "pas"
+
+        # short circuit for PasConnector when zipfile was written using pas files
+        if conn.conn_type == "pas" and not series_ext_json:
+            with ZipFile(fname, "r") as archive:
+                archive.extractall(conn.path)
+            if storename is None:
+                storename = conn.name
+            return cls(conn, storename)
+
         with ZipFile(fname, "r") as archive:
             namelist = [
-                fi for fi in archive.namelist() if not fi.endswith("_meta.json")
+                fi for fi in archive.namelist() if not fi.endswith(f"_meta.{ext}")
             ]
             for f in tqdm(namelist, desc="Reading zip") if progressbar else namelist:
                 libname, fjson = os.path.split(f)
