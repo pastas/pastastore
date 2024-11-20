@@ -5,7 +5,7 @@ import logging
 import os
 import warnings
 from functools import partial
-from typing import Dict, List, Literal, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Literal, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -13,7 +13,6 @@ import pastas as ps
 from packaging.version import parse as parse_version
 from pastas.io.pas import pastas_hook
 from tqdm.auto import tqdm
-from tqdm.contrib.concurrent import cpu_count
 
 from pastastore.base import BaseConnector
 from pastastore.connectors import DictConnector
@@ -623,8 +622,10 @@ class PastaStore:
         self,
         statistics: Union[str, List[str]],
         modelnames: Optional[List[str]] = None,
+        parallel: bool = False,
         progressbar: Optional[bool] = False,
         ignore_errors: Optional[bool] = False,
+        fancy_output: bool = True,
         **kwargs,
     ) -> FrameorSeriesUnion:
         """Get model statistics.
@@ -642,6 +643,11 @@ class PastaStore:
         ignore_errors : bool, optional
             ignore errors when True, i.e. when trying to calculate statistics
             for non-existent model in modelnames, default is False
+        parallel : bool, optional
+            use parallel processing, by default False
+        fancy_output : bool, optional
+            only read if parallel=True, if True, return as DataFrame with statistics,
+            otherwise return list of results
         **kwargs
             any arguments that can be passed to the methods for calculating
             statistics
@@ -656,25 +662,39 @@ class PastaStore:
         if isinstance(statistics, str):
             statistics = [statistics]
 
-        # create dataframe for results
-        s = pd.DataFrame(index=modelnames, columns=statistics, data=np.nan)
+        if parallel:
+            kwargs["statistics"] = statistics
+            if self.conn.conn_type == "pas":
+                kwargs["connector"] = self.conn
+            return self.apply(
+                "models",
+                self.conn._get_statistics,
+                modelnames,
+                kwargs=kwargs,
+                parallel=parallel,
+                progressbar=progressbar,
+                fancy_output=fancy_output,
+            ).T  # transpose to match serial output
+        else:
+            # create dataframe for results
+            s = pd.DataFrame(index=modelnames, columns=statistics, data=np.nan)
 
-        # loop through model names
-        desc = "Get model statistics"
-        for mlname in tqdm(modelnames, desc=desc) if progressbar else modelnames:
-            try:
-                ml = self.get_models(mlname, progressbar=False)
-            except Exception as e:
-                if ignore_errors:
-                    continue
-                else:
-                    raise e
-            for stat in statistics:
-                value = ml.stats.__getattribute__(stat)(**kwargs)
-                s.loc[mlname, stat] = value
+            # loop through model names
+            desc = "Get model statistics"
+            for mlname in tqdm(modelnames, desc=desc) if progressbar else modelnames:
+                try:
+                    ml = self.get_models(mlname, progressbar=False)
+                except Exception as e:
+                    if ignore_errors:
+                        continue
+                    else:
+                        raise e
+                for stat in statistics:
+                    value = getattr(ml.stats, stat)(**kwargs)
+                    s.loc[mlname, stat] = value
 
-        s = s.squeeze()
-        return s.astype(float)
+            s = s.squeeze()
+            return s.astype(float)
 
     def create_model(
         self,
@@ -1235,21 +1255,13 @@ class PastaStore:
         modelnames = self.conn._parse_names(modelnames, libname="models")
 
         # prepare parallel
-        if parallel:
-            max_workers = (
-                min(32, cpu_count() + 4) if max_workers is None else max_workers
+        if parallel and self.conn.conn_type == "dict":
+            parallel = False
+            logger.error(
+                "Parallel solving only supported for PasConnector and "
+                "ArcticDBConnector databases. Setting parallel to `False`"
             )
-            # from: https://stackoverflow.com/a/42096963/10596229
-            num_chunks = max_workers * 14
-            chunksize = max(len(modelnames) // num_chunks, 1)
-
-            if self.conn.conn_type == "dict":
-                parallel = False
-                logger.error(
-                    "Parallel solving only supported for PasConnector and "
-                    "ArcticDBConnector databases. Setting parallel to `False`"
-                )
-
+        if parallel:
             if self.conn.conn_type == "arcticdb":
                 solve_model = partial(
                     self.conn._solve_model,
@@ -1261,7 +1273,7 @@ class PastaStore:
                     solve_model,
                     modelnames,
                     max_workers=max_workers,
-                    chunksize=chunksize,
+                    chunksize=None,
                     progressbar=progressbar,
                     desc="Solving models (parallel)",
                 )
@@ -1277,7 +1289,7 @@ class PastaStore:
                     solve_model,
                     modelnames,
                     max_workers=max_workers,
-                    chunksize=chunksize,
+                    chunksize=None,
                     progressbar=progressbar,
                     desc="Solving models (parallel)",
                 )
@@ -1609,7 +1621,17 @@ class PastaStore:
         else:
             return structure
 
-    def apply(self, libname, func, names=None, progressbar=True):
+    def apply(
+        self,
+        libname: str,
+        func: callable,
+        names: Optional[Union[str, List[str]]] = None,
+        kwargs: Optional[dict] = None,
+        progressbar: bool = True,
+        parallel: bool = False,
+        max_workers: Optional[int] = None,
+        fancy_output: bool = True,
+    ) -> Union[dict, pd.Series, pd.DataFrame]:
         """Apply function to items in library.
 
         Supported libraries are oseries, stresses, and models.
@@ -1619,32 +1641,114 @@ class PastaStore:
         libname : str
             library name, supports "oseries", "stresses" and "models"
         func : callable
-            function that accepts items from one of the supported libraries as input
+            function that accepts a string corresponding to the name of an item in
+            the library as its first argument. Additional keyword arguments can be
+            specified. The function can return any result, or update an item in the
+            database without returning anything.
         names : str, list of str, optional
             apply function to these names, by default None which loops over all stored
             items in library
+        kwargs : dict, optional
+            keyword arguments to pass to func, by default None
         progressbar : bool, optional
             show progressbar, by default True
+        parallel : bool, optional
+            run apply in parallel, default is False.
+        max_workers : int, optional
+            max no. of workers, only used if parallel is True
+        fancy_output : bool, optional
+            if True, try returning result as pandas Series or DataFrame, by default
+            False
 
         Returns
         -------
         dict
             dict of results of func, with names as keys and results as values
+
+        Notes
+        -----
+        Users should be aware that parallel solving is platform dependent
+        and may not always work. The current implementation works well for Linux users.
+        For Windows users, parallel solving does not work when called directly from
+        Jupyter Notebooks or IPython. To use parallel solving on Windows, the following
+        code should be used in a Python file::
+
+            from multiprocessing import freeze_support
+
+            if __name__ == "__main__":
+                freeze_support()
+                pstore.apply("models", some_func, parallel=True)
         """
         names = self.conn._parse_names(names, libname)
-        result = {}
+        if kwargs is None:
+            kwargs = {}
         if libname not in ("oseries", "stresses", "models"):
             raise ValueError(
                 "'libname' must be one of ['oseries', 'stresses', 'models']!"
             )
-        getter = getattr(self.conn, f"get_{libname}")
-        for n in (
-            tqdm(names, desc=f"Applying {func.__name__}") if progressbar else names
-        ):
-            result[n] = func(getter(n))
-        return result
+        if parallel:
+            result = self.conn._parallel(
+                func,
+                kwargs=kwargs,
+                names=names,
+                progressbar=progressbar,
+                max_workers=max_workers,
+                chunksize=None,
+                desc=f"Applying {func.__name__} (parallel)",
+            )
+        else:
+            result = []
+            for n in tqdm(
+                names, desc=f"Applying {func.__name__}", disable=not progressbar
+            ):
+                result.append(func(n, **kwargs))
+        if fancy_output:
+            return PastaStore._fancy_output(result, names, func.__name__)
+        else:
+            return result
 
-    def within(self, extent, names=None, libname="oseries"):
+    @staticmethod
+    def _fancy_output(
+        result: Iterable,
+        names: List[str],
+        label: Optional[str] = None,
+    ) -> Union[pd.Series, pd.DataFrame, dict]:
+        """Convert apply result to pandas Series, DataFrame or dict.
+
+        Parameters
+        ----------
+        result : Iterable
+            result of apply function
+        names : list
+            list of names
+        label : str, optional
+            label for columns, by default None
+
+        Returns
+        -------
+        pd.Series, pd.DataFrame, dict
+            Series, DataFrame or dict with results
+        """
+        if not isinstance(result, list):
+            result = list(result)
+        if isinstance(result[0], (float, int, np.integer)):
+            return pd.Series(result, index=names)
+        elif isinstance(result[0], (pd.Series, pd.DataFrame)):
+            df = pd.concat(dict(zip(names, result)), axis=1)
+            if label is not None:
+                df.columns.name = label
+            return df
+        elif result[0] is None:
+            return None  # return None if first result is None?
+        else:
+            return dict(zip(names, result))
+
+    def within(
+        self,
+        extent: list,
+        names: Optional[list[str]] = None,
+        libname: str = "oseries",
+    ):
         """Get names of items within extent.
 
         Parameters
