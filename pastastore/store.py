@@ -1642,7 +1642,8 @@ class PastaStore:
         func : callable
             function that accepts a string corresponding to the name of an item in
             the library as its first argument. Additional keyword arguments can be
-            specified. The function can return any result.
+            specified. The function can return any result, or update an item in the
+            database without returning anything.
         names : str, list of str, optional
             apply function to these names, by default None which loops over all stored
             items in library
@@ -1675,7 +1676,7 @@ class PastaStore:
 
             if __name__ == "__main__":
                 freeze_support()
-                pstore.solve_models(parallel=True)
+                pstore.apply("models", some_func, parallel=True)
         """
         names = self.conn._parse_names(names, libname)
         if kwargs is None:
