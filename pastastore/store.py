@@ -1752,7 +1752,7 @@ class PastaStore:
         if isinstance(result[0], (float, int, np.integer)):
             return pd.Series(result, index=names)
         elif isinstance(result[0], (pd.Series, pd.DataFrame)):
-            df = pd.concat(dict(zip(names, result, scrict=True)), axis=1)
+            df = pd.concat(dict(zip(names, result, strict=True)), axis=1)
             if label is not None:
                 df.columns.name = label
             return df
