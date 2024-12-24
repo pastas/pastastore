@@ -4,9 +4,8 @@ import json
 import logging
 import os
 import warnings
-from concurrent.futures import ProcessPoolExecutor
 from functools import partial
-from typing import Dict, List, Literal, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Literal, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -14,7 +13,6 @@ import pastas as ps
 from packaging.version import parse as parse_version
 from pastas.io.pas import pastas_hook
 from tqdm.auto import tqdm
-from tqdm.contrib.concurrent import process_map
 
 from pastastore.base import BaseConnector
 from pastastore.connectors import DictConnector
@@ -624,8 +622,10 @@ class PastaStore:
         self,
         statistics: Union[str, List[str]],
         modelnames: Optional[List[str]] = None,
+        parallel: bool = False,
         progressbar: Optional[bool] = False,
         ignore_errors: Optional[bool] = False,
+        fancy_output: bool = True,
         **kwargs,
     ) -> FrameorSeriesUnion:
         """Get model statistics.
@@ -643,6 +643,11 @@ class PastaStore:
         ignore_errors : bool, optional
             ignore errors when True, i.e. when trying to calculate statistics
             for non-existent model in modelnames, default is False
+        parallel : bool, optional
+            use parallel processing, by default False
+        fancy_output : bool, optional
+            only read if parallel=True, if True, return as DataFrame with statistics,
+            otherwise return list of results
         **kwargs
             any arguments that can be passed to the methods for calculating
             statistics
@@ -657,25 +662,39 @@ class PastaStore:
         if isinstance(statistics, str):
             statistics = [statistics]
 
-        # create dataframe for results
-        s = pd.DataFrame(index=modelnames, columns=statistics, data=np.nan)
+        if parallel:
+            kwargs["statistics"] = statistics
+            if self.conn.conn_type == "pas":
+                kwargs["connector"] = self.conn
+            return self.apply(
+                "models",
+                self.conn._get_statistics,
+                modelnames,
+                kwargs=kwargs,
+                parallel=parallel,
+                progressbar=progressbar,
+                fancy_output=fancy_output,
+            ).T  # transpose to match serial output
+        else:
+            # create dataframe for results
+            s = pd.DataFrame(index=modelnames, columns=statistics, data=np.nan)
 
-        # loop through model names
-        desc = "Get model statistics"
-        for mlname in tqdm(modelnames, desc=desc) if progressbar else modelnames:
-            try:
-                ml = self.get_models(mlname, progressbar=False)
-            except Exception as e:
-                if ignore_errors:
-                    continue
-                else:
-                    raise e
-            for stat in statistics:
-                value = ml.stats.__getattribute__(stat)(**kwargs)
-                s.loc[mlname, stat] = value
+            # loop through model names
+            desc = "Get model statistics"
+            for mlname in tqdm(modelnames, desc=desc) if progressbar else modelnames:
+                try:
+                    ml = self.get_models(mlname, progressbar=False)
+                except Exception as e:
+                    if ignore_errors:
+                        continue
+                    else:
+                        raise e
+                for stat in statistics:
+                    value = getattr(ml.stats, stat)(**kwargs)
+                    s.loc[mlname, stat] = value
 
-        s = s.squeeze()
-        return s.astype(float)
+            s = s.squeeze()
+            return s.astype(float)
 
     def create_model(
         self,
@@ -1235,73 +1254,57 @@ class PastaStore:
 
         modelnames = self.conn._parse_names(modelnames, libname="models")
 
-        solve_model = partial(
-            self._solve_model,
-            report=report,
-            ignore_solve_errors=ignore_solve_errors,
-            **kwargs,
-        )
-        if self.conn.conn_type != "pas":
+        # prepare parallel
+        if parallel and self.conn.conn_type == "dict":
             parallel = False
             logger.error(
-                "Parallel solving only supported for PasConnector databases."
-                "Setting parallel to `False`"
+                "Parallel solving only supported for PasConnector and "
+                "ArcticDBConnector databases. Setting parallel to `False`"
             )
-
-        if parallel and progressbar:
-            process_map(solve_model, modelnames, max_workers=max_workers)
-        elif parallel and not progressbar:
-            with ProcessPoolExecutor(max_workers=max_workers) as executor:
-                executor.map(solve_model, modelnames)
+        if parallel:
+            if self.conn.conn_type == "arcticdb":
+                solve_model = partial(
+                    self.conn._solve_model,
+                    report=report,
+                    ignore_solve_errors=ignore_solve_errors,
+                    **kwargs,
+                )
+                self.conn._parallel(
+                    solve_model,
+                    modelnames,
+                    max_workers=max_workers,
+                    chunksize=None,
+                    progressbar=progressbar,
+                    desc="Solving models (parallel)",
+                )
+            elif self.conn.conn_type == "pas":
+                solve_model = partial(
+                    self.conn._solve_model,
+                    connector=self.conn,
+                    report=report,
+                    ignore_solve_errors=ignore_solve_errors,
+                    **kwargs,
+                )
+                self.conn._parallel(
+                    solve_model,
+                    modelnames,
+                    max_workers=max_workers,
+                    chunksize=None,
+                    progressbar=progressbar,
+                    desc="Solving models (parallel)",
+                )
         else:
+            solve_model = partial(
+                self.conn._solve_model,
+                connector=self.conn,
+                report=report,
+                ignore_solve_errors=ignore_solve_errors,
+                **kwargs,
+            )
             for ml_name in (
                 tqdm(modelnames, desc="Solving models") if progressbar else modelnames
             ):
                 solve_model(ml_name=ml_name)
-
-    def _solve_model(
-        self,
-        ml_name: str,
-        report: bool = False,
-        ignore_solve_errors: bool = False,
-        **kwargs,
-    ) -> None:
-        """Solve a model in the store (internal method).
-
-        ml_name : list of str, optional
-            name of a model in the pastastore
-        report : boolean, optional
-            determines if a report is printed when the model is solved,
-            default is False
-        ignore_solve_errors : boolean, optional
-            if True, errors emerging from the solve method are ignored,
-            default is False which will raise an exception when a model
-            cannot be optimized
-        **kwargs : dictionary
-            arguments are passed to the solve method.
-        """
-        ml = self.conn.get_models(ml_name)
-        m_kwargs = {}
-        for key, value in kwargs.items():
-            if isinstance(value, pd.Series):
-                m_kwargs[key] = value.loc[ml.name]
-            else:
-                m_kwargs[key] = value
-        # Convert timestamps
-        for tstamp in ["tmin", "tmax"]:
-            if tstamp in m_kwargs:
-                m_kwargs[tstamp] = pd.Timestamp(m_kwargs[tstamp])
-
-        try:
-            ml.solve(report=report, **m_kwargs)
-        except Exception as e:
-            if ignore_solve_errors:
-                warning = "Solve error ignored for '%s': %s " % (ml.name, e)
-                logger.warning(warning)
-            else:
-                raise e
-
-        self.conn.add_model(ml, overwrite=True)
 
     def model_results(
         self,
@@ -1443,6 +1446,7 @@ class PastaStore:
         conn: Optional[BaseConnector] = None,
         storename: Optional[str] = None,
         progressbar: bool = True,
+        series_ext_json: bool = False,
     ):
         """Load PastaStore from zipfile.
 
@@ -1458,6 +1462,10 @@ class PastaStore:
             defaults to the name of the Connector.
         progressbar : bool, optional
             show progressbar, by default True
+        series_ext_json : bool, optional
+            if True, series are expected to have a .json extension, by default False,
+            which assumes a .pas extension. Set this option to true for reading
+            zipfiles created with older versions of pastastore <1.8.0.
 
         Returns
         -------
@@ -1469,9 +1477,22 @@ class PastaStore:
         if conn is None:
             conn = DictConnector("pastas_db")
 
+        if series_ext_json:
+            ext = "json"
+        else:
+            ext = "pas"
+
+        # short circuit for PasConnector when zipfile was written using pas files
+        if conn.conn_type == "pas" and not series_ext_json:
+            with ZipFile(fname, "r") as archive:
+                archive.extractall(conn.path)
+            if storename is None:
+                storename = conn.name
+            return cls(conn, storename)
+
         with ZipFile(fname, "r") as archive:
             namelist = [
-                fi for fi in archive.namelist() if not fi.endswith("_meta.json")
+                fi for fi in archive.namelist() if not fi.endswith(f"_meta.{ext}")
             ]
             for f in tqdm(namelist, desc="Reading zip") if progressbar else namelist:
                 libname, fjson = os.path.split(f)
@@ -1480,7 +1501,7 @@ class PastaStore:
                     if not isinstance(s.index, pd.DatetimeIndex):
                         s.index = pd.to_datetime(s.index, unit="ms")
                     s = s.sort_index()
-                    meta = json.load(archive.open(f.replace(".json", "_meta.json")))
+                    meta = json.load(archive.open(f.replace(f".{ext}", f"_meta.{ext}")))
                     conn._add_series(libname, s, fjson.split(".")[0], metadata=meta)
                 elif libname in ["models"]:
                     ml = json.load(archive.open(f), object_hook=pastas_hook)
@@ -1496,7 +1517,7 @@ class PastaStore:
         case_sensitive: bool = True,
         sort=True,
     ):
-        """Search for names of time series or models starting with `s`.
+        """Search for names of time series or models containing string `s`.
 
         Parameters
         ----------
@@ -1515,30 +1536,45 @@ class PastaStore:
             list of names that match search result
         """
         if libname == "models":
-            lib_names = self.model_names
+            lib_names = {"models": self.model_names}
         elif libname == "stresses":
-            lib_names = self.stresses_names
+            lib_names = {"stresses": self.stresses_names}
         elif libname == "oseries":
-            lib_names = self.oseries_names
+            lib_names = {"oseries": self.oseries_names}
+        elif libname is None:
+            lib_names = {
+                "oseries": self.oseries_names,
+                "stresses": self.stresses_names,
+                "models": self.model_names,
+            }
         else:
             raise ValueError("Provide valid libname: 'models', 'stresses' or 'oseries'")
 
-        if isinstance(s, str):
-            if case_sensitive:
-                matches = [n for n in lib_names if s in n]
-            else:
-                matches = [n for n in lib_names if s.lower() in n.lower()]
-        if isinstance(s, list):
-            m = np.array([])
-            for sub in s:
+        result = {}
+        for lib, names in lib_names.items():
+            if isinstance(s, str):
                 if case_sensitive:
-                    m = np.append(m, [n for n in lib_names if sub in n])
+                    matches = [n for n in names if s in n]
                 else:
-                    m = np.append(m, [n for n in lib_names if sub.lower() in n.lower()])
-            matches = list(np.unique(m))
-        if sort:
-            matches.sort()
-        return matches
+                    matches = [n for n in names if s.lower() in n.lower()]
+            elif isinstance(s, list):
+                m = np.array([])
+                for sub in s:
+                    if case_sensitive:
+                        m = np.append(m, [n for n in names if sub in n])
+                    else:
+                        m = np.append(m, [n for n in names if sub.lower() in n.lower()])
+                matches = list(np.unique(m))
+            else:
+                raise TypeError("s must be str or list of str!")
+            if sort:
+                matches.sort()
+            result[lib] = matches
+
+        if len(result) == 1:
+            return result[lib]
+        else:
+            return result
 
     def get_model_timeseries_names(
         self,
@@ -1603,7 +1639,17 @@ class PastaStore:
         else:
             return structure
 
-    def apply(self, libname, func, names=None, progressbar=True):
+    def apply(
+        self,
+        libname: str,
+        func: callable,
+        names: Optional[Union[str, List[str]]] = None,
+        kwargs: Optional[dict] = None,
+        progressbar: bool = True,
+        parallel: bool = False,
+        max_workers: Optional[int] = None,
+        fancy_output: bool = True,
+    ) -> Union[dict, pd.Series, pd.DataFrame]:
         """Apply function to items in library.
 
         Supported libraries are oseries, stresses, and models.
@@ -1613,32 +1659,114 @@ class PastaStore:
         libname : str
             library name, supports "oseries", "stresses" and "models"
         func : callable
-            function that accepts items from one of the supported libraries as input
+            function that accepts a string corresponding to the name of an item in
+            the library as its first argument. Additional keyword arguments can be
+            specified. The function can return any result, or update an item in the
+            database without returning anything.
         names : str, list of str, optional
             apply function to these names, by default None which loops over all stored
             items in library
+        kwargs : dict, optional
+            keyword arguments to pass to func, by default None
         progressbar : bool, optional
             show progressbar, by default True
+        parallel : bool, optional
+            run apply in parallel, default is False.
+        max_workers : int, optional
+            max no. of workers, only used if parallel is True
+        fancy_output : bool, optional
+            if True, try returning result as pandas Series or DataFrame, by default
+            False
 
         Returns
         -------
         dict
             dict of results of func, with names as keys and results as values
+
+        Notes
+        -----
+        Users should be aware that parallel solving is platform dependent
+        and may not always work. The current implementation works well for Linux users.
+        For Windows users, parallel solving does not work when called directly from
+        Jupyter Notebooks or IPython. To use parallel solving on Windows, the following
+        code should be used in a Python file::
+
+            from multiprocessing import freeze_support
+
+            if __name__ == "__main__":
+                freeze_support()
+                pstore.apply("models", some_func, parallel=True)
         """
         names = self.conn._parse_names(names, libname)
-        result = {}
+        if kwargs is None:
+            kwargs = {}
         if libname not in ("oseries", "stresses", "models"):
             raise ValueError(
                 "'libname' must be one of ['oseries', 'stresses', 'models']!"
             )
-        getter = getattr(self.conn, f"get_{libname}")
-        for n in (
-            tqdm(names, desc=f"Applying {func.__name__}") if progressbar else names
-        ):
-            result[n] = func(getter(n))
-        return result
+        if parallel:
+            result = self.conn._parallel(
+                func,
+                kwargs=kwargs,
+                names=names,
+                progressbar=progressbar,
+                max_workers=max_workers,
+                chunksize=None,
+                desc=f"Applying {func.__name__} (parallel)",
+            )
+        else:
+            result = []
+            for n in tqdm(
+                names, desc=f"Applying {func.__name__}", disable=not progressbar
+            ):
+                result.append(func(n, **kwargs))
+        if fancy_output:
+            return PastaStore._fancy_output(result, names, func.__name__)
+        else:
+            return result
 
-    def within(self, extent, names=None, libname="oseries"):
+    @staticmethod
+    def _fancy_output(
+        result: Iterable,
+        names: List[str],
+        label: Optional[str] = None,
+    ) -> Union[pd.Series, pd.DataFrame, dict]:
+        """Convert apply result to pandas Series, DataFrame or dict.
+
+        Parameters
+        ----------
+        result : Iterable
+            result of apply function
+        names : list
+            list of names
+        label : str, optional
+            label for columns, by default None
+
+        Returns
+        -------
+        pd.Series, pd.DataFrame, dict
+            Series, DataFrame or dict with results
+        """
+        if not isinstance(result, list):
+            result = list(result)
+        if isinstance(result[0], (float, int, np.integer)):
+            return pd.Series(result, index=names)
+        elif isinstance(result[0], (pd.Series, pd.DataFrame)):
+            df = pd.concat(dict(zip(names, result, strict=True)), axis=1)
+            if label is not None:
+                df.columns.name = label
+            return df
+        elif result[0] is None:
+            return None  # return None if first result is None?
+        else:
+            return dict(zip(names, result, strict=True))
+
+    def within(
+        self,
+        extent: list,
+        names: Optional[list[str]] = None,
+        libname: str = "oseries",
+    ):
         """Get names of items within extent.
 
         Parameters
