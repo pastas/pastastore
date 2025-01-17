@@ -7,7 +7,7 @@
 # pastastore
 
 This module stores 
-[Pastas](https://pastas.readthedocs.io/en/latest/) time series and models in a
+[Pastas](https://pastas.readthedocs.io/latest/) time series and models in a
 database.
 
 Storing time series and models in a database allows the user to manage time
@@ -92,4 +92,4 @@ pstore.to_zip("my_backup.zip")
 ```
 
 For more elaborate examples, refer to the
-[Notebooks](https://pastastore.readthedocs.io/en/latest/examples.html#example-notebooks).
+[Notebooks](https://pastastore.readthedocs.io/latest/examples.html#example-notebooks).
