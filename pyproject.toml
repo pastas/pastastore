@@ -49,9 +49,7 @@ extensions = ["hydropandas"]
 optional = ["contextily", "pyproj", "adjustText"]
 arcticdb = ["arcticdb"]
 lint = ["ruff"]
-test = [
-    "pastastore[arcticdb,lint,optional]",
-    "hydropandas[full]",
+pytest = [
     "coverage",
     "codecov",
     "pytest",
@@ -60,16 +58,10 @@ test = [
     "pytest-benchmark",
     "codacy-coverage",
 ]
-test_py312 = [
-    "pastastore[lint,optional]", # no arcticdb
+test = ["pastastore[arcticdb,lint,optional,pytest]", "hydropandas[full]"]
+test_noarctic = [
+    "pastastore[lint,optional,pytest]", # no arcticdb
     "hydropandas[full]",
-    "coverage",
-    "codecov",
-    "pytest",
-    "pytest-cov",
-    "pytest-dependency",
-    "pytest-benchmark",
-    "codacy-coverage",
 ]
 docs = [
     "pastastore[optional]",

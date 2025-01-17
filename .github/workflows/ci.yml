@@ -63,7 +63,14 @@ jobs:
             pastas-version: "git+https://github.com/pastas/pastas.git@v0.23.1"
           - python-version: "3.12"
             pastas-version: "git+https://github.com/pastas/pastas.git@v1.0.1"
-
+          - python-version: "3.13"
+            pastas-version: "git+https://github.com/pastas/pastas.git@v0.22.0"
+          - python-version: "3.13"
+            pastas-version: "git+https://github.com/pastas/pastas.git@v0.23.1"
+          - python-version: "3.13"
+            pastas-version: "git++https://github.com/pastas/pastas.git@v1.0.1"
+          - python-version: "3.13"
+            pastas-version: "git+https://github.com/pastas/pastas.git@v1.6.0"
     steps:
       - uses: actions/checkout@v4
 
