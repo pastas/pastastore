@@ -370,8 +370,7 @@ class ConnectorUtil:
             raise TypeError("Expected pastas.Model or dict!")
         if name not in self.oseries.index:
             msg = (
-                f"Cannot add model because oseries '{name}' "
-                "is not contained in store."
+                f"Cannot add model because oseries '{name}' is not contained in store."
             )
             raise LookupError(msg)
         # expensive check

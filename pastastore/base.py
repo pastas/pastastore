@@ -332,7 +332,7 @@ class BaseConnector(ABC):
             self._clear_cache(libname)
         else:
             raise ItemInLibraryException(
-                f"Item with name '{name}' already" f" in '{libname}' library!"
+                f"Item with name '{name}' already in '{libname}' library!"
             )
 
     def _update_series(
@@ -575,7 +575,7 @@ class BaseConnector(ABC):
             )
         else:
             raise ItemInLibraryException(
-                f"Model with name '{name}' " "already in 'models' library!"
+                f"Model with name '{name}' already in 'models' library!"
             )
         self._clear_cache("_modelnames_cache")
         self._add_oseries_model_links(str(mldict["oseries"]["name"]), name)
@@ -1093,8 +1093,7 @@ class BaseConnector(ABC):
         """
         if prompt:
             ui = input(
-                f"Do you want to empty '{libname}'"
-                " library of all its contents? [y/N] "
+                f"Do you want to empty '{libname}' library of all its contents? [y/N] "
             )
             if ui.lower() != "y":
                 return
@@ -1115,7 +1114,7 @@ class BaseConnector(ABC):
             ):
                 self._del_item(libname, name)
             self._clear_cache(libname)
-            print(f"Emptied library {libname} in {self.name}: " f"{self.__class__}")
+            print(f"Emptied library {libname} in {self.name}: {self.__class__}")
 
     def _iter_series(self, libname: str, names: Optional[List[str]] = None):
         """Iterate over time series in library (internal method).
