@@ -68,7 +68,7 @@ jobs:
           - python-version: "3.13"
             pastas-version: "git+https://github.com/pastas/pastas.git@v0.23.1"
           - python-version: "3.13"
-            pastas-version: "git++https://github.com/pastas/pastas.git@v1.0.1"
+            pastas-version: "git+https://github.com/pastas/pastas.git@v1.0.1"
           - python-version: "3.13"
             pastas-version: "git+https://github.com/pastas/pastas.git@v1.6.0"
     steps:
