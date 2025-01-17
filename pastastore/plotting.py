@@ -98,8 +98,7 @@ class Plots:
 
         if len(names) > 20 and split:
             raise ValueError(
-                "More than 20 time series leads to too many "
-                "subplots, set split=False."
+                "More than 20 time series leads to too many subplots, set split=False."
             )
 
         if ax is None:
@@ -542,7 +541,7 @@ class Plots:
 
         if label is None:
             if extend:
-                label = f"No. Models = {len(statsdf)-1}"
+                label = f"No. Models = {len(statsdf) - 1}"
             else:
                 label = f"No. Models = {len(statsdf)}"
 
@@ -1053,7 +1052,7 @@ class Maps:
                     yi = imeta.pop("y", np.nan)
                 else:
                     raise ValueError(
-                        "metadata_source must be either " "'model' or 'store'!"
+                        "metadata_source must be either 'model' or 'store'!"
                     )
                 if np.isnan(xi) or np.isnan(yi):
                     print(f"No x,y-data for {istress.name}!")
@@ -1062,7 +1061,7 @@ class Maps:
                     print(f"x,y-data is 0.0 for {istress.name}, not plotting!")
                     continue
 
-                stresses.loc[istress.name, :] = (xi, yi, name, f"C{count%10}")
+                stresses.loc[istress.name, :] = (xi, yi, name, f"C{count % 10}")
             count += 1
 
         # create figure
@@ -1083,7 +1082,7 @@ class Maps:
             xm = float(ometa.pop("x", np.nan))
             ym = float(ometa.pop("y", np.nan))
         else:
-            raise ValueError("metadata_source must be either " "'model' or 'store'!")
+            raise ValueError("metadata_source must be either 'model' or 'store'!")
 
         po = ax.scatter(xm, ym, s=osize, marker="o", label=oserieslabel, color="k")
         legend_list = [po]
@@ -1250,14 +1249,14 @@ class Maps:
                 if np.isin(st.loc[s, "kind"], kinds):
                     (c,) = np.where(skind == st.loc[s, "kind"])
                     if color_lines:
-                        color = f"C{c[0]+1}"
+                        color = f"C{c[0] + 1}"
                     else:
                         color = "k"
                     segments.append(
                         [[os["x"], os["y"]], [st.loc[s, "x"], st.loc[s, "y"]]]
                     )
                     segment_colors.append(color)
-                    scatter_colors.append(f"C{c[0]+1}")
+                    scatter_colors.append(f"C{c[0] + 1}")
 
                     stused = np.append(stused, s)
 
@@ -1294,7 +1293,7 @@ class Maps:
                         [],
                         marker="o",
                         color="w",
-                        markerfacecolor=f"C{c[0]+1}",
+                        markerfacecolor=f"C{c[0] + 1}",
                         label=kind,
                         markersize=10,
                     )

@@ -57,12 +57,12 @@ def boolean_styler(b):
     """
     if b:
         return (
-            f"background-color: {rgb2hex((231/255, 255/255, 239/255))}; "
+            f"background-color: {rgb2hex((231 / 255, 255 / 255, 239 / 255))}; "
             "color: darkgreen"
         )
     else:
         return (
-            f"background-color: {rgb2hex((255/255, 238/255, 238/255))}; "
+            f"background-color: {rgb2hex((255 / 255, 238 / 255, 238 / 255))}; "
             "color: darkred"
         )
 
@@ -90,11 +90,11 @@ def boolean_row_styler(row, column):
     """
     if row[column]:
         return (
-            f"background-color: {rgb2hex((231/255, 255/255, 239/255))}; "
+            f"background-color: {rgb2hex((231 / 255, 255 / 255, 239 / 255))}; "
             "color: darkgreen",
         ) * row.size
     else:
         return (
-            f"background-color: {rgb2hex((255/255, 238/255, 238/255))}; "
+            f"background-color: {rgb2hex((255 / 255, 238 / 255, 238 / 255))}; "
             "color: darkred",
         ) * row.size

@@ -1373,7 +1373,7 @@ class PastaStore:
 
         if os.path.exists(fname) and not overwrite:
             raise FileExistsError(
-                "File already exists! " "Use 'overwrite=True' to " "force writing file."
+                "File already exists! Use 'overwrite=True' to force writing file."
             )
         elif os.path.exists(fname):
             warnings.warn(f"Overwriting file '{os.path.basename(fname)}'", stacklevel=1)

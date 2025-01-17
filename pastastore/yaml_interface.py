@@ -427,7 +427,7 @@ class PastastoreYAML:
                     .values
                 )
                 logger.info(
-                    f"  | using {n} nearest stress(es) with kind='{kind}': " f"{snames}"
+                    f"  | using {n} nearest stress(es) with kind='{kind}': {snames}"
                 )
             else:
                 snames = [snames]
@@ -547,14 +547,14 @@ class PastastoreYAML:
                 # cannot make any assumptions for non-RechargeModels
                 if smyml is None:
                     raise ValueError(
-                        "Insufficient information " f"for stressmodel '{name}'!"
+                        f"Insufficient information for stressmodel '{name}'!"
                     )
                 # get stressmodel type, with default StressModel
                 if classkey in smyml:
                     smtyp = smyml[classkey]
                 else:
                     logger.info(
-                        "| no stressmodel class type provided, " "using 'StressModel'"
+                        "| no stressmodel class type provided, using 'StressModel'"
                     )
                     smtyp = "StressModel"
 
@@ -574,7 +574,7 @@ class PastastoreYAML:
                 sm = self._parse_wellmodel_dict(smyml, onam=onam)
             else:
                 raise NotImplementedError(
-                    "PastaStore.yaml interface does " f"not (yet) support '{smtyp}'!"
+                    f"PastaStore.yaml interface does not (yet) support '{smtyp}'!"
                 )
 
             # add to list

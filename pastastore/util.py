@@ -143,7 +143,7 @@ def delete_pastastore(pstore, libraries: Optional[List[str]] = None) -> None:
         delete_pas_connector(conn=pstore.conn, libraries=libraries)
     else:
         raise TypeError(
-            "Unrecognized pastastore Connector type: " f"{pstore.conn.conn_type}"
+            f"Unrecognized pastastore Connector type: {pstore.conn.conn_type}"
         )
 
 
@@ -545,7 +545,7 @@ def frontiers_checks(
         ml = pstore.get_models(mlnam)
 
         if ml.parameters["optimal"].hasnans:
-            print(f"Warning! Skipping model '{mlnam}' because " "it is not solved!")
+            print(f"Warning! Skipping model '{mlnam}' because it is not solved!")
             continue
 
         checks = pd.DataFrame(columns=["stat", "threshold", "units", "check_passed"])
@@ -752,8 +752,7 @@ def frontiers_aic_select(
             modelnames += pstore.oseries_models[o]
     elif oseries is not None:
         print(
-            "Warning! Both 'modelnames' and 'oseries' provided, "
-            "using only 'modelnames'"
+            "Warning! Both 'modelnames' and 'oseries' provided, using only 'modelnames'"
         )
 
     # Dataframe of models with corresponding oseries
