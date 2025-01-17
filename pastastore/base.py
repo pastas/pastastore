@@ -1435,3 +1435,17 @@ class ModelAccessor:
         from random import choice
 
         return self.conn.get_models(choice(self.conn._modelnames_cache))
+
+    @property
+    @functools.lru_cache()
+    def metadata(self):
+        """Dataframe with overview of models metadata."""
+        idx = pd.MultiIndex.from_tuples(
+            ((k, i) for k, v in self.conn.oseries_models.items() for i in v),
+            names=["oseries", "modelname"],
+        )
+        modeldf = pd.DataFrame(index=idx)
+        modeldf = modeldf.join(
+            self.conn.oseries, on=modeldf.index.get_level_values(0)
+        ).drop("key_0", axis=1)
+        return modeldf
