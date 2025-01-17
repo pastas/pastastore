@@ -47,7 +47,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
         pastas-version:
           [
             "git+https://github.com/pastas/pastas.git@v0.22.0",
@@ -63,7 +63,14 @@ jobs:
             pastas-version: "git+https://github.com/pastas/pastas.git@v0.23.1"
           - python-version: "3.12"
             pastas-version: "git+https://github.com/pastas/pastas.git@v1.0.1"
-
+          - python-version: "3.13"
+            pastas-version: "git+https://github.com/pastas/pastas.git@v0.22.0"
+          - python-version: "3.13"
+            pastas-version: "git+https://github.com/pastas/pastas.git@v0.23.1"
+          - python-version: "3.13"
+            pastas-version: "git+https://github.com/pastas/pastas.git@v1.0.1"
+          - python-version: "3.13"
+            pastas-version: "git+https://github.com/pastas/pastas.git@v1.6.0"
     steps:
       - uses: actions/checkout@v4
 
@@ -75,18 +82,18 @@ jobs:
           cache-dependency-path: pyproject.toml
 
       - name: Install dependencies < PY312
-        if: ${{ matrix.python-version != '3.12'}}  
+        if: ${{ matrix.python-version < '3.12'}}
         run: |
           pip install --upgrade pip
           pip install ${{ matrix.pastas-version }}
           pip install -e .[test]
 
-      - name: Install dependencies == PY312
-        if: ${{ matrix.python-version == '3.12'}}  
+      - name: Install dependencies >= PY312
+        if: ${{ matrix.python-version >= '3.12'}}
         run: |
           pip install --upgrade pip
-          pip install ${{ matrix.pastas-version }}
-          pip install -e .[test_py312]
+          pip install ${{ matrix.pastas-version }} setuptools
+          pip install -e .[test_noarctic]
 
       - name: Run pytest
         run: |
