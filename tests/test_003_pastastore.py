@@ -296,6 +296,16 @@ def test_to_from_zip(pstore):
         os.remove(zipname)
 
 
+def test_load_pastastore_from_config_file(pstore):
+    if pstore.type == "pas" or pstore.type == "arcticdb":
+        path = (
+            pstore.conn.path if pstore.type == "pas" else pstore.conn.uri.split("//")[1]
+        )
+        fname = os.path.join(path, f"{pstore.conn.name}.pastastore")
+        pstore2 = pst.PastaStore.from_pastastore_config_file(fname)
+        assert not pstore2.empty
+
+
 def test_example_pastastore():
     from pastastore.datasets import example_pastastore
 
