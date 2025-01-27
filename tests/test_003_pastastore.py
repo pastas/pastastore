@@ -319,3 +319,11 @@ def test_meta_with_name(pstore):
     pstore.add_stress(s, "what_i_want", kind="special", metadata=smeta)
     assert "what_i_want" in pstore.stresses.index, "This is not right."
     pstore.del_stress("what_i_want")
+
+
+@pytest.mark.dependency
+def test_models_metadata(request, pstore):
+    depends(request, [f"test_create_models[{pstore.type}]"])
+    df = pstore.models.metadata
+    assert df.index.size == 2
+    assert (df["n_stressmodels"] == 1).all()
