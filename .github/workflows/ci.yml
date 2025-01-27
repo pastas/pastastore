@@ -81,26 +81,18 @@ jobs:
           cache: "pip"
           cache-dependency-path: pyproject.toml
 
-      - name: Install dependencies < PY312
-        if: ${{ matrix.python-version < '3.12'}}
+      - name: Install dependencies
         run: |
           pip install --upgrade pip
           pip install ${{ matrix.pastas-version }}
           pip install -e .[test]
-
-      - name: Install dependencies >= PY312
-        if: ${{ matrix.python-version >= '3.12'}}
-        run: |
-          pip install --upgrade pip
-          pip install ${{ matrix.pastas-version }} setuptools
-          pip install -e .[test_noarctic]
 
       - name: Run pytest
         run: |
           pytest -m "not (bgmap or pastas150)"
 
       - name: Run all tests once
-        if: ${{ matrix.python-version == '3.11' && matrix.pastas-version == 'git+https://github.com/pastas/pastas.git@dev' }}
+        if: ${{ matrix.python-version == '3.12' && matrix.pastas-version == 'git+https://github.com/pastas/pastas.git@dev' }}
         run: |
           pytest -m ""
 
