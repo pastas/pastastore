@@ -1437,9 +1437,10 @@ class ModelAccessor:
         return self.conn.get_models(choice(self.conn._modelnames_cache))
 
     @property
-    @functools.lru_cache()
     def metadata(self):
         """Dataframe with overview of models metadata."""
+        # NOTE: cannot be cached as this dataframe is not a property of the connector
+        # I'm not sure how to clear this cache when models are added/removed.
         idx = pd.MultiIndex.from_tuples(
             ((k, i) for k, v in self.conn.oseries_models.items() for i in v),
             names=["oseries", "modelname"],
