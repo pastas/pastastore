@@ -59,10 +59,6 @@ pytest = [
     "codacy-coverage",
 ]
 test = ["pastastore[arcticdb,lint,optional,pytest]", "hydropandas[full]"]
-test_noarctic = [
-    "pastastore[lint,optional,pytest]", # no arcticdb
-    "hydropandas[full]",
-]
 docs = [
     "pastastore[optional]",
     "sphinx_rtd_theme",
