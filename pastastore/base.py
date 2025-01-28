@@ -1364,10 +1364,36 @@ class BaseConnector(ABC):
 class ModelAccessor:
     """Object for managing access to stored models.
 
-    Provides dict-like access to models (i.e. PastaStore.models["model1"]), or allows
-    adding models to the PastaStore using dict-like assignment (i.e.
-    PastaStore.models["model1"] = ml), and it can serve as an iterator (i.e. [ml for ml
-    in pstore.models]).
+    The ModelAccessor object allows dictionary-like assignment and access to models.
+    In addition it provides some useful utilities for working with stored models
+    in the database.
+
+    Examples
+    --------
+    Get a model by name::
+
+    >>> model = pstore.models["my_model"]
+
+    Store a model in the database::
+
+    >>> pstore.models["my_model_v2"] = model
+
+    Get model metadata dataframe::
+
+    >>> pstore.models.metadata
+
+    Number of models::
+
+    >>> len(pstore.models)
+
+    Random model::
+
+    >>> model = pstore.models.random()
+
+    Iterate over stored models::
+
+    >>> for ml in pstore.models:
+    >>>     ml.solve()
     """
 
     def __init__(self, conn):
@@ -1381,8 +1407,11 @@ class ModelAccessor:
         self.conn = conn
 
     def __repr__(self):
-        """Representation of the object is a list of modelnames."""
-        return self.conn._modelnames_cache.__repr__()
+        """Representation contains the number of models and the list of model names."""
+        return (
+            f"<{self.__class__.__name__}> {len(self)} model(s): \n"
+            + self.conn._modelnames_cache.__repr__()
+        )
 
     def __getitem__(self, name: str):
         """Get model from store with model name as key.
@@ -1458,5 +1487,4 @@ class ModelAccessor:
             )
             for setting in mldict["settings"].keys():
                 modeldf.loc[(onam, mlnam), setting] = mldict["settings"][setting]
-
         return modeldf
