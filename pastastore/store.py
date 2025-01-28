@@ -138,12 +138,43 @@ class PastaStore:
 
     @property
     def models(self):
-        """Return list of model names.
+        """Return the ModelAccessor object.
+
+        The ModelAccessor object allows dictionary-like assignment and access to models.
+        In addition it provides some useful utilities for working with stored models
+        in the database.
+
+        Examples
+        --------
+        Get a model by name::
+
+        >>> model = pstore.models["my_model"]
+
+        Store a model in the database::
+
+        >>> pstore.models["my_model_v2"] = model
+
+        Get model metadata dataframe::
+
+        >>> pstore.models.metadata
+
+        Number of models::
+
+        >>> len(pstore.models)
+
+        Random model::
+
+        >>> model = pstore.models.random()
+
+        Iterate over stored models::
+
+        >>> for ml in pstore.models:
+        >>>     ml.solve()
 
         Returns
         -------
-        list
-            list of model names
+        ModelAccessor
+            ModelAccessor object
         """
         return self.conn.models
 

@@ -168,6 +168,7 @@ def test_create_models(pstore):
         ["oseries1", "oseries2"], store=True, progressbar=False
     )
     _ = pstore.conn.models
+    assert pstore.n_models == 2
 
 
 @pytest.mark.dependency
@@ -252,15 +253,12 @@ def test_update_ts_settings(request, pstore):
 
     ml2 = pstore.get_models(ml.name, update_ts_settings=True)
 
-    try:
-        assert ml2.oseries.settings["tmax"] == o.index[-1]
-        assert ml2.stressmodels["recharge"].prec.settings["tmax"] == tmax
-        assert ml2.stressmodels["recharge"].evap.settings["tmax"] == tmax
-        assert ml2.stressmodels["prec"].stress[0].settings["tmax"] == p2.index[-1]
-    except AssertionError:
-        pstore.del_models("ml_oseries2")
-        pstore.set_check_model_series_values(True)
-        raise
+    assert ml2.oseries.settings["tmax"] == o.index[-1]
+    assert ml2.stressmodels["recharge"].prec.settings["tmax"] == tmax
+    assert ml2.stressmodels["recharge"].evap.settings["tmax"] == tmax
+    assert ml2.stressmodels["prec"].stress[0].settings["tmax"] == p2.index[-1]
+    pstore.del_models("ml_oseries2")
+    pstore.set_check_model_series_values(True)
 
 
 # @pytest.mark.dependency()
@@ -329,3 +327,12 @@ def test_meta_with_name(pstore):
     pstore.add_stress(s, "what_i_want", kind="special", metadata=smeta)
     assert "what_i_want" in pstore.stresses.index, "This is not right."
     pstore.del_stress("what_i_want")
+
+
+@pytest.mark.dependency
+def test_models_metadata(request, pstore):
+    # depends(request, [f"test_create_models[{pstore.type}]"])
+    pstore.create_models_bulk(["oseries1", "oseries2"], store=True, progressbar=False)
+    df = pstore.models.metadata
+    assert df.index.size == 2
+    assert (df["n_stressmodels"] == 1).all()
