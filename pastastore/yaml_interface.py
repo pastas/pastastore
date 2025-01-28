@@ -3,6 +3,8 @@
 import datetime
 import logging
 import os
+import tempfile
+from contextlib import contextmanager
 from copy import deepcopy
 from typing import Any, Dict, List, Optional, Union
 
@@ -122,6 +124,18 @@ def reduce_to_minimal_dict(d, keys=None):
             del d[k]
         elif isinstance(v, dict):
             reduce_to_minimal_dict(v, keys=keys)
+
+
+@contextmanager
+def temporary_yaml_from_str(yaml):
+    """Temporary yaml file that is deleted after usage."""
+    temp = tempfile.NamedTemporaryFile(delete=False)
+    temp.write(yaml.encode("utf-8"))
+    temp.close()
+    try:
+        yield temp.name
+    finally:
+        os.unlink(temp.name)
 
 
 class PastastoreYAML:
@@ -533,7 +547,10 @@ class PastastoreYAML:
             if (
                 smnam.lower() in ["rch", "rech", "recharge", "rechargemodel"]
             ) and not smtyp:
-                logger.info("| assuming RechargeModel based on stressmodel name.")
+                logger.info(
+                    "| no StressModel type provided, using 'RechargeModel' based on "
+                    "stressmodel name."
+                )
                 # check if stressmodel dictionary is empty, create (nearly
                 # empty) dict so defaults are used
                 if smyml is None:
@@ -604,7 +621,7 @@ class PastastoreYAML:
         Parameters
         ----------
         fyaml : str
-            path to file
+            YAML as str or path to file
 
         Returns
         -------
@@ -618,8 +635,18 @@ class PastastoreYAML:
         NotImplementedError
             if unsupported stressmodel is encountered
         """
-        with open(fyaml, "r") as f:
-            yml = yaml.load(f, Loader=yaml.CFullLoader)
+        if "\n" in fyaml or "\r" in fyaml:
+            with temporary_yaml_from_str(fyaml) as fyaml:
+                with open(fyaml, "r") as f:
+                    yml = yaml.load(f, Loader=yaml.CFullLoader)
+        elif os.path.exists(fyaml):
+            with open(fyaml, "r") as f:
+                yml = yaml.load(f, Loader=yaml.CFullLoader)
+        else:
+            raise ValueError(
+                "Could not read YAML file! Check if input is valid YAML "
+                "or valid path to YAML file."
+            )
 
         models = []
 
