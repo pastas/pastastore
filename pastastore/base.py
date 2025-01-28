@@ -332,7 +332,8 @@ class BaseConnector(ABC):
             self._clear_cache(libname)
         else:
             raise ItemInLibraryException(
-                f"Item with name '{name}' already in '{libname}' library!"
+                f"Time series with name '{name}' already in '{libname}' library! "
+                "Use overwrite=True to replace existing time series."
             )
 
     def _update_series(
