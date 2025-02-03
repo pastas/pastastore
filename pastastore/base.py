@@ -576,7 +576,8 @@ class BaseConnector(ABC):
             )
         else:
             raise ItemInLibraryException(
-                f"Model with name '{name}' already in 'models' library!"
+                f"Model with name '{name}' already in 'models' library! "
+                "Use overwrite=True to replace existing model."
             )
         self._clear_cache("_modelnames_cache")
         self._add_oseries_model_links(str(mldict["oseries"]["name"]), name)
