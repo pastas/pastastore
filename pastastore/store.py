@@ -1597,7 +1597,10 @@ class PastaStore:
                 "models": self.model_names,
             }
         else:
-            raise ValueError("Provide valid libname: 'models', 'stresses' or 'oseries'")
+            raise ValueError(
+                "Provide valid libname: 'models', 'stresses', 'oseries' or None"
+                " to seach within all libraries."
+            )
 
         result = {}
         for lib, names in lib_names.items():
