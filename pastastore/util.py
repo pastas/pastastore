@@ -1,6 +1,7 @@
 """Useful utilities for pastastore."""
 
 import os
+import shutil
 from typing import Dict, List, Optional, Union
 
 import numpy as np
@@ -43,8 +44,6 @@ def delete_arcticdb_connector(
         list of library names to delete, by default None which deletes
         all libraries
     """
-    import shutil
-
     import arcticdb
 
     if conn is not None:
@@ -75,9 +74,17 @@ def delete_arcticdb_connector(
             print()
             print(f" - deleted: {lib}")
 
-    remaining = [ilib for ilib in arc.list_libraries() if ilib.split(".") == name]
+    # delete .pastastore file if entire pastastore is deleted
+    remaining_libs = [
+        ilib for ilib in arc.list_libraries() if ilib.split(".")[0] == name
+    ]
+    if remaining_libs == 0:
+        os.unlink(os.path.join(uri.split("//")[-1], f"{name}.pastastore"))
+
+    # check if any remaining libraries in lmdb dir, if none, delete entire folder
+    remaining = arc.list_libraries()
     if len(remaining) == 0:
-        shutil.rmtree(os.path.join(conn.uri.split("//")[-1], name))
+        shutil.rmtree(os.path.join(conn.uri.split("//")[-1]))
 
     print("Done!")
 
@@ -98,8 +105,6 @@ def delete_dict_connector(conn, libraries: Optional[List[str]] = None) -> None:
 
 def delete_pas_connector(conn, libraries: Optional[List[str]] = None) -> None:
     """Delete PasConnector object."""
-    import shutil
-
     print(f"Deleting PasConnector database: '{conn.name}' ... ", end="")
     if libraries is None:
         shutil.rmtree(conn.path)
@@ -143,7 +148,7 @@ def delete_pastastore(pstore, libraries: Optional[List[str]] = None) -> None:
         delete_pas_connector(conn=pstore.conn, libraries=libraries)
     else:
         raise TypeError(
-            "Unrecognized pastastore Connector type: " f"{pstore.conn.conn_type}"
+            f"Unrecognized pastastore Connector type: {pstore.conn.conn_type}"
         )
 
 
@@ -545,7 +550,7 @@ def frontiers_checks(
         ml = pstore.get_models(mlnam)
 
         if ml.parameters["optimal"].hasnans:
-            print(f"Warning! Skipping model '{mlnam}' because " "it is not solved!")
+            print(f"Warning! Skipping model '{mlnam}' because it is not solved!")
             continue
 
         checks = pd.DataFrame(columns=["stat", "threshold", "units", "check_passed"])
@@ -752,8 +757,7 @@ def frontiers_aic_select(
             modelnames += pstore.oseries_models[o]
     elif oseries is not None:
         print(
-            "Warning! Both 'modelnames' and 'oseries' provided, "
-            "using only 'modelnames'"
+            "Warning! Both 'modelnames' and 'oseries' provided, using only 'modelnames'"
         )
 
     # Dataframe of models with corresponding oseries

@@ -332,7 +332,8 @@ class BaseConnector(ABC):
             self._clear_cache(libname)
         else:
             raise ItemInLibraryException(
-                f"Item with name '{name}' already" f" in '{libname}' library!"
+                f"Time series with name '{name}' already in '{libname}' library! "
+                "Use overwrite=True to replace existing time series."
             )
 
     def _update_series(
@@ -575,7 +576,8 @@ class BaseConnector(ABC):
             )
         else:
             raise ItemInLibraryException(
-                f"Model with name '{name}' " "already in 'models' library!"
+                f"Model with name '{name}' already in 'models' library! "
+                "Use overwrite=True to replace existing model."
             )
         self._clear_cache("_modelnames_cache")
         self._add_oseries_model_links(str(mldict["oseries"]["name"]), name)
@@ -1093,8 +1095,7 @@ class BaseConnector(ABC):
         """
         if prompt:
             ui = input(
-                f"Do you want to empty '{libname}'"
-                " library of all its contents? [y/N] "
+                f"Do you want to empty '{libname}' library of all its contents? [y/N] "
             )
             if ui.lower() != "y":
                 return
@@ -1115,7 +1116,7 @@ class BaseConnector(ABC):
             ):
                 self._del_item(libname, name)
             self._clear_cache(libname)
-            print(f"Emptied library {libname} in {self.name}: " f"{self.__class__}")
+            print(f"Emptied library {libname} in {self.name}: {self.__class__}")
 
     def _iter_series(self, libname: str, names: Optional[List[str]] = None):
         """Iterate over time series in library (internal method).
@@ -1365,10 +1366,36 @@ class BaseConnector(ABC):
 class ModelAccessor:
     """Object for managing access to stored models.
 
-    Provides dict-like access to models (i.e. PastaStore.models["model1"]), or allows
-    adding models to the PastaStore using dict-like assignment (i.e.
-    PastaStore.models["model1"] = ml), and it can serve as an iterator (i.e. [ml for ml
-    in pstore.models]).
+    The ModelAccessor object allows dictionary-like assignment and access to models.
+    In addition it provides some useful utilities for working with stored models
+    in the database.
+
+    Examples
+    --------
+    Get a model by name::
+
+    >>> model = pstore.models["my_model"]
+
+    Store a model in the database::
+
+    >>> pstore.models["my_model_v2"] = model
+
+    Get model metadata dataframe::
+
+    >>> pstore.models.metadata
+
+    Number of models::
+
+    >>> len(pstore.models)
+
+    Random model::
+
+    >>> model = pstore.models.random()
+
+    Iterate over stored models::
+
+    >>> for ml in pstore.models:
+    >>>     ml.solve()
     """
 
     def __init__(self, conn):
@@ -1382,8 +1409,11 @@ class ModelAccessor:
         self.conn = conn
 
     def __repr__(self):
-        """Representation of the object is a list of modelnames."""
-        return self.conn._modelnames_cache.__repr__()
+        """Representation contains the number of models and the list of model names."""
+        return (
+            f"<{self.__class__.__name__}> {len(self)} model(s): \n"
+            + self.conn._modelnames_cache.__repr__()
+        )
 
     def __getitem__(self, name: str):
         """Get model from store with model name as key.
@@ -1436,3 +1466,27 @@ class ModelAccessor:
         from random import choice
 
         return self.conn.get_models(choice(self.conn._modelnames_cache))
+
+    @property
+    def metadata(self):
+        """Dataframe with overview of models metadata."""
+        # NOTE: cannot be cached as this dataframe is not a property of the connector
+        # I'm not sure how to clear this cache when models are added/removed.
+        idx = pd.MultiIndex.from_tuples(
+            ((k, i) for k, v in self.conn.oseries_models.items() for i in v),
+            names=["oseries", "modelname"],
+        )
+        modeldf = pd.DataFrame(index=idx)
+        modeldf = modeldf.join(
+            self.conn.oseries, on=modeldf.index.get_level_values(0)
+        ).drop("key_0", axis=1)
+        modeldf["n_stressmodels"] = 0
+        for onam, mlnam in modeldf.index:
+            mldict = self.conn.get_models(mlnam, return_dict=True)
+            modeldf.loc[(onam, mlnam), "n_stressmodels"] = len(mldict["stressmodels"])
+            modeldf.loc[(onam, mlnam), "stressmodel_names"] = ",".join(
+                list(mldict["stressmodels"].keys())
+            )
+            for setting in mldict["settings"].keys():
+                modeldf.loc[(onam, mlnam), setting] = mldict["settings"][setting]
+        return modeldf

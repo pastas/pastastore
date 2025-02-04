@@ -15,7 +15,7 @@ maintainers = [
     { name = "R. Calje", email = "r.calje@artesia-water.nl" },
     { name = "M.A. Vonk", email = "m.vonk@artesia-water.nl" },
 ]
-requires-python = ">= 3.7"
+requires-python = ">= 3.10"
 dependencies = ["pastas>=0.13", "tqdm>=4.36", "pyyaml"]
 
 keywords = ["hydrology", "groundwater", "time series", "analysis", "database"]
@@ -30,10 +30,10 @@ classifiers = [
     "Operating System :: MacOS",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3 :: Only",
     "Topic :: Scientific/Engineering :: Hydrology",
 ]
@@ -49,9 +49,7 @@ extensions = ["hydropandas"]
 optional = ["contextily", "pyproj", "adjustText"]
 arcticdb = ["arcticdb"]
 lint = ["ruff"]
-test = [
-    "pastastore[arcticdb,lint,optional]",
-    "hydropandas[full]",
+pytest = [
     "coverage",
     "codecov",
     "pytest",
@@ -60,17 +58,7 @@ test = [
     "pytest-benchmark",
     "codacy-coverage",
 ]
-test_py312 = [
-    "pastastore[lint,optional]", # no arcticdb
-    "hydropandas[full]",
-    "coverage",
-    "codecov",
-    "pytest",
-    "pytest-cov",
-    "pytest-dependency",
-    "pytest-benchmark",
-    "codacy-coverage",
-]
+test = ["pastastore[arcticdb,lint,optional,pytest]", "hydropandas[full]"]
 docs = [
     "pastastore[optional]",
     "sphinx_rtd_theme",
@@ -116,7 +104,7 @@ markers = [
 ]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 

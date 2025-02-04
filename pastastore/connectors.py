@@ -370,8 +370,7 @@ class ConnectorUtil:
             raise TypeError("Expected pastas.Model or dict!")
         if name not in self.oseries.index:
             msg = (
-                f"Cannot add model because oseries '{name}' "
-                "is not contained in store."
+                f"Cannot add model because oseries '{name}' is not contained in store."
             )
             raise LookupError(msg)
         # expensive check
@@ -764,6 +763,7 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
         """
         try:
             import arcticdb
+
         except ModuleNotFoundError as e:
             print("Please install arcticdb with `pip install arcticdb`!")
             raise e
@@ -777,6 +777,9 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
         # for older versions of PastaStore, if oseries_models library is empty
         # populate oseries - models database
         self._update_all_oseries_model_links()
+        # write pstore file to store database info that can be used to load pstore
+        if "lmdb" in self.uri:
+            self.write_pstore_config_file()
 
     def _initialize(self, verbose: bool = True) -> None:
         """Initialize the libraries (internal method)."""
@@ -791,6 +794,29 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
                         " already exists. Linking to existing library."
                     )
             self.libs[libname] = self._get_library(libname)
+
+    def write_pstore_config_file(self, path: str = None) -> None:
+        """Write pstore configuration file to store database info."""
+        # NOTE: method is not private as theoretically an ArcticDB
+        # database could also be hosted in the cloud, in which case,
+        # writing this config in the folder holding the database
+        # is no longer possible. For those situations, the user can
+        # write this config file and specify the path it should be
+        # written to.
+        config = {
+            "connector_type": self.conn_type,
+            "name": self.name,
+            "uri": self.uri,
+        }
+        if path is None and "lmdb" in self.uri:
+            path = self.uri.split("://")[1]
+        elif path is None and "lmdb" not in self.uri:
+            raise ValueError("Please provide a path to write the pastastore file!")
+
+        with open(
+            os.path.join(path, f"{self.name}.pastastore"), "w", encoding="utf-8"
+        ) as f:
+            json.dump(config, f)
 
     def _library_name(self, libname: str) -> str:
         """Get full library name according to ArcticDB (internal method)."""
@@ -1165,6 +1191,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
             whether to print message when database is initialized, by default True
         """
         self.name = name
+        self.parentdir = path
         self.path = os.path.abspath(os.path.join(path, self.name))
         self.relpath = os.path.relpath(self.path)
         self._initialize(verbose=verbose)
@@ -1172,6 +1199,8 @@ class PasConnector(BaseConnector, ConnectorUtil):
         # for older versions of PastaStore, if oseries_models library is empty
         # populate oseries_models library
         self._update_all_oseries_model_links()
+        # write pstore file to store database info that can be used to load pstore
+        self._write_pstore_config_file()
 
     def _initialize(self, verbose: bool = True) -> None:
         """Initialize the libraries (internal method)."""
@@ -1188,6 +1217,18 @@ class PasConnector(BaseConnector, ConnectorUtil):
                         f"Linking to existing directory: '{libdir}'"
                     )
             setattr(self, f"lib_{val}", os.path.join(self.path, val))
+
+    def _write_pstore_config_file(self):
+        """Write pstore configuration file to store database info."""
+        config = {
+            "connector_type": self.conn_type,
+            "name": self.name,
+            "path": self.parentdir,
+        }
+        with open(
+            os.path.join(self.path, f"{self.name}.pastastore"), "w", encoding="utf-8"
+        ) as f:
+            json.dump(config, f)
 
     def _get_library(self, libname: str):
         """Get path to directory holding data.

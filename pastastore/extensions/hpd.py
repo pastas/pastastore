@@ -259,7 +259,7 @@ class HydroPandasExtension:
         meteo_var: str = "RD",
         tmin: TimeType = None,
         tmax: TimeType = None,
-        unit_multiplier: float = 1e-3,
+        unit_multiplier: float = 1e3,
         fill_missing_obs: bool = True,
         normalize_datetime_index: bool = True,
         **kwargs,
@@ -298,7 +298,7 @@ class HydroPandasExtension:
         meteo_var: str = "EV24",
         tmin: TimeType = None,
         tmax: TimeType = None,
-        unit_multiplier: float = 1e-3,
+        unit_multiplier: float = 1e3,
         fill_missing_obs: bool = True,
         normalize_datetime_index: bool = True,
         **kwargs,
@@ -409,7 +409,7 @@ class HydroPandasExtension:
         meteo_var: str = "RD",
         tmin: Optional[TimeType] = None,
         tmax: Optional[TimeType] = None,
-        unit_multiplier: float = 1e-3,
+        unit_multiplier: float = 1e3,
         normalize_datetime_index: bool = True,
         fill_missing_obs: bool = True,
         **kwargs,
@@ -428,7 +428,7 @@ class HydroPandasExtension:
             end time
         unit_multiplier : float, optional
             multiply unit by this value before saving it in the store,
-            by default 1.0 (no conversion)
+            by default 1e3 (converting m to mm)
         fill_missing_obs : bool, optional
             if True, fill missing observations by getting observations from nearest
             station with data.
@@ -454,7 +454,7 @@ class HydroPandasExtension:
         meteo_var: str = "EV24",
         tmin: Optional[TimeType] = None,
         tmax: Optional[TimeType] = None,
-        unit_multiplier: float = 1e-3,
+        unit_multiplier: float = 1e3,
         normalize_datetime_index: bool = True,
         fill_missing_obs: bool = True,
         **kwargs,
@@ -474,7 +474,7 @@ class HydroPandasExtension:
             end time
         unit_multiplier : float, optional
             multiply unit by this value before saving it in the store,
-            by default 1.0 (no conversion)
+            by default 1e3 (converting m to mm)
         fill_missing_obs : bool, optional
             if True, fill missing observations by getting observations from nearest
             station with data.

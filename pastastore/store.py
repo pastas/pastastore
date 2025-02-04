@@ -15,7 +15,7 @@ from pastas.io.pas import pastas_hook
 from tqdm.auto import tqdm
 
 from pastastore.base import BaseConnector
-from pastastore.connectors import DictConnector
+from pastastore.connectors import ArcticDBConnector, DictConnector, PasConnector
 from pastastore.plotting import Maps, Plots
 from pastastore.util import _custom_warning
 from pastastore.version import PASTAS_GEQ_150, PASTAS_LEQ_022
@@ -79,6 +79,24 @@ class PastaStore:
         self.plots = Plots(self)
         self.yaml = PastastoreYAML(self)
 
+    @classmethod
+    def from_pastastore_config_file(cls, fname):
+        """Create a PastaStore from a pastastore config file."""
+        with open(fname, "r") as f:
+            cfg = json.load(f)
+
+        conn_type = cfg.pop("connector_type")
+        if conn_type == "pas":
+            conn = PasConnector(**cfg)
+        elif conn_type == "arcticdb":
+            conn = ArcticDBConnector(**cfg)
+        else:
+            raise ValueError(
+                f"Cannot load connector type: '{conn_type}'. "
+                "This is only supported for PasConnector and ArcticDBConnector."
+            )
+        return cls(conn)
+
     @property
     def empty(self) -> bool:
         """Check if the PastaStore is empty."""
@@ -120,12 +138,43 @@ class PastaStore:
 
     @property
     def models(self):
-        """Return list of model names.
+        """Return the ModelAccessor object.
+
+        The ModelAccessor object allows dictionary-like assignment and access to models.
+        In addition it provides some useful utilities for working with stored models
+        in the database.
+
+        Examples
+        --------
+        Get a model by name::
+
+        >>> model = pstore.models["my_model"]
+
+        Store a model in the database::
+
+        >>> pstore.models["my_model_v2"] = model
+
+        Get model metadata dataframe::
+
+        >>> pstore.models.metadata
+
+        Number of models::
+
+        >>> len(pstore.models)
+
+        Random model::
+
+        >>> model = pstore.models.random()
+
+        Iterate over stored models::
+
+        >>> for ml in pstore.models:
+        >>>     ml.solve()
 
         Returns
         -------
-        list
-            list of model names
+        ModelAccessor
+            ModelAccessor object
         """
         return self.conn.models
 
@@ -1373,7 +1422,7 @@ class PastaStore:
 
         if os.path.exists(fname) and not overwrite:
             raise FileExistsError(
-                "File already exists! " "Use 'overwrite=True' to " "force writing file."
+                "File already exists! Use 'overwrite=True' to force writing file."
             )
         elif os.path.exists(fname):
             warnings.warn(f"Overwriting file '{os.path.basename(fname)}'", stacklevel=1)
@@ -1548,7 +1597,10 @@ class PastaStore:
                 "models": self.model_names,
             }
         else:
-            raise ValueError("Provide valid libname: 'models', 'stresses' or 'oseries'")
+            raise ValueError(
+                "Provide valid libname: 'models', 'stresses', 'oseries' or None"
+                " to seach within all libraries."
+            )
 
         result = {}
         for lib, names in lib_names.items():

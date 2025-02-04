@@ -1,18 +1,14 @@
 # ruff: noqa: D100 D103
 import importlib
 from importlib import metadata
-from platform import python_version
 
 import pandas as pd
 import pastas as ps
 import pytest
-from packaging.version import parse as parse_version
 
 import pastastore as pst
 
-IS_PY312 = parse_version(python_version()) >= parse_version("3.12.0")
-
-params = ["dict", "pas", "arcticdb"] if not IS_PY312 else ["dict", "pas"]
+params = ["dict", "pas", "arcticdb"]
 
 
 def initialize_project(conn):
