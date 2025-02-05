@@ -628,6 +628,7 @@ class Maps:
         self.pstore = pstore
 
     def __repr__(self):
+        """Return string representation of Maps submodule."""
         methods = "".join(
             [f"\n - {meth}" for meth in dir(self) if not meth.startswith("_")]
         )
