@@ -1201,6 +1201,7 @@ class Maps:
         if ax is None:
             return_scatter = False
             fig, ax = plt.subplots(figsize=figsize)
+            ax.set_aspect("equal", adjustable="box")
         else:
             return_scatter = True
             fig = ax.figure
@@ -1263,8 +1264,8 @@ class Maps:
         label: bool, optional, default is True
             add labels to points on map
         metadata_source: str, optional
-            whether to obtain metadata from model Timeseries or from
-            metadata in pastastore("store"), default is "model"
+            one of "model" or "store", pick whether to obtain metadata from model
+            Timeseries or from metadata in pastastore, default is "model"
         offset : float, optional
             add offset to current extent of model time series, useful
             for zooming out around models
