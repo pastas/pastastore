@@ -1173,7 +1173,7 @@ class PastaStore:
             # compute distances and add to kwargs
             distances = (
                 self.get_distances(oseries=oseries, stresses=names)
-                .T.squeeze(axis=0)
+                .T.squeeze(axis=1)
                 .values
             )
             kwargs["distances"] = distances
