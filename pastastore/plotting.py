@@ -484,6 +484,7 @@ class Plots:
         figsize=(6, 6),
         label=None,
         legend=True,
+        progressbar=True,
     ):
         """Plot a cumulative step histogram for a model statistic.
 
@@ -507,6 +508,8 @@ class Plots:
             of models
         legend: bool, optional
             show legend, by default True
+        progressbar: bool, optional
+            show progressbar, default is True.
 
         Returns
         -------
@@ -514,7 +517,7 @@ class Plots:
             The axes in which the cumulative histogram is plotted
         """
         statsdf = self.pstore.get_statistics(
-            [statistic], modelnames=modelnames, progressbar=False
+            [statistic], modelnames=modelnames, progressbar=progressbar
         )
 
         if ax is None:
