@@ -809,6 +809,7 @@ class PastaStore:
         solve: bool = False,
         store_models: bool = True,
         ignore_errors: bool = False,
+        suffix: Optional[str] = None,
         progressbar: bool = True,
         **kwargs,
     ) -> Union[Tuple[dict, dict], dict]:
@@ -829,6 +830,8 @@ class PastaStore:
             store the models in the database.
         ignore_errors : bool, optional
             ignore errors while creating models, by default False
+        suffix : str, optional
+            add suffix to oseries name to create model name, by default None
         progressbar : bool, optional
             show progressbar, by default True
 
@@ -849,7 +852,13 @@ class PastaStore:
         desc = "Bulk creation models"
         for o in tqdm(oseries, desc=desc) if progressbar else oseries:
             try:
-                iml = self.create_model(o, add_recharge=add_recharge)
+                if suffix is not None:
+                    modelname = f"{o}{suffix}"
+                else:
+                    modelname = o
+                iml = self.create_model(
+                    o, modelname=modelname, add_recharge=add_recharge
+                )
             except Exception as e:
                 if ignore_errors:
                     errors[o] = e
