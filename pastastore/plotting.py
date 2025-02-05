@@ -643,6 +643,7 @@ class Maps:
         figsize=(10, 8),
         backgroundmap=False,
         label_kwargs=None,
+        show_legend: bool = True,
         **kwargs,
     ):
         """Plot stresses locations on map.
@@ -669,6 +670,9 @@ class Maps:
             by OpenStreetMap.Mapnik. Default option is False.
         label_kwargs: dict, optional
             dictionary with keyword arguments to pass to add_labels method
+        show_legend : bool, optional
+            add legend with each kind of stress and associated color, only possible
+            if colors are not explicitly passed. Default is True.
 
         Returns
         -------
@@ -695,7 +699,8 @@ class Maps:
         mask0 = (stresses["x"] != 0.0) | (stresses["y"] != 0.0)
 
         if "c" in kwargs:
-            c = kwargs.pop("c", None)
+            c = kwargs.pop("c")
+            kind_to_color = None
         else:
             c = stresses.loc[mask0, "kind"]
             kind_to_color = {k: f"C{i}" for i, k in enumerate(c.unique())}
@@ -703,13 +708,18 @@ class Maps:
 
         r = self._plotmap_dataframe(stresses.loc[mask0], c=c, figsize=figsize, **kwargs)
         if "ax" in kwargs:
-            ax = kwargs["ax"]
+            ax = kwargs.pop("ax")
         else:
             ax = r
         if labels:
             if label_kwargs is None:
                 label_kwargs = {}
             self.add_labels(stresses, ax, adjust=adjust, **label_kwargs)
+
+        if show_legend and kind_to_color is not None:
+            for k, color in kind_to_color.items():
+                ax.plot([], [], color=color, label=k, **kwargs, marker="o", ls="none")
+            ax.legend(loc=(0, 1), frameon=False, ncol=5)
 
         if backgroundmap:
             self.add_background_map(ax)
