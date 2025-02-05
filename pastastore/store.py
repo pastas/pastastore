@@ -611,7 +611,7 @@ class PastaStore:
         modelnames: Optional[List[str]] = None,
         param_value: Optional[str] = "optimal",
         progressbar: Optional[bool] = False,
-        ignore_errors: Optional[bool] = False,
+        ignore_errors: Optional[bool] = True,
     ) -> FrameorSeriesUnion:
         """Get model parameters.
 
@@ -633,7 +633,7 @@ class PastaStore:
             show progressbar, default is False
         ignore_errors : bool, optional
             ignore errors when True, i.e. when non-existent model is
-            encountered in modelnames, by default False
+            encountered in modelnames, by default True
 
         Returns
         -------
@@ -662,7 +662,10 @@ class PastaStore:
                 pindex = parameters
 
             for c in pindex:
-                p.loc[mlname, c] = mldict["parameters"].loc[c, param_value]
+                if c in mldict["parameters"].index:
+                    p.loc[mlname, c] = mldict["parameters"].loc[c, param_value]
+                else:
+                    p.loc[mlname, c] = np.nan
 
         p = p.squeeze()
         return p.astype(float)
