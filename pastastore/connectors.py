@@ -1223,7 +1223,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         config = {
             "connector_type": self.conn_type,
             "name": self.name,
-            "path": self.parentdir,
+            "path": os.path.abspath(self.parentdir),
         }
         with open(
             os.path.join(self.path, f"{self.name}.pastastore"), "w", encoding="utf-8"
