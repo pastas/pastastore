@@ -45,6 +45,12 @@ class HydroPandasExtension:
         """
         self._store = store
 
+    def __repr__(self):
+        methods = "".join(
+            [f"\n - {meth}" for meth in dir(self) if not meth.startswith("_")]
+        )
+        return "HydroPandasExtension, available methods:" + methods
+
     def add_obscollection(
         self,
         libname: str,
