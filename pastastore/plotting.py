@@ -586,15 +586,15 @@ class Plots:
             The CompareModels object containing the comparison results.
         """
         models = self.pstore.get_models(modelnames)
-        names = []
+        names = kwargs.pop("names", [])
         onames = [iml.oseries.name for iml in models]
-        if len(np.unique(onames)) == 1:
+        if len(np.unique(onames)) == 1 and len(names) == 0:
             for modelname in modelnames:
                 if onames[0] in modelname:
                     names.append(modelname.replace(onames[0], ""))
                 else:
                     names.append(modelname)
-        else:
+        elif len(np.unique(onames)) > 1:
             names = modelnames
         cm = ps.CompareModels(models, names=names)
         cm.plot(**kwargs)
