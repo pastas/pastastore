@@ -841,6 +841,81 @@ class Maps:
 
         return ax
 
+    def _map_helper(
+        self,
+        df,
+        column,
+        label=True,
+        adjust=False,
+        cmap="viridis",
+        norm=None,
+        vmin=None,
+        vmax=None,
+        figsize=(10, 8),
+        backgroundmap=False,
+        **kwargs,
+    ):
+        """Help function for plotting values on map.
+
+        Parameters
+        ----------
+        df: pd.DataFrame
+            dataframe containing plotting information
+        column: str
+            column with values to plot
+        label: bool, optional
+            label points, by default True
+        adjust: bool, optional
+            automated smart label placement using adjustText, by default False
+        cmap: str or colormap, optional
+            (name of) the colormap, by default "viridis"
+        norm: norm, optional
+            normalization for colorbar, by default None
+        vmin: float, optional
+            vmin for colorbar, by default None
+        vmax: float, optional
+            vmax for colorbar, by default None
+        ax : matplotlib.Axes, optional
+            axes handle, if not provided a new figure is created.
+        figsize: tuple, optional
+            figuresize, by default(10, 8)
+        backgroundmap: bool, optional
+            if True, add background map (default CRS is EPSG:28992) with default tiles
+            by OpenStreetMap.Mapnik. Default option is False.
+        progressbar: bool, optional
+            show progressbar, default is True.
+
+        Returns
+        -------
+        ax: matplotlib.Axes
+            axes object
+
+        See Also
+        --------
+        self.add_background_map
+        """
+        scatter_kwargs = {
+            "cmap": cmap,
+            "norm": norm,
+            "vmin": vmin,
+            "vmax": vmax,
+            "edgecolors": "w",
+            "linewidths": 0.7,
+        }
+        scatter_kwargs.update(kwargs)
+
+        ax = self._plotmap_dataframe(
+            df, column=column, figsize=figsize, **scatter_kwargs
+        )
+        if label:
+            df.set_index("index", inplace=True)
+            self.add_labels(df, ax, adjust=adjust)
+
+        if backgroundmap:
+            self.add_background_map(ax)
+
+        return ax
+
     def modelstat(
         self,
         statistic,
@@ -853,6 +928,7 @@ class Maps:
         vmax=None,
         figsize=(10, 8),
         backgroundmap=False,
+        progressbar=True,
         **kwargs,
     ):
         """Plot model statistic on map.
@@ -882,6 +958,8 @@ class Maps:
         backgroundmap: bool, optional
             if True, add background map (default CRS is EPSG:28992) with default tiles
             by OpenStreetMap.Mapnik. Default option is False.
+        progressbar: bool, optional
+            show progressbar, default is True.
 
         Returns
         -------
@@ -893,7 +971,7 @@ class Maps:
         self.add_background_map
         """
         statsdf = self.pstore.get_statistics(
-            [statistic], modelnames=modelnames, progressbar=False
+            [statistic], modelnames=modelnames, progressbar=progressbar
         ).to_frame()
 
         statsdf["oseries"] = [
@@ -903,28 +981,177 @@ class Maps:
         statsdf = statsdf.reset_index().set_index("oseries")
         df = statsdf.join(self.pstore.oseries, how="left")
 
-        scatter_kwargs = {
-            "cmap": cmap,
-            "norm": norm,
-            "vmin": vmin,
-            "vmax": vmax,
-            "edgecolors": "w",
-            "linewidths": 0.7,
-        }
-
-        scatter_kwargs.update(kwargs)
-
-        ax = self._plotmap_dataframe(
-            df, column=statistic, figsize=figsize, **scatter_kwargs
+        return self._map_helper(
+            df,
+            column=statistic,
+            label=label,
+            adjust=adjust,
+            cmap=cmap,
+            norm=norm,
+            vmin=vmin,
+            vmax=vmax,
+            figsize=figsize,
+            backgroundmap=backgroundmap,
+            **kwargs,
         )
-        if label:
-            df.set_index("index", inplace=True)
-            self.add_labels(df, ax, adjust=adjust)
 
-        if backgroundmap:
-            self.add_background_map(ax)
+    def modelparam(
+        self,
+        parameter,
+        modelnames=None,
+        label=True,
+        adjust=False,
+        cmap="viridis",
+        norm=None,
+        vmin=None,
+        vmax=None,
+        figsize=(10, 8),
+        backgroundmap=False,
+        progressbar=True,
+        **kwargs,
+    ):
+        """Plot model parameter value on map.
 
-        return ax
+        Parameters
+        ----------
+        parameter: str
+            name of the parameter, e.g. "rech_A" or "river_a"
+        modelnames : list of str, optional
+            list of modelnames to include
+        label: bool, optional
+            label points, by default True
+        adjust: bool, optional
+            automated smart label placement using adjustText, by default False
+        cmap: str or colormap, optional
+            (name of) the colormap, by default "viridis"
+        norm: norm, optional
+            normalization for colorbar, by default None
+        vmin: float, optional
+            vmin for colorbar, by default None
+        vmax: float, optional
+            vmax for colorbar, by default None
+        ax : matplotlib.Axes, optional
+            axes handle, if not provided a new figure is created.
+        figsize: tuple, optional
+            figuresize, by default(10, 8)
+        backgroundmap: bool, optional
+            if True, add background map (default CRS is EPSG:28992) with default tiles
+            by OpenStreetMap.Mapnik. Default option is False.
+        progressbar: bool, optional
+            show progressbar, default is True
+
+        Returns
+        -------
+        ax: matplotlib.Axes
+            axes object
+
+        See Also
+        --------
+        self.add_background_map
+        """
+        paramdf = self.pstore.get_parameters(
+            [parameter],
+            modelnames=modelnames,
+            progressbar=progressbar,
+            ignore_errors=True,
+        ).to_frame()
+
+        paramdf["oseries"] = [
+            self.pstore.get_models(m, return_dict=True)["oseries"]["name"]
+            for m in paramdf.index
+        ]
+        paramdf = paramdf.reset_index().set_index("oseries")
+        df = paramdf.join(self.pstore.oseries, how="left")
+
+        return self._map_helper(
+            df,
+            column=parameter,
+            label=label,
+            adjust=adjust,
+            cmap=cmap,
+            norm=norm,
+            vmin=vmin,
+            vmax=vmax,
+            figsize=figsize,
+            backgroundmap=backgroundmap,
+            **kwargs,
+        )
+
+    def signature(
+        self,
+        signature,
+        names=None,
+        label=True,
+        adjust=False,
+        cmap="viridis",
+        norm=None,
+        vmin=None,
+        vmax=None,
+        figsize=(10, 8),
+        backgroundmap=False,
+        progressbar=True,
+        **kwargs,
+    ):
+        """Plot signature value on map.
+
+        Parameters
+        ----------
+        signature: str
+            name of the signature, e.g. "mean_annual_maximum" or "duration_curve_slope"
+        names : list of str, optional
+            list of observation well names to include
+        label: bool, optional
+            label points, by default True
+        adjust: bool, optional
+            automated smart label placement using adjustText, by default False
+        cmap: str or colormap, optional
+            (name of) the colormap, by default "viridis"
+        norm: norm, optional
+            normalization for colorbar, by default None
+        vmin: float, optional
+            vmin for colorbar, by default None
+        vmax: float, optional
+            vmax for colorbar, by default None
+        ax : matplotlib.Axes, optional
+            axes handle, if not provided a new figure is created.
+        figsize: tuple, optional
+            figuresize, by default(10, 8)
+        backgroundmap: bool, optional
+            if True, add background map (default CRS is EPSG:28992) with default tiles
+            by OpenStreetMap.Mapnik. Default option is False.
+        progressbar: bool, optional
+            show progressbar, default is True
+
+        Returns
+        -------
+        ax: matplotlib.Axes
+            axes object
+
+        See Also
+        --------
+        self.add_background_map
+        """
+        signature_df = self.pstore.get_signatures(
+            [signature],
+            names=names,
+            progressbar=progressbar,
+            ignore_errors=True,
+        )
+        df = signature_df.join(self.pstore.oseries, how="left")
+
+        return self._map_helper(
+            df,
+            column=signature,
+            label=label,
+            adjust=adjust,
+            cmap=cmap,
+            norm=norm,
+            vmin=vmin,
+            vmax=vmax,
+            figsize=figsize,
+            backgroundmap=backgroundmap,
+            **kwargs,
+        )
 
     @staticmethod
     def _plotmap_dataframe(
