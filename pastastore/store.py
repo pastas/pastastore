@@ -1373,56 +1373,40 @@ class PastaStore:
             ):
                 solve_model(ml_name=ml_name)
 
-    def model_results(
-        self,
-        mls: Optional[Union[ps.Model, list, str]] = None,
-        progressbar: bool = True,
-    ):  # pragma: no cover
-        """Get pastas model results.
+    def check_models(self, checklist=None, modelnames=None):
+        """Check models against checklist.
 
         Parameters
         ----------
-        mls : list of str, optional
-            list of model names, by default None which means results for
-            all models will be calculated
-        progressbar : bool, optional
-            show progressbar, by default True
+        checklist : dict, optional
+            dictionary containing model check methods, by default None which
+            uses the ps.checks.checks_brakenhoff_2022 checklist. This includes:
+               - fit metric R² >= 0.6
+               - runs test for autocorrelation
+               - t95 response < half length calibration period
+               - |model parameters| < 1.96 * σ (std deviation)
+               - model parameters are not on bounds
+        modelnames : list of str, optional
+            list of modelnames to perform checks on, by default None
 
         Returns
         -------
-        results : pd.DataFrame
-            dataframe containing parameters and other statistics
-            for each model
-
-        Raises
-        ------
-        ModuleNotFoundError
-            if the art_tools module is not available
+        pd.DataFrame
+            DataFrame containing pass True/False for each check for each model
         """
-        try:
-            from art_tools import pastas_get_model_results
-        except Exception as e:
-            raise ModuleNotFoundError("You need 'art_tools' to use this method!") from e
+        if checklist is None:
+            checklist = ps.check.checks_brakenhoff_2022
 
-        if mls is None:
-            mls = self.conn.models
-        elif isinstance(mls, ps.Model):
-            mls = [mls.name]
+        names = self.conn._parse_names(modelnames, libname="models")
 
-        results_list = []
-        desc = "Get model results"
-        for mlname in tqdm(mls, desc=desc) if progressbar else mls:
-            try:
-                iml = self.conn.get_models(mlname)
-            except Exception as e:
-                print("{1}: '{0}' could not be parsed!".format(mlname, e))
-                continue
-            iresults = pastas_get_model_results(
-                iml, par_selection="all", stats=("evp",), stderrors=True
-            )
-            results_list.append(iresults)
-
-        return pd.concat(results_list, axis=1).transpose()
+        check_dfs = []
+        for n in names:
+            cdf = ps.check.checklist(self.models[n], checklist, report=False)["pass"]
+            cdf.name = n
+            check_dfs.append(cdf)
+        chkdf = pd.concat(check_dfs, axis=1)
+        chkdf.columns.name = "models"
+        return chkdf
 
     def to_zip(self, fname: str, overwrite=False, progressbar: bool = True):
         """Write data to zipfile.
