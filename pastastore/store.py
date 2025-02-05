@@ -1162,13 +1162,19 @@ class PastaStore:
 
         # special for WellModels
         if stressmodel._name == "WellModel":
-            names = [s.squeeze().name for s in stresses["stress"]]
+            if isinstance(stresses["stress"], list):
+                names = [s.squeeze().name for s in stresses["stress"]]
+            else:
+                names = [stresses["stress"].squeeze().name]
+                stresses["stress"] = [stresses["stress"]]  # ugly fix for WellModel
             # check oseries is provided
             if oseries is None:
                 raise ValueError("WellModel requires 'oseries' to compute distances!")
             # compute distances and add to kwargs
             distances = (
-                self.get_distances(oseries=oseries, stresses=names).T.squeeze().values
+                self.get_distances(oseries=oseries, stresses=names)
+                .T.squeeze(axis=0)
+                .values
             )
             kwargs["distances"] = distances
             # set settings to well
