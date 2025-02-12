@@ -34,6 +34,19 @@ def test_add_get_series(request, conn):
         conn.del_oseries("test_series")
 
 
+def test_add_get_single_value_series(request, conn):
+    o1 = pd.Series({pd.Timestamp(2025, 1, 1): 5.0})
+    o1.name = "test_single_value_series"
+    conn.add_oseries(o1, "test_single_value_series", metadata=None)
+    o2 = conn.get_oseries("test_single_value_series")
+    try:
+        assert isinstance(o2, pd.Series)
+        assert o1.equals(o2)
+        assert o1.dtype == o2.dtype
+    finally:
+        conn.del_oseries("test_single_value_series")
+
+
 def test_add_get_series_wnans(request, conn):
     o1 = pd.Series(
         index=pd.date_range("2000", periods=10, freq="D"),

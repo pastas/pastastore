@@ -608,7 +608,7 @@ class ConnectorUtil:
             s.index = pd.to_datetime(s.index, unit="ms")
         s = s.sort_index()  # needed for some reason ...
         if squeeze:
-            return s.squeeze()
+            return s.squeeze(axis="columns")
         return s
 
     @staticmethod
