@@ -1546,6 +1546,13 @@ class PastaStore:
                 fi for fi in archive.namelist() if not fi.endswith(f"_meta.{ext}")
             ]
             for f in tqdm(namelist, desc="Reading zip") if progressbar else namelist:
+                if f.endswith("_meta.json"):
+                    raise (
+                        ValueError(
+                            "The zipfile was created using pastastore <1.8.0."
+                            " Please pass `series_ext_json=True` to `from_zip()`"
+                        )
+                    )
                 libname, fjson = os.path.split(f)
                 if libname in ["stresses", "oseries"]:
                     s = pd.read_json(archive.open(f), dtype=float, orient="columns")
