@@ -1550,7 +1550,7 @@ class PastaStore:
                     raise (
                         ValueError(
                             "The zipfile was created using pastastore <1.8.0."
-                            " PLease pass `series_ext_json=True` to `from_zip()`"
+                            " Please pass `series_ext_json=True` to `from_zip()`"
                         )
                     )
                 libname, fjson = os.path.split(f)
