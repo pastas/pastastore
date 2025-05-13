@@ -12,7 +12,7 @@ from typing import List, Optional, Union
 
 import hydropandas as hpd
 import numpy as np
-from hydropandas.io.knmi import _check_latest_measurement_date_de_bilt, get_stations
+from hydropandas.io.knmi import _get_default_settings, download_knmi_data, get_stations
 from pandas import DataFrame, Series, Timedelta, Timestamp
 from pastas.timeseries_utils import timestep_weighted_resample
 from tqdm.auto import tqdm
@@ -23,6 +23,20 @@ logger = logging.getLogger("hydropandas_extension")
 
 
 TimeType = Optional[Union[str, Timestamp]]
+
+
+def _check_latest_measurement_date_de_bilt(meteo_var: str, **kwargs):
+    # get measurements at de Bilt
+    stn_de_bilt = 550 if meteo_var == "RD" else 260
+    ts_de_bilt, _, _ = download_knmi_data(
+        stn_de_bilt,
+        meteo_var,
+        start=Timestamp.today() - Timedelta(days=60),
+        end=Timestamp.today(),
+        settings=_get_default_settings(kwargs),
+        stn_name="De Bilt",
+    )
+    return ts_de_bilt.index[-1]  # last measurement date
 
 
 @register_pastastore_accessor("hpd")

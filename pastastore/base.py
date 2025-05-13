@@ -1477,9 +1477,10 @@ class ModelAccessor:
             names=["oseries", "modelname"],
         )
         modeldf = pd.DataFrame(index=idx)
-        modeldf = modeldf.join(
-            self.conn.oseries, on=modeldf.index.get_level_values(0)
-        ).drop("key_0", axis=1)
+        modeldf = modeldf.join(self.conn.oseries, on=modeldf.index.get_level_values(0))
+        # drop key_0 column if it exists
+        if "key_0" in modeldf.columns:
+            modeldf.drop("key_0", axis=1, inplace=True)
         modeldf["n_stressmodels"] = 0
         for onam, mlnam in modeldf.index:
             mldict = self.conn.get_models(mlnam, return_dict=True)
