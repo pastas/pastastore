@@ -5,6 +5,7 @@ import logging
 import os
 import warnings
 from functools import partial
+from pathlib import Path
 from typing import Dict, Iterable, List, Literal, Optional, Tuple, Union
 
 import numpy as np
@@ -80,15 +81,39 @@ class PastaStore:
         self.yaml = PastastoreYAML(self)
 
     @classmethod
-    def from_pastastore_config_file(cls, fname):
-        """Create a PastaStore from a pastastore config file."""
+    def from_pastastore_config_file(cls, fname, update_path: bool = True):
+        """Create a PastaStore from a pastastore config file.
+
+        Parameters
+        ----------
+        fname : str
+            path to the pastastore config file
+        update_path : bool, optional
+            when True, use path derived from location of the config file instead of
+            the stored path in the config file. If a PastaStore is moved, the path
+            in the config file will probably still refer to the old location. Set to
+            False to read the file from the path listed in the config file. In that
+            case config files do not need to be stored within the correct directory.
+
+        Returns
+        -------
+        PastaStore
+            PastaStore
+        """
         with open(fname, "r") as f:
             cfg = json.load(f)
-
         conn_type = cfg.pop("connector_type")
         if conn_type == "pas":
+            # allow loading of pas files from config file that was moved
+            if update_path:
+                # update path to the config file
+                cfg["path"] = Path(fname).parent.parent
             conn = PasConnector(**cfg)
         elif conn_type == "arcticdb":
+            if update_path:
+                prefix, _ = cfg["uri"].split("://")
+                if prefix.lower() == "lmbd":
+                    cfg["uri"] = prefix + "://" + str(Path(fname).parent)
             conn = ArcticDBConnector(**cfg)
         else:
             raise ValueError(
@@ -1533,7 +1558,7 @@ class PastaStore:
         else:
             ext = "pas"
 
-        # short circuit for PasConnector when zipfile was written using pas files
+        # short-circuit for PasConnector when zipfile was written using pas files
         if conn.conn_type == "pas" and not series_ext_json:
             with ZipFile(fname, "r") as archive:
                 archive.extractall(conn.path)
@@ -1543,7 +1568,9 @@ class PastaStore:
 
         with ZipFile(fname, "r") as archive:
             namelist = [
-                fi for fi in archive.namelist() if not fi.endswith(f"_meta.{ext}")
+                fi
+                for fi in archive.namelist()
+                if not fi.endswith(f"_meta.{ext}") and not fi.endswith(os.sep)
             ]
             for f in tqdm(namelist, desc="Reading zip") if progressbar else namelist:
                 if f.endswith("_meta.json"):
@@ -1554,6 +1581,7 @@ class PastaStore:
                         )
                     )
                 libname, fjson = os.path.split(f)
+                libname = os.path.split(libname)[-1]  # in case zip is one level deeper
                 if libname in ["stresses", "oseries"]:
                     s = pd.read_json(archive.open(f), dtype=float, orient="columns")
                     if not isinstance(s.index, pd.DatetimeIndex):
