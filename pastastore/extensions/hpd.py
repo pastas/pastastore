@@ -185,7 +185,7 @@ class HydroPandasExtension:
         metadata.pop("name", None)
         metadata.pop("meta", None)
         unit = metadata.get("unit", None)
-        if unit == "m" and np.allclose(unit_multiplier, 1e-3):
+        if unit == "m" and np.allclose(unit_multiplier, 1e3):
             metadata["unit"] = "mm"
         elif unit_multiplier != 1.0:
             metadata["unit"] = f"{unit_multiplier:.1e}*{unit}"
@@ -695,10 +695,18 @@ class HydroPandasExtension:
                     continue
                 stn = stns.loc[mask].index[0]
 
-            if unit == "mm":
+            if unit == "m":
+                unit_multiplier = 1.0
+            elif unit == "mm":
                 unit_multiplier = 1e3
+            elif unit.count("m") == 1 and unit.endswith("m"):
+                unit_multiplier = float(unit.replace("m", ""))
             else:
                 unit_multiplier = 1.0
+                logger.warning(
+                    "Unit '%s' not recognized, using unit_multiplier=%.1e."
+                    % (unit, unit_multiplier)
+                )
 
             logger.debug("Updating KNMI %s from %s to %s" % (name, itmin, itmax))
             knmi = hpd.read_knmi(
