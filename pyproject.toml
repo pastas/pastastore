@@ -77,8 +77,11 @@ version = { attr = "pastastore.version.__version__" }
 [tool.ruff]
 line-length = 88
 extend-include = ["*.ipynb"]
+show-fixes = true
+fix = true
 
 [tool.ruff.lint]
+extend-select = ["I"]
 # See: https://docs.astral.sh/ruff/rules/
 select = [
     "C4",  # flake8-comprehensions
