@@ -474,24 +474,24 @@ class PastaStore:
 
     def get_signatures(
         self,
-        signatures=None,
-        names=None,
-        libname="oseries",
-        progressbar=False,
-        ignore_errors=False,
-    ):
+        names: list[str] | str | None = None,
+        signatures: list[str] | None = None,
+        libname: Literal["oseries", "stresses"] = "oseries",
+        progressbar: bool = False,
+        ignore_errors: bool = False,
+    ) -> pd.DataFrame | pd.Series:
         """Get groundwater signatures.
 
         NaN-values are returned when the signature cannot be computed.
 
         Parameters
         ----------
-        signatures : list of str, optional
-            list of groundwater signatures to compute, if None all groundwater
-            signatures in ps.stats.signatures.__all__ are used, by default None
         names : str, list of str, or None, optional
             names of the time series, by default None which
             uses all the time series in the library
+        signatures : list of str, optional
+            list of groundwater signatures to compute, if None all groundwater
+            signatures in ps.stats.signatures.__all__ are used, by default None
         libname : str
             name of the library containing the time series
             ('oseries' or 'stresses'), by default "oseries"
@@ -503,34 +503,37 @@ class PastaStore:
 
         Returns
         -------
-        signatures_df : pandas.DataFrame
-            DataFrame containing the signatures (columns) per time series (rows)
+        signatures_df : pandas.DataFrame or pandas.Series
+            Containing the time series (columns) and the signatures (index).
         """
         names = self.conn._parse_names(names, libname=libname)
 
-        if signatures is None:
-            signatures = ps.stats.signatures.__all__.copy()
+        signatures = (
+            ps.stats.signatures.__all__.copy() if signatures is None else signatures
+        )
 
-        # create dataframe for results
-        signatures_df = pd.DataFrame(index=names, columns=signatures, data=np.nan)
-
+        sigs = []
         # loop through oseries names
-        desc = "Get groundwater signatures"
-        for name in tqdm(names, desc=desc) if progressbar else names:
+        for name in (
+            tqdm(names, desc="Get groundwater signatures") if progressbar else names
+        ):
+            sig = pd.Series(np.nan, index=signatures, name=name)
             try:
-                if libname == "oseries":
-                    s = self.conn.get_oseries(name)
-                else:
-                    s = self.conn.get_stresses(name)
+                s = (
+                    self.conn.get_oseries(name)
+                    if libname == "oseries"
+                    else self.conn.get_stresses(name)
+                )
             except Exception as e:
                 if ignore_errors:
-                    signatures_df.loc[name, :] = np.nan
-                    continue
+                    return sig
                 else:
                     raise e
 
             try:
-                i_signatures = ps.stats.signatures.summary(s.squeeze(), signatures)
+                i_signatures: pd.Series = ps.stats.signatures.summary(
+                    s.squeeze(), signatures
+                ).squeeze()
             except Exception as e:
                 if ignore_errors:
                     i_signatures = []
@@ -544,9 +547,12 @@ class PastaStore:
                         i_signatures.append(sign_val)
                 else:
                     raise e
-            signatures_df.loc[name, signatures] = i_signatures.squeeze()
-
-        return signatures_df
+            sig.loc[signatures] = i_signatures.values
+            sigs.append(sig)
+        if len(sigs) == 1:
+            return sigs[0]
+        else:
+            return pd.concat(sigs, axis=1)
 
     def get_tmin_tmax(
         self,
@@ -1841,7 +1847,13 @@ class PastaStore:
         if isinstance(result[0], (float, int, np.integer)):
             return pd.Series(result, index=names)
         elif isinstance(result[0], (pd.Series, pd.DataFrame)):
-            df = pd.concat(dict(zip(names, result, strict=True)), axis=1)
+            if isinstance(result[0], pd.Series):
+                if names[0] == result[0].name:
+                    df = pd.concat(result, axis=1)
+                else:
+                    df = pd.concat(dict(zip(names, result, strict=True)), axis=1)
+            else:
+                df = pd.concat(dict(zip(names, result, strict=True)), axis=1)
             if label is not None:
                 df.columns.name = label
             return df
