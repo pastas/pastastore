@@ -183,7 +183,7 @@ def test_get_parameters(request, pstore):
 def test_get_signatures(request, pstore):
     depends(request, [f"test_create_models[{pstore.type}]"])
     s = pstore.get_signatures(progressbar=False)
-    assert s.shape[1] == len(ps.stats.signatures.__all__)
+    assert s.shape[0] == len(ps.stats.signatures.__all__)
 
 
 @pytest.mark.dependency

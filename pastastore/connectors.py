@@ -10,7 +10,7 @@ from copy import deepcopy
 from functools import partial
 
 # import weakref
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Literal, Optional, Tuple, Union
 
 import pandas as pd
 import pastas as ps
@@ -40,8 +40,8 @@ class ConnectorUtil:
 
     def _parse_names(
         self,
-        names: Optional[Union[list, str]] = None,
-        libname: Optional[str] = "oseries",
+        names: list[str] | str | None = None,
+        libname: Literal["oseries", "stresses", "models", "oseries_models"] = "oseries",
     ) -> list:
         """Parse names kwarg, returns iterable with name(s) (internal method).
 
