@@ -1268,6 +1268,10 @@ class PasConnector(BaseConnector, ConnectorUtil):
         """
         lib = self._get_library(libname)
 
+        # remove unwanted characters (i.e.: slashes) from the filename
+        # exist in dutch names like "Krimpen a/d Lek"
+        name = name.replace("/", "")
+
         # time series
         if isinstance(item, pd.Series):
             item = item.to_frame()
