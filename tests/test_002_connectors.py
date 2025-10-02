@@ -97,6 +97,21 @@ def test_add_pastas_timeseries(request, conn):
         pass
 
 
+def test_add_series_illegal_filename(request, conn):
+    o1 = pd.Series(
+        index=pd.date_range("2000", periods=10, freq="D"),
+        data=0.0,
+    )
+    o1.name = r"test\series/illegal_chars"
+    conn.add_oseries(o1, o1.name, metadata=None)
+    o2 = conn.get_oseries("testseriesillegal_chars")
+    try:
+        assert isinstance(o2, pd.Series)
+        assert o1.equals(o2)
+    finally:
+        conn.del_oseries("testseriesillegal_chars")
+
+
 def test_update_series(request, conn):
     o1 = pd.DataFrame(
         data=1.0,
