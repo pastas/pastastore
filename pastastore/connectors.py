@@ -22,7 +22,7 @@ from tqdm.auto import tqdm
 from tqdm.contrib.concurrent import process_map
 
 from pastastore.base import BaseConnector, ModelAccessor
-from pastastore.util import _custom_warning
+from pastastore.util import _custom_warning, validate_names
 from pastastore.version import PASTAS_LEQ_022
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
@@ -75,6 +75,32 @@ class ConnectorUtil:
                 raise ValueError(f"No library '{libname}'!")
         else:
             raise NotImplementedError(f"Cannot parse 'names': {names}")
+
+    def _check_filename(self, libname: str, name: str) -> str:
+        """Check filename for invalid characters (internal method).
+
+        Parameters
+        ----------
+        libname : str
+            library name
+        name : str
+            name of the item
+
+        Returns
+        -------
+        str
+            validated name
+        """
+        # check name for invalid characters in name
+        new_name = validate_names(name, deletechars=r"\/" + os.sep, replace_space=None)
+        if new_name != name:
+            warning = (
+                f"{libname} name '{name}' contained invalid characters "
+                f"and was changed to '{new_name}'"
+            )
+            logger.warning(warning)
+            name = new_name
+        return name
 
     @staticmethod
     def _meta_list_to_frame(metalist: list, names: list):
@@ -861,6 +887,10 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
             dictionary containing metadata, by default None
         """
         lib = self._get_library(libname)
+
+        # check file name for illegal characters
+        name = self._check_filename(libname, name)
+
         # only normalizable datatypes can be written with write, else use write_pickle
         # normalizable: Series, DataFrames, Numpy Arrays
         if isinstance(item, (dict, list)):
@@ -1080,6 +1110,10 @@ class DictConnector(BaseConnector, ConnectorUtil):
             dictionary containing metadata, by default None
         """
         lib = self._get_library(libname)
+
+        # check file name for illegal characters
+        name = self._check_filename(libname, name)
+
         if libname in ["models", "oseries_models"]:
             lib[name] = item
         else:
@@ -1267,6 +1301,9 @@ class PasConnector(BaseConnector, ConnectorUtil):
             dictionary containing metadata, by default None
         """
         lib = self._get_library(libname)
+
+        # check file name for illegal characters
+        name = self._check_filename(libname, name)
 
         # time series
         if isinstance(item, pd.Series):
