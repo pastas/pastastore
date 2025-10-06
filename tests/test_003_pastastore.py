@@ -300,7 +300,7 @@ def test_load_pastastore_from_config_file(pstore):
         path = (
             pstore.conn.path
             if pstore.type == "pas"
-            else Path(pstore.conn.uri.split("//")[1])
+            else Path(pstore.conn.uri.split("://")[-1]) / pstore.conn.name
         )
         fname = path / f"{pstore.conn.name}.pastastore"
         pstore2 = pst.PastaStore.from_pastastore_config_file(fname)
