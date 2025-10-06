@@ -6,6 +6,7 @@ import os
 import tempfile
 from contextlib import contextmanager
 from copy import deepcopy
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
@@ -133,7 +134,7 @@ def temporary_yaml_from_str(yaml):
     temp.write(yaml.encode("utf-8"))
     temp.close()
     try:
-        yield temp.name
+        yield Path(temp.name)
     finally:
         os.unlink(temp.name)
 
@@ -637,10 +638,10 @@ class PastastoreYAML:
         """
         if "\n" in fyaml or "\r" in fyaml:
             with temporary_yaml_from_str(fyaml) as fyaml:
-                with open(fyaml, "r") as f:
+                with open(fyaml, "r", encoding="utf-8") as f:
                     yml = yaml.load(f, Loader=yaml.CFullLoader)
-        elif os.path.exists(fyaml):
-            with open(fyaml, "r") as f:
+        elif fyaml.exists():
+            with open(fyaml, "r", encoding="utf-8") as f:
                 yml = yaml.load(f, Loader=yaml.CFullLoader)
         else:
             raise ValueError(
@@ -664,7 +665,7 @@ class PastastoreYAML:
     def export_stored_models_per_oseries(
         self,
         oseries: Optional[Union[List[str], str]] = None,
-        outdir: Optional[str] = ".",
+        outdir: Optional[Path | str] = ".",
         minimal_yaml: Optional[bool] = False,
         use_nearest: Optional[bool] = False,
     ):
@@ -716,7 +717,7 @@ class PastastoreYAML:
                 name = d.pop("name")
                 model_dicts[name] = d
 
-            with open(os.path.join(outdir, f"{onam}.yaml"), "w") as f:
+            with open(Path(outdir) / f"{onam}.yaml", "w", encoding="utf-8") as f:
                 yaml.dump(model_dicts, f, Dumper=yaml.CDumper)
 
     def export_models(
@@ -783,13 +784,13 @@ class PastastoreYAML:
                 name = d.pop("name")
                 model_dicts[name] = d
 
-            with open(os.path.join(outdir, filename), "w") as f:
+            with open(Path(outdir) / filename, "w", encoding="utf-8") as f:
                 yaml.dump(model_dicts, f, Dumper=yaml.CDumper)
 
     @staticmethod
     def export_model(
         ml: Union[ps.Model, dict],
-        outdir: Optional[str] = ".",
+        outdir: Optional[Path | str] = ".",
         minimal_yaml: Optional[bool] = False,
         use_nearest: Optional[bool] = False,
     ):
@@ -816,7 +817,7 @@ class PastastoreYAML:
             name = ml["name"]
         else:
             name = ml.name
-        with open(os.path.join(outdir, f"{name}.yaml"), "w") as f:
+        with open(Path(outdir) / f"{name}.yaml", "w", encoding="utf-8") as f:
             if isinstance(ml, ps.Model):
                 mldict = deepcopy(ml.to_dict(series=False))
             elif isinstance(ml, dict):

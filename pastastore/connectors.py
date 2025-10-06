@@ -8,6 +8,7 @@ from collections.abc import Iterable
 from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
 from functools import partial
+from pathlib import Path
 
 # import weakref
 from typing import Callable, Dict, List, Literal, Optional, Tuple, Union
@@ -835,12 +836,14 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
             "uri": self.uri,
         }
         if path is None and "lmdb" in self.uri:
-            path = self.uri.split("://")[1]
+            path = Path(self.uri.split("://")[1])
         elif path is None and "lmdb" not in self.uri:
             raise ValueError("Please provide a path to write the pastastore file!")
 
         with open(
-            os.path.join(path, f"{self.name}.pastastore"), "w", encoding="utf-8"
+            path / self.name / f"{self.name}.pastastore",
+            "w",
+            encoding="utf-8",
         ) as f:
             json.dump(config, f)
 
@@ -1225,9 +1228,9 @@ class PasConnector(BaseConnector, ConnectorUtil):
             whether to print message when database is initialized, by default True
         """
         self.name = name
-        self.parentdir = path
-        self.path = os.path.abspath(os.path.join(path, self.name))
-        self.relpath = os.path.relpath(self.path)
+        self.parentdir = Path(path)
+        self.path = (self.parentdir / self.name).absolute()
+        self.relpath = self.parentdir.relative_to(".")
         self._initialize(verbose=verbose)
         self.models = ModelAccessor(self)
         # for older versions of PastaStore, if oseries_models library is empty
@@ -1239,32 +1242,30 @@ class PasConnector(BaseConnector, ConnectorUtil):
     def _initialize(self, verbose: bool = True) -> None:
         """Initialize the libraries (internal method)."""
         for val in self._default_library_names:
-            libdir = os.path.join(self.path, val)
-            if not os.path.exists(libdir):
+            libdir = self.path / val
+            if not libdir.exists():
                 if verbose:
                     print(f"PasConnector: library '{val}' created in '{libdir}'")
-                os.makedirs(libdir)
+                libdir.mkdir(parents=True, exist_ok=False)
             else:
                 if verbose:
                     print(
                         f"PasConnector: library '{val}' already exists. "
                         f"Linking to existing directory: '{libdir}'"
                     )
-            setattr(self, f"lib_{val}", os.path.join(self.path, val))
+            setattr(self, f"lib_{val}", self.path / val)
 
     def _write_pstore_config_file(self):
         """Write pstore configuration file to store database info."""
         config = {
             "connector_type": self.conn_type,
             "name": self.name,
-            "path": os.path.abspath(self.parentdir),
+            "path": self.parentdir.absolute(),
         }
-        with open(
-            os.path.join(self.path, f"{self.name}.pastastore"), "w", encoding="utf-8"
-        ) as f:
+        with open(self.path / f"{self.name}.pastastore", "w", encoding="utf-8") as f:
             json.dump(config, f)
 
-    def _get_library(self, libname: str):
+    def _get_library(self, libname: str) -> Path:
         """Get path to directory holding data.
 
         Parameters
@@ -1277,7 +1278,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         lib : str
             path to library
         """
-        return getattr(self, "lib_" + libname)
+        return Path(getattr(self, "lib_" + libname))
 
     def _add_item(
         self,
@@ -1310,25 +1311,25 @@ class PasConnector(BaseConnector, ConnectorUtil):
             item = item.to_frame()
         if isinstance(item, pd.DataFrame):
             sjson = item.to_json(orient="columns")
-            fname = os.path.join(lib, f"{name}.pas")
-            with open(fname, "w") as f:
+            fname = lib / f"{name}.pas"
+            with open(fname, "w", encoding="utf-8") as f:
                 f.write(sjson)
             if metadata is not None:
                 mjson = json.dumps(metadata, cls=PastasEncoder, indent=4)
-                fname_meta = os.path.join(lib, f"{name}_meta.pas")
-                with open(fname_meta, "w") as m:
+                fname_meta = lib / f"{name}_meta.pas"
+                with open(fname_meta, "w", encoding="utf-8") as m:
                     m.write(mjson)
         # pastas model dict
         elif isinstance(item, dict):
             jsondict = json.dumps(item, cls=PastasEncoder, indent=4)
-            fmodel = os.path.join(lib, f"{name}.pas")
-            with open(fmodel, "w") as fm:
+            fmodel = lib / f"{name}.pas"
+            with open(fmodel, "w", encoding="utf-8") as fm:
                 fm.write(jsondict)
         # oseries_models list
         elif isinstance(item, list):
             jsondict = json.dumps(item)
-            fname = os.path.join(lib, f"{name}.pas")
-            with open(fname, "w") as fm:
+            fname = lib / f"{name}.pas"
+            with open(fname, "w", encoding="utf-8") as fm:
                 fm.write(jsondict)
 
     def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
@@ -1347,17 +1348,17 @@ class PasConnector(BaseConnector, ConnectorUtil):
             time series or model dictionary
         """
         lib = self._get_library(libname)
-        fjson = os.path.join(lib, f"{name}.pas")
-        if not os.path.exists(fjson):
+        fjson = lib / f"{name}.pas"
+        if not fjson.exists():
             msg = f"Item '{name}' not in '{libname}' library."
             raise FileNotFoundError(msg)
         # model
         if libname == "models":
-            with open(fjson, "r") as ml_json:
+            with open(fjson, "r", encoding="utf-8") as ml_json:
                 item = json.load(ml_json, object_hook=pastas_hook)
         # list of models per oseries
         elif libname == "oseries_models":
-            with open(fjson, "r") as f:
+            with open(fjson, "r", encoding="utf-8") as f:
                 item = json.load(f)
         # time series
         else:
@@ -1375,11 +1376,11 @@ class PasConnector(BaseConnector, ConnectorUtil):
             name of item to delete
         """
         lib = self._get_library(libname)
-        os.remove(os.path.join(lib, f"{name}.pas"))
+        os.remove(lib / f"{name}.pas")
         # remove metadata for time series
         if libname != "models":
             try:
-                os.remove(os.path.join(lib, f"{name}_meta.pas"))
+                os.remove(lib / f"{name}_meta.pas")
             except FileNotFoundError:
                 # Nothing to delete
                 pass
@@ -1400,8 +1401,8 @@ class PasConnector(BaseConnector, ConnectorUtil):
             dictionary containing metadata
         """
         lib = self._get_library(libname)
-        mjson = os.path.join(lib, f"{name}_meta.pas")
-        if os.path.isfile(mjson):
+        mjson = lib / f"{name}_meta.pas"
+        if mjson.is_file():
             imeta = self._metadata_from_json(mjson)
         else:
             imeta = {}
