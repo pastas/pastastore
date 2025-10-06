@@ -640,7 +640,7 @@ class PastastoreYAML:
             with temporary_yaml_from_str(fyaml) as fyaml:
                 with open(fyaml, "r", encoding="utf-8") as f:
                     yml = yaml.load(f, Loader=yaml.CFullLoader)
-        elif fyaml.exists():
+        elif os.path.exists(fyaml):
             with open(fyaml, "r", encoding="utf-8") as f:
                 yml = yaml.load(f, Loader=yaml.CFullLoader)
         else:
