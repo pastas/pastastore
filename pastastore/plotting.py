@@ -1155,12 +1155,13 @@ class Maps:
         )
 
     def _plotmap_dataframe(self, *args, **kwargs):
-        """Deprecated, use dataframe method."""
+        """Deprecated, use dataframe method."""  # noqa: D401
         import warnings
 
         warnings.warn(
             "maps._plotmap_dataframe is deprecated, use maps.dataframe_scatter instead",
             DeprecationWarning,
+            stacklevel=2,
         )
         return self.dataframe_scatter(*args, **kwargs)
 
