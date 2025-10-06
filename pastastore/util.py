@@ -49,7 +49,7 @@ def delete_arcticdb_connector(
 
     if conn is not None:
         name = conn.name
-        uri = Path(conn.uri)
+        uri = conn.uri
     elif name is None or uri is None:
         raise ValueError("Provide 'name' and 'uri' OR 'conn'!")
 
@@ -84,7 +84,7 @@ def delete_arcticdb_connector(
     # check if any remaining libraries in lmdb dir, if none, delete entire folder
     remaining = arc.list_libraries()
     if len(remaining) == 0:
-        shutil.rmtree(Path(conn.uri.split("//").parent))
+        shutil.rmtree(Path(conn.uri.split("://")[-1]))
 
     print("Done!")
 
