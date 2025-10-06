@@ -1647,6 +1647,7 @@ class Maps:
                         name,
                         fontsize=fontsize,
                         **{"path_effects": stroke},
+                        **kwargs,
                     )
                 )
 
@@ -1654,7 +1655,6 @@ class Maps:
                 texts,
                 objects=objects,
                 force_text=(0.05, 0.10),
-                **kwargs,
                 **{
                     "arrowprops": {
                         "arrowstyle": "-",
