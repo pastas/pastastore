@@ -638,10 +638,10 @@ class PastastoreYAML:
         """
         if "\n" in fyaml or "\r" in fyaml:
             with temporary_yaml_from_str(fyaml) as fyaml:
-                with open(fyaml, "r", encoding="utf-8") as f:
+                with fyaml.open("r", encoding="utf-8") as f:
                     yml = yaml.load(f, Loader=yaml.CFullLoader)
-        elif os.path.exists(fyaml):
-            with open(fyaml, "r", encoding="utf-8") as f:
+        elif Path(fyaml).exists():
+            with Path(fyaml).open("r", encoding="utf-8") as f:
                 yml = yaml.load(f, Loader=yaml.CFullLoader)
         else:
             raise ValueError(
@@ -717,7 +717,7 @@ class PastastoreYAML:
                 name = d.pop("name")
                 model_dicts[name] = d
 
-            with open(Path(outdir) / f"{onam}.yaml", "w", encoding="utf-8") as f:
+            with (Path(outdir) / f"{onam}.yaml").open("w", encoding="utf-8") as f:
                 yaml.dump(model_dicts, f, Dumper=yaml.CDumper)
 
     def export_models(
@@ -784,7 +784,7 @@ class PastastoreYAML:
                 name = d.pop("name")
                 model_dicts[name] = d
 
-            with open(Path(outdir) / filename, "w", encoding="utf-8") as f:
+            with (Path(outdir) / filename).open("w", encoding="utf-8") as f:
                 yaml.dump(model_dicts, f, Dumper=yaml.CDumper)
 
     @staticmethod
@@ -817,7 +817,7 @@ class PastastoreYAML:
             name = ml["name"]
         else:
             name = ml.name
-        with open(Path(outdir) / f"{name}.yaml", "w", encoding="utf-8") as f:
+        with (Path(outdir) / f"{name}.yaml").open("w", encoding="utf-8") as f:
             if isinstance(ml, ps.Model):
                 mldict = deepcopy(ml.to_dict(series=False))
             elif isinstance(ml, dict):

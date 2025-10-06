@@ -115,7 +115,7 @@ class ConnectorUtil:
         if path.exists() and path.is_dir():
             config_file = list(path.glob("*.pastastore"))
             if len(config_file) > 0:
-                with open(config_file[0], "r", encoding="utf-8") as f:
+                with config_file[0].open("r", encoding="utf-8") as f:
                     cfg = json.load(f)
                 stored_connector_type = cfg.pop("connector_type")
                 if stored_connector_type != self.conn_type:
@@ -868,8 +868,7 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
         elif path is None and "lmdb" not in self.uri:
             raise ValueError("Please provide a path to write the pastastore file!")
 
-        with open(
-            path / self.name / f"{self.name}.pastastore",
+        with (path / self.name / f"{self.name}.pastastore").open(
             "w",
             encoding="utf-8",
         ) as f:
@@ -1291,7 +1290,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
             "name": self.name,
             "path": str(self.parentdir.absolute()),
         }
-        with open(self.path / f"{self.name}.pastastore", "w", encoding="utf-8") as f:
+        with (self.path / f"{self.name}.pastastore").open("w", encoding="utf-8") as f:
             json.dump(config, f)
 
     def _get_library(self, libname: str) -> Path:
@@ -1341,24 +1340,24 @@ class PasConnector(BaseConnector, ConnectorUtil):
         if isinstance(item, pd.DataFrame):
             sjson = item.to_json(orient="columns")
             fname = lib / f"{name}.pas"
-            with open(fname, "w", encoding="utf-8") as f:
+            with fname.open("w", encoding="utf-8") as f:
                 f.write(sjson)
             if metadata is not None:
                 mjson = json.dumps(metadata, cls=PastasEncoder, indent=4)
                 fname_meta = lib / f"{name}_meta.pas"
-                with open(fname_meta, "w", encoding="utf-8") as m:
+                with fname_meta.open("w", encoding="utf-8") as m:
                     m.write(mjson)
         # pastas model dict
         elif isinstance(item, dict):
             jsondict = json.dumps(item, cls=PastasEncoder, indent=4)
             fmodel = lib / f"{name}.pas"
-            with open(fmodel, "w", encoding="utf-8") as fm:
+            with fmodel.open("w", encoding="utf-8") as fm:
                 fm.write(jsondict)
         # oseries_models list
         elif isinstance(item, list):
             jsondict = json.dumps(item)
             fname = lib / f"{name}.pas"
-            with open(fname, "w", encoding="utf-8") as fm:
+            with fname.open("w", encoding="utf-8") as fm:
                 fm.write(jsondict)
 
     def _get_item(self, libname: str, name: str) -> Union[FrameorSeriesUnion, Dict]:
@@ -1383,11 +1382,11 @@ class PasConnector(BaseConnector, ConnectorUtil):
             raise FileNotFoundError(msg)
         # model
         if libname == "models":
-            with open(fjson, "r", encoding="utf-8") as ml_json:
+            with fjson.open("r", encoding="utf-8") as ml_json:
                 item = json.load(ml_json, object_hook=pastas_hook)
         # list of models per oseries
         elif libname == "oseries_models":
-            with open(fjson, "r", encoding="utf-8") as f:
+            with fjson.open("r", encoding="utf-8") as f:
                 item = json.load(f)
         # time series
         else:
