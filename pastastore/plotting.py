@@ -707,7 +707,7 @@ class Maps:
             kind_to_color = {k: f"C{i}" for i, k in enumerate(c.unique())}
             c = c.apply(lambda k: kind_to_color[k])
 
-        r = self._plotmap_dataframe(stresses.loc[mask0], c=c, figsize=figsize, **kwargs)
+        r = self.dataframe(stresses.loc[mask0], c=c, figsize=figsize, **kwargs)
         if "ax" in kwargs:
             ax = kwargs.pop("ax")
         else:
@@ -773,7 +773,7 @@ class Maps:
             names = self.pstore.within(extent, names=names)
         oseries = self.pstore.oseries.loc[names]
         mask0 = (oseries["x"] != 0.0) | (oseries["y"] != 0.0)
-        r = self._plotmap_dataframe(oseries.loc[mask0], figsize=figsize, **kwargs)
+        r = self.dataframe(oseries.loc[mask0], figsize=figsize, **kwargs)
         if "ax" in kwargs:
             ax = kwargs["ax"]
         else:
@@ -829,7 +829,7 @@ class Maps:
 
         # mask out 0.0 coordinates
         mask0 = (models["x"] != 0.0) | (models["y"] != 0.0)
-        r = self._plotmap_dataframe(models.loc[mask0], figsize=figsize, **kwargs)
+        r = self.dataframe(models.loc[mask0], figsize=figsize, **kwargs)
         if "ax" in kwargs:
             ax = kwargs["ax"]
         else:
@@ -905,9 +905,7 @@ class Maps:
         }
         scatter_kwargs.update(kwargs)
 
-        ax = self._plotmap_dataframe(
-            df, column=column, figsize=figsize, **scatter_kwargs
-        )
+        ax = self.dataframe(df, column=column, figsize=figsize, **scatter_kwargs)
         if label:
             df.set_index("index", inplace=True)
             self.add_labels(df, ax, adjust=adjust)
@@ -1154,8 +1152,18 @@ class Maps:
             **kwargs,
         )
 
+    def _plotmap_dataframe(self, *args, **kwargs):
+        """Deprecated, use dataframe method."""
+        import warnings
+
+        warnings.warn(
+            "maps._plotmap_dataframe is deprecated, use maps.dataframe instead.",
+            DeprecationWarning,
+        )
+        return self.dataframe(*args, **kwargs)
+
     @staticmethod
-    def _plotmap_dataframe(
+    def dataframe(
         df,
         x="x",
         y="y",
@@ -1165,9 +1173,7 @@ class Maps:
         figsize=(10, 8),
         **kwargs,
     ):
-        """Plot dataframe with point locations (internal method).
-
-        Can be called directly for more control over plot characteristics.
+        """Plot dataframe on a map.
 
         Parameters
         ----------
