@@ -1614,23 +1614,27 @@ class Maps:
         ctx.add_basemap(ax, source=providers[map_provider], crs=proj.srs, **kwargs)
 
     @staticmethod
-    def add_labels(df, ax, adjust=False, objects=None, **kwargs):
+    def add_labels(
+        df, ax, adjust=False, objects=None, adjust_text_kwargs=None, **kwargs
+    ):
         """Add labels to points on plot.
 
         Uses dataframe index to label points.
 
         Parameters
         ----------
-        df: pd.DataFrame
+        df : pd.DataFrame
             DataFrame containing x, y - data. Index is used as label
-        ax: matplotlib.Axes
+        ax : matplotlib.Axes
             axes object to label points on
-        adjust: bool
+        adjust : bool
             automated smart label placement using adjustText
         objects : list of matplotlib objects
             use to avoid labels overlapping markers
-        **kwargs:
-            keyword arguments to ax.annotate or adjusttext
+        adjust_text_kwargs
+            keyword arguments to adjust_text function, only used if adjust=True
+        **kwargs
+            keyword arguments to ax.annotate or ax.text
         """
         stroke = [patheffects.withStroke(linewidth=3, foreground="w")]
         fontsize = kwargs.pop("fontsize", 10)
@@ -1650,7 +1654,8 @@ class Maps:
                         **kwargs,
                     )
                 )
-
+            if adjust_text_kwargs is None:
+                adjust_text_kwargs = {}
             adjust_text(
                 texts,
                 objects=objects,
@@ -1662,6 +1667,7 @@ class Maps:
                         "alpha": 0.5,
                     }
                 },
+                **adjust_text_kwargs,
             )
 
         else:
