@@ -23,7 +23,6 @@ from tqdm.contrib.concurrent import process_map
 
 from pastastore.base import BaseConnector, ModelAccessor
 from pastastore.util import _custom_warning, validate_names
-from pastastore.version import PASTAS_LEQ_022
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning
@@ -309,7 +308,7 @@ class ConnectorUtil:
         if isinstance(ml, ps.Model):
             smtyps = [sm._name for sm in ml.stressmodels.values()]
         elif isinstance(ml, dict):
-            classkey = "stressmodel" if PASTAS_LEQ_022 else "class"
+            classkey = "class"
             smtyps = [sm[classkey] for sm in ml["stressmodels"].values()]
         check = isin(smtyps, supported_stressmodels)
         if not all(check):
@@ -332,20 +331,12 @@ class ConnectorUtil:
 
         elif isinstance(ml, dict):
             # non RechargeModel, Tarsomodel, WellModel stressmodels
-            classkey = "stressmodel" if PASTAS_LEQ_022 else "class"
-            if PASTAS_LEQ_022:
-                series_names = [
-                    istress["name"]
-                    for sm in ml["stressmodels"].values()
-                    if sm[classkey] not in (prec_evap_model + ["WellModel"])
-                    for istress in sm["stress"]
-                ]
-            else:
-                series_names = [
-                    sm["stress"]["name"]
-                    for sm in ml["stressmodels"].values()
-                    if sm[classkey] not in (prec_evap_model + ["WellModel"])
-                ]
+            classkey = "class"
+            series_names = [
+                sm["stress"]["name"]
+                for sm in ml["stressmodels"].values()
+                if sm[classkey] not in (prec_evap_model + ["WellModel"])
+            ]
 
             # WellModel
             if isin(
@@ -402,10 +393,7 @@ class ConnectorUtil:
         # expensive check
         if self.CHECK_MODEL_SERIES_VALUES and isinstance(ml, ps.Model):
             s_org = self.get_oseries(name).squeeze().dropna()
-            if PASTAS_LEQ_022:
-                so = ml.oseries.series_original
-            else:
-                so = ml.oseries._series_original
+            so = ml.oseries._series_original
             try:
                 assert_series_equal(
                     so.dropna(),
@@ -443,10 +431,7 @@ class ConnectorUtil:
                         raise LookupError(msg)
                     if self.CHECK_MODEL_SERIES_VALUES:
                         s_org = self.get_stresses(s.name).squeeze()
-                        if PASTAS_LEQ_022:
-                            so = s.series_original
-                        else:
-                            so = s._series_original
+                        so = s._series_original
                         try:
                             assert_series_equal(
                                 so,
@@ -462,13 +447,13 @@ class ConnectorUtil:
                             ) from e
         elif isinstance(ml, dict):
             for sm in ml["stressmodels"].values():
-                classkey = "stressmodel" if PASTAS_LEQ_022 else "class"
+                classkey = "class"
                 if sm[classkey] in prec_evap_model:
                     stresses = [sm["prec"], sm["evap"]]
                 elif sm[classkey] in ["WellModel"]:
                     stresses = sm["stress"]
                 else:
-                    stresses = sm["stress"] if PASTAS_LEQ_022 else [sm["stress"]]
+                    stresses = [sm["stress"]]
                 for s in stresses:
                     if str(s["name"]) not in self.stresses.index:
                         msg = (
