@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import shutil
 import warnings
 from collections.abc import Iterable
 from concurrent.futures import ProcessPoolExecutor
@@ -118,6 +119,9 @@ class ConnectorUtil:
                     cfg = json.load(f)
                 stored_connector_type = cfg.pop("connector_type")
                 if stored_connector_type != self.conn_type:
+                    # NOTE: delete _arctic_cfg that is created on ArcticDB init
+                    if self.conn_type == "arcticdb":
+                        shutil.rmtree(path.parent / "_arctic_cfg")
                     raise ValueError(
                         f"Directory '{self.name}/' in use by another connector type! "
                         f"Either create a '{stored_connector_type}' connector to load"

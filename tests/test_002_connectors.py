@@ -303,3 +303,17 @@ def test_delete(request, conn):
     elif conn.conn_type == "pas":
         pst.util.delete_pas_connector(conn, libraries=["oseries"])
         pst.util.delete_pas_connector(conn)
+
+
+def test_new_connector_in_occupied_dir():
+    conn1 = pst.PasConnector("my_db", "./tests/data/pas")
+    with pytest.raises(ValueError):
+        conn2 = pst.ArcticDBConnector("my_db", "lmdb://./tests/data/pas")
+
+    pst.util.delete_pas_connector(conn1)
+
+    conn1 = pst.ArcticDBConnector("my_db", "lmdb://./tests/data/arcticdb")
+    with pytest.raises(ValueError):
+        conn2 = pst.PasConnector("my_db", "./tests/data/arcticdb")
+
+    pst.util.delete_arcticdb_connector(conn1)
