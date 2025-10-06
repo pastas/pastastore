@@ -707,7 +707,7 @@ class Maps:
             kind_to_color = {k: f"C{i}" for i, k in enumerate(c.unique())}
             c = c.apply(lambda k: kind_to_color[k])
 
-        r = self.dataframe(stresses.loc[mask0], c=c, figsize=figsize, **kwargs)
+        r = self.dataframe_scatter(stresses.loc[mask0], c=c, figsize=figsize, **kwargs)
         if "ax" in kwargs:
             ax = kwargs.pop("ax")
         else:
@@ -773,7 +773,7 @@ class Maps:
             names = self.pstore.within(extent, names=names)
         oseries = self.pstore.oseries.loc[names]
         mask0 = (oseries["x"] != 0.0) | (oseries["y"] != 0.0)
-        r = self.dataframe(oseries.loc[mask0], figsize=figsize, **kwargs)
+        r = self.dataframe_scatter(oseries.loc[mask0], figsize=figsize, **kwargs)
         if "ax" in kwargs:
             ax = kwargs["ax"]
         else:
@@ -829,7 +829,7 @@ class Maps:
 
         # mask out 0.0 coordinates
         mask0 = (models["x"] != 0.0) | (models["y"] != 0.0)
-        r = self.dataframe(models.loc[mask0], figsize=figsize, **kwargs)
+        r = self.dataframe_scatter(models.loc[mask0], figsize=figsize, **kwargs)
         if "ax" in kwargs:
             ax = kwargs["ax"]
         else:
@@ -842,7 +842,7 @@ class Maps:
 
         return ax
 
-    def _map_helper(
+    def dataframe(
         self,
         df,
         column,
@@ -856,7 +856,7 @@ class Maps:
         backgroundmap=False,
         **kwargs,
     ):
-        """Help function for plotting values on map.
+        """Plot dataframe on a map.
 
         Parameters
         ----------
@@ -905,7 +905,9 @@ class Maps:
         }
         scatter_kwargs.update(kwargs)
 
-        ax = self.dataframe(df, column=column, figsize=figsize, **scatter_kwargs)
+        ax = self.dataframe_scatter(
+            df, column=column, figsize=figsize, **scatter_kwargs
+        )
         if label:
             df.set_index("index", inplace=True)
             self.add_labels(df, ax, adjust=adjust)
@@ -980,7 +982,7 @@ class Maps:
         statsdf = statsdf.reset_index().set_index("oseries")
         df = statsdf.join(self.pstore.oseries, how="left")
 
-        return self._map_helper(
+        return self.dataframe(
             df,
             column=statistic,
             label=label,
@@ -1062,7 +1064,7 @@ class Maps:
         paramdf = paramdf.reset_index().set_index("oseries")
         df = paramdf.join(self.pstore.oseries, how="left")
 
-        return self._map_helper(
+        return self.dataframe(
             df,
             column=parameter,
             label=label,
@@ -1138,7 +1140,7 @@ class Maps:
         )
         df = signature_df.join(self.pstore.oseries, how="left")
 
-        return self._map_helper(
+        return self.dataframe(
             df,
             column=signature,
             label=label,
@@ -1157,13 +1159,13 @@ class Maps:
         import warnings
 
         warnings.warn(
-            "maps._plotmap_dataframe is deprecated, use maps.dataframe instead.",
+            "maps._plotmap_dataframe is deprecated, use maps.dataframe_scatter instead",
             DeprecationWarning,
         )
-        return self.dataframe(*args, **kwargs)
+        return self.dataframe_scatter(*args, **kwargs)
 
     @staticmethod
-    def dataframe(
+    def dataframe_scatter(
         df,
         x="x",
         y="y",
@@ -1173,7 +1175,7 @@ class Maps:
         figsize=(10, 8),
         **kwargs,
     ):
-        """Plot dataframe on a map.
+        """Plot dataframe.
 
         Parameters
         ----------
