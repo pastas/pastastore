@@ -103,6 +103,28 @@ class ConnectorUtil:
             name = new_name
         return name
 
+    def check_config_connector_type(self, path: str) -> None:
+        """Check if config file connector type matches connector instance.
+
+        Parameters
+        ----------
+        path : str
+            path to directory containing the pastastore config file
+        """
+        if path.exists() and path.is_dir():
+            config_file = list(path.glob("*.pastastore"))
+            if len(config_file) > 0:
+                with open(config_file[0], "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                stored_connector_type = cfg.pop("connector_type")
+                if stored_connector_type != self.conn_type:
+                    raise ValueError(
+                        f"Directory '{self.name}/' in use by another connector type! "
+                        f"Either create a '{stored_connector_type}' connector to load"
+                        " the current pastastore or change the directory name to create"
+                        f" a new '{self.conn_type}' connector."
+                    )
+
     @staticmethod
     def _meta_list_to_frame(metalist: list, names: list):
         """Convert list of metadata dictionaries to DataFrame.
@@ -810,6 +832,8 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
 
     def _initialize(self, verbose: bool = True) -> None:
         """Initialize the libraries (internal method)."""
+        if "lmdb" in self.uri.lower():  # only check for LMDB
+            self.check_config_connector_type(Path(self.uri.split("://")[1]) / self.name)
         for libname in self._default_library_names:
             if self._library_name(libname) not in self.arc.list_libraries():
                 self.arc.create_library(self._library_name(libname))
@@ -1241,6 +1265,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
 
     def _initialize(self, verbose: bool = True) -> None:
         """Initialize the libraries (internal method)."""
+        self.check_config_connector_type(self.path)
         for val in self._default_library_names:
             libdir = self.path / val
             if not libdir.exists():
