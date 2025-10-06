@@ -73,7 +73,7 @@ jobs:
           pip install -e .[test]
 
       - name: Check numpy version
-        if: ${{ matrix.pastas-version == 'git+https://github.com/pastas/pastas.git@1.4.0' }}
+        if: ${{ matrix.pastas-version == 'git+https://github.com/pastas/pastas.git@v1.4.0' }}
         run: |
           pip install "numpy<2.0"
 
