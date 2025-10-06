@@ -72,6 +72,11 @@ jobs:
           pip install ${{ matrix.pastas-version }}
           pip install -e .[test]
 
+      - name: Check numpy version
+        if: ${{ matrix.pastas-version == 'git+https://github.com/pastas/pastas.git@1.4.0' }}
+        run: |
+          pip install "numpy<2.0"
+
       - name: Run pytest
         run: |
           pytest -m "not (bgmap or pastas150)"
