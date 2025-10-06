@@ -217,7 +217,6 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
     """
     df = pd.DataFrame(columns=["model 0", "model 1"])
     so1 = []  # for storing series_original
-    sv1 = []  # for storing series_validated
     ss1 = []  # for storing series
 
     for i, ml in enumerate([ml1, ml2]):
