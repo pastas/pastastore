@@ -1254,7 +1254,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         self.name = name
         self.parentdir = Path(path)
         self.path = (self.parentdir / self.name).absolute()
-        self.relpath = self.parentdir.relative_to(".")
+        self.relpath = os.path.relpath(self.parentdir)
         self._initialize(verbose=verbose)
         self.models = ModelAccessor(self)
         # for older versions of PastaStore, if oseries_models library is empty
@@ -1285,7 +1285,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         config = {
             "connector_type": self.conn_type,
             "name": self.name,
-            "path": self.parentdir.absolute(),
+            "path": str(self.parentdir.absolute()),
         }
         with open(self.path / f"{self.name}.pastastore", "w", encoding="utf-8") as f:
             json.dump(config, f)
