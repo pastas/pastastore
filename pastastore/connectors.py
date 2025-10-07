@@ -1234,7 +1234,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
 
     @property
     def stresses_with_models(self):
-        """List of oseries with models."""
+        """List of stresses with models."""
         lib = self._get_library("stresses_models")
         return list(lib.keys())
 
