@@ -24,6 +24,12 @@ class ItemInLibraryException(Exception):
     pass
 
 
+class SeriesUsedByModel(Exception):
+    """Exception when item is already in library."""
+
+    pass
+
+
 def delete_arcticdb_connector(
     conn=None,
     uri: Optional[str] = None,
