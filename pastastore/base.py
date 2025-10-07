@@ -1336,6 +1336,9 @@ class BaseConnector(ABC):
         model_names : Union[str, List[str]]
             model name or list of model names for a stress with name
         """
+        # if one model name, make list for loop
+        if isinstance(model_names, str):
+            model_names = [model_names]
         for snam in stress_names:
             # get stored list of model names
             if str(snam) in self.stresses_with_models:
@@ -1343,9 +1346,6 @@ class BaseConnector(ABC):
             else:
                 # else empty list
                 modellist = []
-            # if one model name, make list for loop
-            if isinstance(model_names, str):
-                model_names = [model_names]
             # loop over model names
             for iml in model_names:
                 # if not present, add to list
