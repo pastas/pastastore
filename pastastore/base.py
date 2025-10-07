@@ -392,6 +392,7 @@ class BaseConnector(ABC):
         name: str,
         metadata: Optional[dict] = None,
         validate: Optional[bool] = None,
+        force: bool = False,
     ) -> None:
         """Update time series (internal method).
 
@@ -409,9 +410,14 @@ class BaseConnector(ABC):
         validate: bool, optional
             use pastas to validate series, default is None, which will use the
             USE_PASTAS_VALIDATE_SERIES value (default is True).
+        force : bool, optional
+            force update even if time series is used in a model, by default False
+
         """
         if libname not in ["oseries", "stresses"]:
             raise ValueError("Library must be 'oseries' or 'stresses'!")
+        if not force:
+            self._check_series_in_models(libname, name)
         self._validate_input_series(series)
         series = self._set_series_name(series, name)
         stored = self._get_series(libname, name, progressbar=False)
