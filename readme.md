@@ -18,8 +18,12 @@ left off without having to reload everything.
 
 Install the module with `pip install pastastore`.
 
-For installing in development mode, clone the repository and install by typing
-`pip install -e .` from the module root directory.
+For development, clone the repository and install all development, testing, and
+documentation dependencies with:
+
+```sh
+pip install -e .[dev]
+```
 
 For plotting background maps, the `contextily` and `pyproj` packages are
 required. For a full install, including optional dependencies for plotting and

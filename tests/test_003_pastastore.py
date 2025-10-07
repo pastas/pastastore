@@ -1,5 +1,4 @@
 # ruff: noqa: D100 D103
-import os
 from pathlib import Path
 
 import numpy as np
@@ -32,7 +31,7 @@ def test_get_tmintmax(pstore):
     assert sttt.at["evap2", "tmax"] == pd.Timestamp("2016-11-22")
     ml = pstore.create_model("oseries1")
     ml.solve(report=False)
-    pstore.conn.add_model(ml)
+    pstore.add_model(ml)
     mltt = pstore.get_tmin_tmax("models")
     assert mltt.at["oseries1", "tmax"] == pd.Timestamp("2015-06-28")
     pstore.del_model("oseries1")
@@ -87,7 +86,7 @@ def test_del_oseries_used_by_model(request, pstore):
     pstore.del_oseries("oseries1", force=True)
     pstore.add_oseries(oseries, "oseries1", metadata=ometa)
     pstore.set_protect_series_in_models(False)
-    pstore.del_oseries("oseries1")  # should work without force=True
+    pstore.del_oseries("oseries1")
     pstore.add_oseries(oseries, "oseries1", metadata=ometa)
     pstore.set_protect_series_in_models(True)
 
@@ -101,7 +100,7 @@ def test_del_stress_used_by_model(request, pstore):
     pstore.del_stress("prec1", force=True)
     pstore.add_stress(stress, "prec1", kind="prec", metadata=smeta)
     pstore.set_protect_series_in_models(False)
-    pstore.del_stress("prec1")  # should work without force=True
+    pstore.del_stress("prec1")
     pstore.add_stress(stress, "prec1", kind="prec", metadata=smeta)
     pstore.set_protect_series_in_models(True)
 
@@ -109,13 +108,9 @@ def test_del_stress_used_by_model(request, pstore):
 @pytest.mark.dependency
 def test_model_accessor(request, pstore):
     depends(request, [f"test_store_model[{pstore.type}]"])
-    # repr
     pstore.models.__repr__()
-    # getter
     ml = pstore.models["oseries1"]
-    # setter
     pstore.models["oseries1_2"] = ml
-    # iter
     mnames = [ml.name for ml in pstore.models]
     try:
         assert len(mnames) == 2
@@ -128,19 +123,15 @@ def test_model_accessor(request, pstore):
 @pytest.mark.dependency
 def test_oseries_model_accessor(request, pstore):
     depends(request, [f"test_store_model[{pstore.type}]"])
-    # repr
     pstore.oseries_models.__repr__()
-    # get model names
     ml = pstore.models["oseries1"]
     ml_list1 = pstore.oseries_models["oseries1"]
     assert len(ml_list1) == 1
 
-    # add model
     pstore.models["oseries1_2"] = ml
     ml_list2 = pstore.oseries_models["oseries1"]
     assert len(ml_list2) == 2
 
-    # delete model
     pstore.del_models("oseries1_2")
     ml_list3 = pstore.oseries_models["oseries1"]
     assert len(ml_list3) == 1
@@ -177,7 +168,7 @@ def test_get_model(request, pstore):
             f"test_store_model_missing_series[{pstore.type}]",
         ],
     )
-    _ = pstore.conn.get_models("oseries1")
+    _ = pstore.get_models("oseries1")
 
 
 @pytest.mark.dependency
@@ -191,7 +182,7 @@ def test_del_model(request, pstore):
             f"test_get_model[{pstore.type}]",
         ],
     )
-    pstore.conn.del_models("oseries1")
+    pstore.del_models("oseries1")
 
 
 @pytest.mark.dependency
@@ -199,7 +190,7 @@ def test_create_models(pstore):
     _ = pstore.create_models_bulk(
         ["oseries1", "oseries2"], store=True, progressbar=False
     )
-    _ = pstore.conn.models
+    _ = pstore.models
     assert pstore.n_models == 2
 
 
@@ -293,13 +284,6 @@ def test_update_ts_settings(request, pstore):
     pstore.set_check_model_series_values(True)
 
 
-# @pytest.mark.dependency()
-# def test_model_results(request, pstore):
-#     depends(request, [f"test_create_models[{pstore.type}]",
-#                       f"test_solve_models[{pstore.type}]"])
-#     pstore.model_results(["oseries1", "oseries2"], progressbar=False)
-
-
 def test_oseries_distances(pstore):
     _ = pstore.get_nearest_oseries()
 
@@ -323,7 +307,7 @@ def test_to_from_zip(pstore):
         store = pst.PastaStore.from_zip(zipname, conn)
         assert not store.oseries.empty
     finally:
-        os.remove(zipname)
+        Path(zipname).unlink()
 
 
 def test_load_pastastore_from_config_file(pstore):
@@ -365,7 +349,6 @@ def test_meta_with_name(pstore):
 
 @pytest.mark.dependency
 def test_models_metadata(request, pstore):
-    # depends(request, [f"test_create_models[{pstore.type}]"])
     pstore.create_models_bulk(["oseries1", "oseries2"], store=True, progressbar=False)
     df = pstore.models.metadata
     assert df.index.size == 2

@@ -73,7 +73,7 @@ def test_add_get_dataframe(request, conn):
     o1.index.name = "test_idx"
     conn.add_oseries(o1, "test_df", metadata=None)
     o2 = conn.get_oseries("test_df")
-    # little hack as PasConnector does preserve DataFrames after load...
+    # PasConnector does not preserve DataFrames after load, so convert if needed.
     if conn.conn_type == "pas":
         o2 = o2.to_frame()
     try:
@@ -296,7 +296,7 @@ def test_empty_library(request, conn):
 
 @pytest.mark.dependency
 def test_delete(request, conn):
-    # no need to delete dictconnector (in memory)
+    # No need to delete dictconnector (in memory)
     if conn.conn_type == "arcticdb":
         pst.util.delete_arcticdb_connector(conn, libraries=["oseries"])
         pst.util.delete_arcticdb_connector(conn)
