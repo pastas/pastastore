@@ -368,6 +368,11 @@ class BaseConnector(ABC):
                 libname, series, name, metadata=metadata, overwrite=overwrite
             )
             self._clear_cache(libname)
+        elif name in self.oseries_models or name in self.stresses_models:
+            raise SeriesUsedByModel(
+                f"Time series with name '{name}' is used by a model! "
+                "Use overwrite=True to replace existing time series."
+            )
         else:
             raise ItemInLibraryException(
                 f"Time series with name '{name}' already in '{libname}' library! "
