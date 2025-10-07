@@ -1624,7 +1624,7 @@ class BaseConnector(ABC):
         Returns
         -------
         d : dict
-            dictionary with oseries names as keys and list of model names as
+            dictionary with stress names as keys and list of model names as
             values
         """
         d = {}
