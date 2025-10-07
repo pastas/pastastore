@@ -43,6 +43,9 @@ class BaseConnector(ABC):
     # True for pastas>=0.23.0 and False for pastas<=0.22.0
     USE_PASTAS_VALIDATE_SERIES = False if PASTAS_LEQ_022 else True
 
+    # whether to protect series when used by a model
+    PROTECT_SERIES_IN_MODELS = True
+
     # set series equality comparison settings (using assert_series_equal)
     SERIES_EQUALITY_ABSOLUTE_TOLERANCE = 1e-10
     SERIES_EQUALITY_RELATIVE_TOLERANCE = 0.0
@@ -253,6 +256,23 @@ class BaseConnector(ABC):
         self.USE_PASTAS_VALIDATE_SERIES = b
         print(f"Model time series checking set to: {b}.")
 
+    def set_protect_series_in_models(self, b: bool):
+        """Turn PROTECT_SERIES_IN_MODELS option on (True) or off (False).
+
+        The default option is on. When turned on, deleting a time series that
+        is used in a model will raise an error. This prevents models from
+        breaking because a required time series has been deleted. If you really
+        want to delete such a time series, use the force=True option in
+        del_oseries() or del_stress().
+
+        Parameters
+        ----------
+        b : bool
+            boolean indicating whether option should be turned on (True) or
+            off (False). Option is on by default.
+        """
+        self.PROTECT_SERIES_IN_MODELS = b
+        print(f"Protect series in models set to: {b}.")
     def _pastas_validate(self, validate):
         """Whether to validate time series.
 
