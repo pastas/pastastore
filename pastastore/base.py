@@ -1353,10 +1353,24 @@ class BaseConnector(ABC):
                         stresses.append(s.name)
         return list(set(stresses))
 
-        Used for old PastaStore versions, where relationship between oseries and models
-        was not stored. If there are any models in the database and if the
-        oseries_models library is empty, loops through all models to determine which
-        oseries each model belongs to.
+    def _del_stress_model_link(self, stress_names, model_name):
+        """Delete model name from stored list of models per oseries.
+
+        Parameters
+        ----------
+        mldict : dict
+            model dictionary
+        """
+        for stress_name in stress_names:
+            modellist = self._get_item("stresses_models", stress_name)
+            modellist.remove(model_name)
+            if len(modellist) == 0:
+                self._del_item("stresses_models", stress_name)
+            else:
+                self._add_item(
+                    "stresses_models", modellist, stress_name, overwrite=True
+                )
+        self._clear_cache("stresses_models")
         """
         # get oseries_models library if there are any contents, if empty
         # add all model links.
