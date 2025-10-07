@@ -296,19 +296,21 @@ class BaseConnector(ABC):
         print(f"Protect series in models set to: {b}.")
 
     def _check_series_in_models(self, libname, name):
+        msg = (
+            "{libname} '{name}' is used in {n_models} model(s)! Either "
+            "delete model(s) first, or use force=True."
+        )
         if libname == "oseries":
             if name in self.oseries_models:
                 n_models = len(self.oseries_models[name])
                 raise SeriesUsedByModel(
-                    f"oseries '{name}' is used in {n_models} model(s)! Either "
-                    "delete model(s) first, or use force=True."
+                    msg.format(libname=libname, name=name, n_models=n_models)
                 )
         elif libname == "stresses":
             if name in self.stresses_models:
                 n_models = len(self.stresses_models[name])
                 raise SeriesUsedByModel(
-                    f"stress '{name}' is used in {n_models} model(s)! Either "
-                    "delete model(s) first, or use force=True."
+                    msg.format(libname=libname, name=name, n_models=n_models)
                 )
 
     def _pastas_validate(self, validate):
@@ -1414,7 +1416,7 @@ class BaseConnector(ABC):
         return list(set(stresses))
 
     def _del_stress_model_link(self, stress_names, model_name):
-        """Delete model name from stored list of models per oseries.
+        """Delete model name from stored list of models per stress.
 
         Parameters
         ----------
