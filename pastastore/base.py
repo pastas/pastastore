@@ -66,6 +66,21 @@ class BaseConnector(ABC):
         )
 
     @property
+    def settings(self):
+        """Return current connector settings as dictionary."""
+        return {
+            "CHECK_MODEL_SERIES_VALUES": self.CHECK_MODEL_SERIES_VALUES,
+            "USE_PASTAS_VALIDATE_SERIES": self.USE_PASTAS_VALIDATE_SERIES,
+            "PROTECT_SERIES_IN_MODELS": self.PROTECT_SERIES_IN_MODELS,
+            "SERIES_EQUALITY_ABSOLUTE_TOLERANCE": (
+                self.SERIES_EQUALITY_ABSOLUTE_TOLERANCE
+            ),
+            "SERIES_EQUALITY_RELATIVE_TOLERANCE": (
+                self.SERIES_EQUALITY_RELATIVE_TOLERANCE
+            ),
+        }
+
+    @property
     def empty(self):
         """Check if the database is empty."""
         return not any([self.n_oseries > 0, self.n_stresses > 0, self.n_models > 0])
