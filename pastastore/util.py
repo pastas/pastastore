@@ -25,7 +25,7 @@ class ItemInLibraryException(Exception):
 
 
 class SeriesUsedByModel(Exception):
-    """Exception when item is already in library."""
+    """Exception raised when a series is used by a model."""
 
     pass
 
