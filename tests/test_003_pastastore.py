@@ -10,6 +10,7 @@ from packaging.version import parse
 from pytest_dependency import depends
 
 import pastastore as pst
+from pastastore.util import SeriesUsedByModel
 
 
 @pytest.mark.dependency
@@ -58,6 +59,8 @@ def test_properties(pstore):
     _ = pstore.oseries
     _ = pstore.stresses
     _ = pstore.models
+    _ = pstore.oseries_models
+    _ = pstore.stresses_models
 
     try:
         assert pstore.n_oseries == pstore.conn.n_oseries
@@ -71,7 +74,35 @@ def test_properties(pstore):
 def test_store_model(request, pstore):
     depends(request, [f"test_create_model[{pstore.type}]"])
     ml = pstore.create_model("oseries1")
-    pstore.conn.add_model(ml)
+    pstore.add_model(ml)
+
+
+@pytest.mark.dependency
+def test_del_oseries_used_by_model(request, pstore):
+    depends(request, [f"test_store_model[{pstore.type}]"])
+    oseries, ometa = pstore.get_oseries("oseries1", return_metadata=True)
+    with pytest.raises(SeriesUsedByModel):
+        pstore.del_oseries("oseries1")
+    pstore.del_oseries("oseries1", force=True)
+    pstore.add_oseries(oseries, "oseries1", metadata=ometa)
+    pstore.set_protect_series_in_models(False)
+    pstore.del_oseries("oseries1")  # should work without force=True
+    pstore.add_oseries(oseries, "oseries1", metadata=ometa)
+    pstore.set_protect_series_in_models(True)
+
+
+@pytest.mark.dependency
+def test_del_stress_used_by_model(request, pstore):
+    depends(request, [f"test_store_model[{pstore.type}]"])
+    stress, smeta = pstore.get_stress("prec1", return_metadata=True)
+    with pytest.raises(SeriesUsedByModel):
+        pstore.del_stress("prec1")
+    pstore.del_stress("prec1", force=True)
+    pstore.add_stress(stress, "prec1", kind="prec", metadata=smeta)
+    pstore.set_protect_series_in_models(False)
+    pstore.del_stress("prec1")  # should work without force=True
+    pstore.add_stress(stress, "prec1", kind="prec", metadata=smeta)
+    pstore.set_protect_series_in_models(True)
 
 
 @pytest.mark.dependency
