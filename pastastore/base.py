@@ -273,6 +273,23 @@ class BaseConnector(ABC):
         """
         self.PROTECT_SERIES_IN_MODELS = b
         print(f"Protect series in models set to: {b}.")
+
+    def _check_series_in_models(self, libname, name):
+        if libname == "oseries":
+            if name in self.oseries_models:
+                n_models = len(self.oseries_models[name])
+                raise SeriesUsedByModel(
+                    f"oseries '{name}' is used in {n_models} model(s)! Either "
+                    "delete model(s) first, or use force=True."
+                )
+        elif libname == "stresses":
+            if name in self.stresses_models:
+                n_models = len(self.stresses_models[name])
+                raise SeriesUsedByModel(
+                    f"stress '{name}' is used in {n_models} model(s)! Either "
+                    "delete model(s) first, or use force=True."
+                )
+
     def _pastas_validate(self, validate):
         """Whether to validate time series.
 
