@@ -1421,8 +1421,10 @@ class BaseConnector(ABC):
 
         Parameters
         ----------
-        mldict : dict
-            model dictionary
+        stress_names : list of str
+            List of stress names for which to remove the model link.
+        model_name : str
+            Name of the model to remove from the stress links.
         """
         for stress_name in stress_names:
             modellist = self._get_item("stresses_models", stress_name)
