@@ -33,6 +33,7 @@ class BaseConnector(ABC):
         "stresses",
         "models",
         "oseries_models",
+        "stresses_models",
     ]
 
     # whether to check model time series contents against stored copies
@@ -1360,6 +1361,22 @@ class BaseConnector(ABC):
         d = {}
         for onam in self.oseries_with_models:
             d[onam] = self._get_item("oseries_models", onam)
+        return d
+
+    @property  # type: ignore
+    @functools.lru_cache()
+    def stresses_models(self):
+        """List of model names per stress.
+
+        Returns
+        -------
+        d : dict
+            dictionary with oseries names as keys and list of model names as
+            values
+        """
+        d = {}
+        for stress_name in self.stresses_with_models:
+            d[stress_name] = self._get_item("stresses_models", stress_name)
         return d
 
 

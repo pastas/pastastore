@@ -1049,6 +1049,11 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
         """List of oseries with models."""
         return self._get_library("oseries_models").list_symbols()
 
+    @property
+    def stresses_with_models(self):
+        """List of stresses with models."""
+        return self._get_library("stresses_models").list_symbols()
+
 
 class DictConnector(BaseConnector, ConnectorUtil):
     """DictConnector object that stores timeseries and models in dictionaries."""
@@ -1114,7 +1119,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         # check file name for illegal characters
         name = self._check_filename(libname, name)
 
-        if libname in ["models", "oseries_models"]:
+        if libname in ["models", "oseries_models", "stresses_models"]:
             lib[name] = item
         else:
             lib[name] = (metadata, item)
@@ -1135,7 +1140,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
             time series or model dictionary
         """
         lib = self._get_library(libname)
-        if libname in ["models", "oseries_models"]:
+        if libname in ["models", "oseries_models", "stresses_models"]:
             item = deepcopy(lib[name])
         else:
             item = deepcopy(lib[name][1])
@@ -1201,6 +1206,12 @@ class DictConnector(BaseConnector, ConnectorUtil):
     def oseries_with_models(self):
         """List of oseries with models."""
         lib = self._get_library("oseries_models")
+        return list(lib.keys())
+
+    @property
+    def stresses_with_models(self):
+        """List of oseries with models."""
+        lib = self._get_library("stresses_models")
         return list(lib.keys())
 
 
@@ -1324,7 +1335,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
             fmodel = os.path.join(lib, f"{name}.pas")
             with open(fmodel, "w") as fm:
                 fm.write(jsondict)
-        # oseries_models list
+        # oseries_models or stresses_models list
         elif isinstance(item, list):
             jsondict = json.dumps(item)
             fname = os.path.join(lib, f"{name}.pas")
@@ -1356,7 +1367,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
             with open(fjson, "r") as ml_json:
                 item = json.load(ml_json, object_hook=pastas_hook)
         # list of models per oseries
-        elif libname == "oseries_models":
+        elif libname in ["oseries_models", "stresses_models"]:
             with open(fjson, "r") as f:
                 item = json.load(f)
         # time series
@@ -1491,4 +1502,10 @@ class PasConnector(BaseConnector, ConnectorUtil):
     def oseries_with_models(self):
         """List of oseries with models."""
         lib = self._get_library("oseries_models")
+        return [i[:-4] for i in os.listdir(lib) if i.endswith(".pas")]
+
+    @property
+    def stresses_with_models(self):
+        """List of stresses with models."""
+        lib = self._get_library("stresses_models")
         return [i[:-4] for i in os.listdir(lib) if i.endswith(".pas")]
