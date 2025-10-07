@@ -1384,28 +1384,38 @@ class BaseConnector(ABC):
                 ):
                     self._add_oseries_model_links(onam, mllinks)
 
-    def _get_all_oseries_model_links(self):
-        """Get all model names per oseries in dictionary.
+    def _get_time_series_model_links(self):
+        """Get model names per oseries and stresses time series in a dictionary.
 
         Returns
         -------
         links : dict
-            dictionary with oseries names as keys and lists of model names as
-            values
+            dictionary with 'oseries' and 'stresses' as keys containing
+            dictionaries with time series names as keys and lists of model
+            names as values.
         """
-        links = {}
+        oseries_links = {}
+        stresses_links = {}
         for mldict in tqdm(
             self.iter_models(return_dict=True),
             total=self.n_models,
-            desc="Get models per oseries",
+            desc="Get models per time series",
         ):
-            onam = mldict["oseries"]["name"]
             mlnam = mldict["name"]
-            if onam in links:
-                links[onam].append(mlnam)
+            # oseries
+            onam = mldict["oseries"]["name"]
+            if onam in oseries_links:
+                oseries_links[onam].append(mlnam)
             else:
-                links[onam] = [mlnam]
-        return links
+                oseries_links[onam] = [mlnam]
+            # stresses
+            stress_names = self._get_model_stress_names(mldict)
+            for snam in stress_names:
+                if snam in stresses_links:
+                    stresses_links[snam].append(mlnam)
+                else:
+                    stresses_links[snam] = [mlnam]
+        return {"oseries": oseries_links, "stresses": stresses_links}
 
     @staticmethod
     def _clear_cache(libname: str) -> None:
