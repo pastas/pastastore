@@ -295,6 +295,28 @@ class PastaStore:
         """
         return self.conn.oseries_with_models
 
+    @property
+    def stresses_models(self):
+        """Return dictionary of models per stress.
+
+        Returns
+        -------
+        dict
+            dictionary containing list of models (values) for each oseries (keys).
+        """
+        return self.conn.stresses_models
+
+    @property
+    def stresses_with_models(self):
+        """Return list of stresses for which models are contained in the database.
+
+        Returns
+        -------
+        list
+            list of stress names for which models are contained in the database.
+        """
+        return self.conn.stresses_with_models
+
     def __repr__(self):
         """Representation string of the object."""
         return f"<PastaStore> {self.name}: \n - " + self.conn.__str__()
