@@ -1408,7 +1408,7 @@ class BaseConnector(ABC):
                     stresses.append(sm.evap.name)
                     if sm.temp is not None:
                         stresses.append(sm.temp.name)
-                elif "stress" in sm:
+                elif hasattr(sm, "stress"):
                     smstress = sm.stress
                     if not isinstance(smstress, list):
                         smstress = [smstress]
