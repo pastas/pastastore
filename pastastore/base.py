@@ -1371,18 +1371,30 @@ class BaseConnector(ABC):
                     "stresses_models", modellist, stress_name, overwrite=True
                 )
         self._clear_cache("stresses_models")
+
+    def _update_time_series_model_links(self):
+        """Add all model names to reverse lookup time series dictionaries.
+
+        Used for old PastaStore versions, where relationship between time series and
+        models was not stored. If there are any models in the database and if the
+        oseries_models or stresses_models libraries are empty, loop through all models
+        to determine which time series are used in each model.
         """
-        # get oseries_models library if there are any contents, if empty
-        # add all model links.
+        # get oseries_models and stresses_models libraries,
+        # if empty add all time series -> model links.
         if self.n_models > 0:
-            if len(self.oseries_models) == 0:
-                links = self._get_all_oseries_model_links()
-                for onam, mllinks in tqdm(
-                    links.items(),
-                    desc="Store models per oseries",
-                    total=len(links),
-                ):
-                    self._add_oseries_model_links(onam, mllinks)
+            if len(self.oseries_models) == 0 or len(self.stresses_models) == 0:
+                links = self._get_time_series_model_links()
+                for k in ["oseries", "stresses"]:
+                    for name, model_links in tqdm(
+                        links[k],
+                        desc=f"Store models per {k}",
+                        total=len(links[k]),
+                    ):
+                        if k == "oseries":
+                            self._add_oseries_model_links(name, model_links)
+                        elif k == "stresses":
+                            self._add_stresses_model_links(name, model_links)
 
     def _get_time_series_model_links(self):
         """Get model names per oseries and stresses time series in a dictionary.
