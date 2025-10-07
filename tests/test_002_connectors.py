@@ -307,13 +307,17 @@ def test_delete(request, conn):
 
 def test_new_connector_in_occupied_dir():
     conn1 = pst.PasConnector("my_db", "./tests/data/pas")
-    with pytest.raises(ValueError):
-        conn2 = pst.ArcticDBConnector("my_db", "lmdb://./tests/data/pas")
+    with pytest.raises(
+        ValueError, match=f"Directory '{conn1.name}/' in use by another connector type!"
+    ):
+        pst.ArcticDBConnector("my_db", "lmdb://./tests/data/pas")
 
     pst.util.delete_pas_connector(conn1)
 
     conn1 = pst.ArcticDBConnector("my_db", "lmdb://./tests/data/arcticdb")
-    with pytest.raises(ValueError):
-        conn2 = pst.PasConnector("my_db", "./tests/data/arcticdb")
+    with pytest.raises(
+        ValueError, match=f"Directory '{conn1.name}/' in use by another connector type!"
+    ):
+        pst.PasConnector("my_db", "./tests/data/arcticdb")
 
     pst.util.delete_arcticdb_connector(conn1)
