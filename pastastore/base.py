@@ -612,13 +612,14 @@ class BaseConnector(ABC):
             self._add_item(
                 "models", mldict, name, metadata=metadata, overwrite=overwrite
             )
+            self._clear_cache("_modelnames_cache")
+            self._add_oseries_model_links(str(mldict["oseries"]["name"]), name)
+            self._add_stresses_model_links(self._get_model_stress_names(mldict), name)
         else:
             raise ItemInLibraryException(
                 f"Model with name '{name}' already in 'models' library! "
                 "Use overwrite=True to replace existing model."
             )
-        self._clear_cache("_modelnames_cache")
-        self._add_oseries_model_links(str(mldict["oseries"]["name"]), name)
 
     @staticmethod
     def _parse_series_input(
@@ -1234,34 +1235,63 @@ class BaseConnector(ABC):
         for mlnam in modelnames:
             yield self.get_models(mlnam, return_dict=return_dict, progressbar=False)
 
-    def _add_oseries_model_links(self, onam: str, mlnames: Union[str, List[str]]):
+    def _add_oseries_model_links(
+        self, oseries_name: str, model_names: Union[str, List[str]]
+    ):
         """Add model name to stored list of models per oseries.
 
         Parameters
         ----------
-        onam : str
+        oseries_name : str
             name of oseries
-        mlnames : Union[str, List[str]]
+        model_names : Union[str, List[str]]
             model name or list of model names for an oseries with name
-            onam.
+            oseries_name.
         """
         # get stored list of model names
-        if str(onam) in self.oseries_with_models:
-            modellist = self._get_item("oseries_models", onam)
+        if str(oseries_name) in self.oseries_with_models:
+            modellist = self._get_item("oseries_models", oseries_name)
         else:
             # else empty list
             modellist = []
         # if one model name, make list for loop
-        if isinstance(mlnames, str):
-            mlnames = [mlnames]
+        if isinstance(model_names, str):
+            model_names = [model_names]
         # loop over model names
-        for iml in mlnames:
+        for iml in model_names:
             # if not present, add to list
             if iml not in modellist:
                 modellist.append(iml)
-        self._add_item("oseries_models", modellist, onam, overwrite=True)
+        self._add_item("oseries_models", modellist, oseries_name, overwrite=True)
         self._clear_cache("oseries_models")
 
+    def _add_stresses_model_links(self, stress_names, model_names):
+        """Add model name to stored list of models per stress.
+
+        Parameters
+        ----------
+        stress_names : list of str
+            names of stresses
+        model_names : Union[str, List[str]]
+            model name or list of model names for a stress with name
+        """
+        for snam in stress_names:
+            # get stored list of model names
+            if str(snam) in self.stresses_with_models:
+                modellist = self._get_item("stresses_models", snam)
+            else:
+                # else empty list
+                modellist = []
+            # if one model name, make list for loop
+            if isinstance(model_names, str):
+                model_names = [model_names]
+            # loop over model names
+            for iml in model_names:
+                # if not present, add to list
+                if iml not in modellist:
+                    modellist.append(iml)
+            self._add_item("stresses_models", modellist, snam, overwrite=True)
+        self._clear_cache("stresses_models")
     def _del_oseries_model_link(self, onam, mlnam):
         """Delete model name from stored list of models per oseries.
 
