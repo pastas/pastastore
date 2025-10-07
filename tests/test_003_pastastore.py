@@ -1,5 +1,6 @@
 # ruff: noqa: D100 D103
 import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -328,9 +329,11 @@ def test_to_from_zip(pstore):
 def test_load_pastastore_from_config_file(pstore):
     if pstore.type == "pas" or pstore.type == "arcticdb":
         path = (
-            pstore.conn.path if pstore.type == "pas" else pstore.conn.uri.split("//")[1]
+            pstore.conn.path
+            if pstore.type == "pas"
+            else Path(pstore.conn.uri.split("://")[-1]) / pstore.conn.name
         )
-        fname = os.path.join(path, f"{pstore.conn.name}.pastastore")
+        fname = path / f"{pstore.conn.name}.pastastore"
         pstore2 = pst.PastaStore.from_pastastore_config_file(fname)
         assert not pstore2.empty
 
