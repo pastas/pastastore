@@ -1310,7 +1310,7 @@ class BaseConnector(ABC):
             self._add_item("oseries_models", modellist, onam, overwrite=True)
         self._clear_cache("oseries_models")
 
-    def _get_model_stress_names(self, ml: ps.MOdel | dict) -> List[str]:
+    def _get_model_stress_names(self, ml: ps.Model | dict) -> List[str]:
         """Get list of stress names used in model.
 
         Parameters
