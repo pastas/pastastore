@@ -1401,14 +1401,14 @@ class BaseConnector(ABC):
                     for s in smstress:
                         stresses.append(s["name"])
         else:
-            for sm in ml["stressmodels"].values():
+            for sm in ml.stressmodels.values():
                 if sm._name == "RechargeModel":
-                    stresses.append(sm["prec"].name)
-                    stresses.append(sm["evap"].name)
-                    if sm["temp"] is not None:
-                        stresses.append(sm["temp"].name)
+                    stresses.append(sm.prec.name)
+                    stresses.append(sm.evap.name)
+                    if sm.temp is not None:
+                        stresses.append(sm.temp.name)
                 elif "stress" in sm:
-                    smstress = sm["stress"]
+                    smstress = sm.stress
                     if not isinstance(smstress, list):
                         smstress = [smstress]
                     for s in smstress:
