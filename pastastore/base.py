@@ -11,7 +11,6 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 import pastas as ps
-from packaging.version import parse as parse_version
 from tqdm.auto import tqdm
 
 from pastastore.util import (
@@ -21,7 +20,6 @@ from pastastore.util import (
     validate_names,
 )
 from pastastore.version import PASTAS_GEQ_150
-
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning

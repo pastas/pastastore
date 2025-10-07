@@ -11,7 +11,6 @@ from typing import Dict, Iterable, List, Literal, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 import pastas as ps
-from packaging.version import parse as parse_version
 from pastas.io.pas import pastas_hook
 from tqdm.auto import tqdm
 
