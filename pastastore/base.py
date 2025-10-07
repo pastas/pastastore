@@ -11,9 +11,15 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 import pastas as ps
+from packaging.version import parse as parse_version
 from tqdm.auto import tqdm
 
-from pastastore.util import ItemInLibraryException, _custom_warning, validate_names
+from pastastore.util import (
+    ItemInLibraryException,
+    SeriesUsedByModel,
+    _custom_warning,
+    validate_names,
+)
 from pastastore.version import PASTAS_GEQ_150, PASTAS_LEQ_022
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
@@ -126,7 +132,7 @@ class BaseConnector(ABC):
         """
 
     @abstractmethod
-    def _del_item(self, libname: str, name: str) -> None:
+    def _del_item(self, libname: str, name: str, force: bool = False) -> None:
         """Delete items (series or models) (internal method).
 
         Must be overridden by subclass.
@@ -1185,7 +1191,7 @@ class BaseConnector(ABC):
                 if progressbar
                 else names
             ):
-                self._del_item(libname, name)
+                self._del_item(libname, name, force=True)
             self._clear_cache(libname)
             print(f"Emptied library {libname} in {self.name}: {self.__class__}")
 
@@ -1324,6 +1330,7 @@ class BaseConnector(ABC):
                     modellist.append(iml)
             self._add_item("stresses_models", modellist, snam, overwrite=True)
         self._clear_cache("stresses_models")
+
     def _del_oseries_model_link(self, onam, mlnam):
         """Delete model name from stored list of models per oseries.
 
