@@ -20,7 +20,8 @@ from pastastore.util import (
     _custom_warning,
     validate_names,
 )
-from pastastore.version import PASTAS_GEQ_150, PASTAS_LEQ_022
+from pastastore.version import PASTAS_GEQ_150
+
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning
@@ -46,8 +47,7 @@ class BaseConnector(ABC):
     CHECK_MODEL_SERIES_VALUES = True
 
     # whether to validate time series according to pastas rules
-    # True for pastas>=0.23.0 and False for pastas<=0.22.0
-    USE_PASTAS_VALIDATE_SERIES = False if PASTAS_LEQ_022 else True
+    USE_PASTAS_VALIDATE_SERIES = True
 
     # whether to protect series when used by a model
     PROTECT_SERIES_IN_MODELS = True
