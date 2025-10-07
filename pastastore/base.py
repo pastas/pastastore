@@ -1429,6 +1429,54 @@ class BaseConnector(ABC):
                     stresses_links[snam] = [mlnam]
         return {"oseries": oseries_links, "stresses": stresses_links}
 
+    def get_model_time_series_names(
+        self,
+        modelnames: Optional[Union[list, str]] = None,
+        dropna: bool = True,
+        progressbar: bool = True,
+    ) -> FrameorSeriesUnion:
+        """Get time series names contained in model.
+
+        Parameters
+        ----------
+        modelnames : Optional[Union[list, str]], optional
+            list or name of models to get time series names for,
+            by default None which will use all modelnames
+        dropna : bool, optional
+            drop stresses from table if stress is not included in any
+            model, by default True
+        progressbar : bool, optional
+            show progressbar, by default True
+
+        Returns
+        -------
+        structure : pandas.DataFrame
+            returns DataFrame with oseries name per model, and a flag
+            indicating whether a stress is contained within a time series
+            model.
+        """
+        model_names = self._parse_names(modelnames, libname="models")
+        structure = pd.DataFrame(
+            index=model_names, columns=["oseries"] + self.stresses_names
+        )
+        structure.index.name = "model"
+
+        for mlnam in (
+            tqdm(model_names, desc="Get model time series names")
+            if progressbar
+            else model_names
+        ):
+            mldict = self.get_models(mlnam, return_dict=True)
+            stresses_names = self._get_model_stress_names(mldict)
+            # oseries
+            structure.loc[mlnam, "oseries"] = mldict["oseries"]["name"]
+            # stresses
+            structure.loc[mlnam, stresses_names] = 1
+        if dropna:
+            return structure.dropna(how="all", axis=1)
+        else:
+            return structure
+
     @staticmethod
     def _clear_cache(libname: str) -> None:
         """Clear cached property."""
