@@ -781,7 +781,11 @@ class BaseConnector(ABC):
         self.del_models(names=names, verbose=verbose)
 
     def del_oseries(
-        self, names: Union[list, str], remove_models: bool = False, verbose: bool = True
+        self,
+        names: Union[list, str],
+        remove_models: bool = False,
+        force: bool = False,
+        verbose: bool = True,
     ):
         """Delete oseries from the database.
 
@@ -791,12 +795,14 @@ class BaseConnector(ABC):
             name(s) of the oseries to delete
         remove_models : bool, optional
             also delete models for deleted oseries, default is False
+        force : bool, optional
+            force deletion of oseries that are used in models, by default False
         verbose : bool, optional
             print information about deleted oseries, by default True
         """
         names = self._parse_names(names, libname="oseries")
         for n in names:
-            self._del_item("oseries", n)
+            self._del_item("oseries", n, force=force)
         self._clear_cache("oseries")
         if verbose:
             print(f"Deleted {len(names)} oseries from database.")
@@ -806,23 +812,43 @@ class BaseConnector(ABC):
                 chain.from_iterable([self.oseries_models.get(n, []) for n in names])
             )
             self.del_models(modelnames, verbose=verbose)
+            if verbose:
+                print(f"Deleted {len(modelnames)} models(s) from database.")
 
-    def del_stress(self, names: Union[list, str], verbose: bool = True):
+    def del_stress(
+        self,
+        names: Union[list, str],
+        remove_models: bool = False,
+        force: bool = False,
+        verbose: bool = True,
+    ):
         """Delete stress from the database.
 
         Parameters
         ----------
         names : str or list of str
             name(s) of the stress to delete
+        remove_models : bool, optional
+            also delete models for deleted stresses, default is False
+        force : bool, optional
+            force deletion of stresses that are used in models, by default False
         verbose : bool, optional
             print information about deleted stresses, by default True
         """
         names = self._parse_names(names, libname="stresses")
         for n in names:
-            self._del_item("stresses", n)
+            self._del_item("stresses", n, force=force)
         self._clear_cache("stresses")
         if verbose:
             print(f"Deleted {len(names)} stress(es) from database.")
+        # remove associated models from database
+        if remove_models:
+            modelnames = list(
+                chain.from_iterable([self.stresses_models.get(n, []) for n in names])
+            )
+            self.del_models(modelnames, verbose=verbose)
+            if verbose:
+                print(f"Deleted {len(modelnames)} models(s) from database.")
 
     def _get_series(
         self,
