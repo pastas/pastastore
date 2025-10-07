@@ -1310,8 +1310,48 @@ class BaseConnector(ABC):
             self._add_item("oseries_models", modellist, onam, overwrite=True)
         self._clear_cache("oseries_models")
 
-    def _update_all_oseries_model_links(self):
-        """Add all model names to oseries metadata dictionaries.
+    def _get_model_stress_names(self, ml: ps.MOdel | dict) -> List[str]:
+        """Get list of stress names used in model.
+
+        Parameters
+        ----------
+        ml : pastas.Model or dict
+            model to get stress names from
+
+        Returns
+        -------
+        list of str
+            list of stress names used in model
+        """
+        stresses = []
+        if isinstance(ml, dict):
+            for sm in ml["stressmodels"].values():
+                class_key = "class"
+                if sm[class_key] == "RechargeModel":
+                    stresses.append(sm["prec"]["name"])
+                    stresses.append(sm["evap"]["name"])
+                    if sm["temp"] is not None:
+                        stresses.append(sm["temp"]["name"])
+                elif "stress" in sm:
+                    smstress = sm["stress"]
+                    if isinstance(smstress, dict):
+                        smstress = [smstress]
+                    for s in smstress:
+                        stresses.append(s["name"])
+        else:
+            for sm in ml["stressmodels"].values():
+                if sm._name == "RechargeModel":
+                    stresses.append(sm["prec"].name)
+                    stresses.append(sm["evap"].name)
+                    if sm["temp"] is not None:
+                        stresses.append(sm["temp"].name)
+                elif "stress" in sm:
+                    smstress = sm["stress"]
+                    if not isinstance(smstress, list):
+                        smstress = [smstress]
+                    for s in smstress:
+                        stresses.append(s.name)
+        return list(set(stresses))
 
         Used for old PastaStore versions, where relationship between oseries and models
         was not stored. If there are any models in the database and if the
