@@ -302,7 +302,7 @@ class PastaStore:
         Returns
         -------
         dict
-            dictionary containing list of models (values) for each oseries (keys).
+            dictionary containing list of models (values) for each stress (keys).
         """
         return self.conn.stresses_models
 
