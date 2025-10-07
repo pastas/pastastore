@@ -2,6 +2,7 @@
 
 import os
 import shutil
+from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 import numpy as np
@@ -66,7 +67,6 @@ def delete_arcticdb_connector(
 
     for lib in libs:
         arc.delete_library(lib)
-        # shutil.rmtree(os.path.join(conn.uri.split("//")[-1], lib))
 
         if libraries is not None:
             print()
@@ -77,12 +77,12 @@ def delete_arcticdb_connector(
         ilib for ilib in arc.list_libraries() if ilib.split(".")[0] == name
     ]
     if remaining_libs == 0:
-        os.unlink(os.path.join(uri.split("//")[-1], f"{name}.pastastore"))
+        os.unlink(uri.split("//")[-1] / f"{name}.pastastore")
 
     # check if any remaining libraries in lmdb dir, if none, delete entire folder
     remaining = arc.list_libraries()
     if len(remaining) == 0:
-        shutil.rmtree(os.path.join(conn.uri.split("//")[-1]))
+        shutil.rmtree(Path(conn.uri.split("://")[-1]))
 
     print("Done!")
 
@@ -110,7 +110,7 @@ def delete_pas_connector(conn, libraries: Optional[List[str]] = None) -> None:
     else:
         for lib in libraries:
             print()
-            shutil.rmtree(os.path.join(conn.path, lib))
+            shutil.rmtree(conn.path / lib)
             print(f" - deleted: {lib}")
         print("Done!")
 

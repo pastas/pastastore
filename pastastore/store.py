@@ -113,7 +113,7 @@ class PastaStore:
             if update_path:
                 prefix, _ = cfg["uri"].split("://")
                 if prefix.lower() == "lmbd":
-                    cfg["uri"] = prefix + "://" + str(Path(fname).parent)
+                    cfg["uri"] = prefix + "://" + str(Path(fname).parent.parent)
             conn = ArcticDBConnector(**cfg)
         else:
             raise ValueError(
@@ -1451,12 +1451,13 @@ class PastaStore:
         """
         from zipfile import ZIP_DEFLATED, ZipFile
 
-        if os.path.exists(fname) and not overwrite:
+        fname = Path(fname)
+        if fname.exists() and not overwrite:
             raise FileExistsError(
                 "File already exists! Use 'overwrite=True' to force writing file."
             )
-        elif os.path.exists(fname):
-            warnings.warn(f"Overwriting file '{os.path.basename(fname)}'", stacklevel=1)
+        elif fname.exists():
+            warnings.warn(f"Overwriting file '{fname.name}'", stacklevel=1)
 
         with ZipFile(fname, "w", compression=ZIP_DEFLATED) as archive:
             # oseries
@@ -1469,7 +1470,7 @@ class PastaStore:
     def export_model_series_to_csv(
         self,
         names: Optional[Union[list, str]] = None,
-        exportdir: str = ".",
+        exportdir: Path | str = ".",
         exportmeta: bool = True,
     ):  # pragma: no cover
         """Export model time series to csv files.
@@ -1485,12 +1486,13 @@ class PastaStore:
             export metadata for all time series as csv file, default is True
         """
         names = self.conn._parse_names(names, libname="models")
+        exportdir = Path(exportdir)
         for name in names:
             mldict = self.get_models(name, return_dict=True)
 
             oname = mldict["oseries"]["name"]
             o = self.get_oseries(oname)
-            o.to_csv(os.path.join(exportdir, f"{oname}.csv"))
+            o.to_csv(exportdir / f"{oname}.csv")
 
             if exportmeta:
                 metalist = [self.get_metadata("oseries", oname)]
@@ -1501,7 +1503,7 @@ class PastaStore:
                         istress = mldict["stressmodels"][sm][istress]
                         stress_name = istress["name"]
                         ts = self.get_stresses(stress_name)
-                        ts.to_csv(os.path.join(exportdir, f"{stress_name}.csv"))
+                        ts.to_csv(exportdir / f"{stress_name}.csv")
                         if exportmeta:
                             tsmeta = self.get_metadata("stresses", stress_name)
                             metalist.append(tsmeta)
@@ -1509,15 +1511,13 @@ class PastaStore:
                     for istress in mldict["stressmodels"][sm]["stress"]:
                         stress_name = istress["name"]
                         ts = self.get_stresses(stress_name)
-                        ts.to_csv(os.path.join(exportdir, f"{stress_name}.csv"))
+                        ts.to_csv(exportdir / f"{stress_name}.csv")
                         if exportmeta:
                             tsmeta = self.get_metadata("stresses", stress_name)
                             metalist.append(tsmeta)
 
             if exportmeta:
-                pd.concat(metalist, axis=0).to_csv(
-                    os.path.join(exportdir, f"metadata_{name}.csv")
-                )
+                pd.concat(metalist, axis=0).to_csv(exportdir / f"metadata_{name}.csv")
 
     @classmethod
     def from_zip(
