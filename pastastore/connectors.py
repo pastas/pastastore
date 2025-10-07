@@ -1414,11 +1414,11 @@ class PasConnector(BaseConnector, ConnectorUtil):
         lib = self._get_library(libname)
         if self.PROTECT_SERIES_IN_MODELS and not force:
             self._check_series_in_models(libname, name)
-        os.remove(lib / f"{name}.pas")
+        (lib / f"{name}.pas").unlink()
         # remove metadata for time series
         if libname in ["oseries", "stresses"]:
             try:
-                os.remove(lib / f"{name}_meta.pas")
+                (lib / f"{name}_meta.pas").unlink()
             except FileNotFoundError:
                 # Nothing to delete
                 pass
@@ -1502,38 +1502,28 @@ class PasConnector(BaseConnector, ConnectorUtil):
     def oseries_names(self):
         """List of oseries names."""
         lib = self._get_library("oseries")
-        return [
-            i[:-4]
-            for i in os.listdir(lib)
-            if i.endswith(".pas")
-            if not i.endswith("_meta.pas")
-        ]
+        return [i.stem for i in lib.glob("*.pas") if "_meta" not in i.stem]
 
     @property
     def stresses_names(self):
         """List of stresses names."""
         lib = self._get_library("stresses")
-        return [
-            i[:-4]
-            for i in os.listdir(lib)
-            if i.endswith(".pas")
-            if not i.endswith("_meta.pas")
-        ]
+        return [i.stem for i in lib.glob("*.pas") if "_meta" not in i.stem]
 
     @property
     def model_names(self):
         """List of model names."""
         lib = self._get_library("models")
-        return [i[:-4] for i in os.listdir(lib) if i.endswith(".pas")]
+        return [i.stem for i in lib.glob("*.pas")]
 
     @property
     def oseries_with_models(self):
         """List of oseries with models."""
         lib = self._get_library("oseries_models")
-        return [i[:-4] for i in os.listdir(lib) if i.endswith(".pas")]
+        return [i.stem for i in lib.glob("*.pas")]
 
     @property
     def stresses_with_models(self):
         """List of stresses with models."""
         lib = self._get_library("stresses_models")
-        return [i[:-4] for i in os.listdir(lib) if i.endswith(".pas")]
+        return [i.stem for i in lib.glob("*.pas")]
