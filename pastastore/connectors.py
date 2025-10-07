@@ -1391,7 +1391,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
                 item = json.load(ml_json, object_hook=pastas_hook)
         # list of models per oseries
         elif libname in ["oseries_models", "stresses_models"]:
-            with open(fjson, "r", encoding="utf-8") as f:
+            with fjson.open("r", encoding="utf-8") as f:
                 item = json.load(f)
         # time series
         else:
