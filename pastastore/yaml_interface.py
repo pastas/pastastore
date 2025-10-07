@@ -13,8 +13,6 @@ import pandas as pd
 import pastas as ps
 import yaml
 
-from pastastore.version import PASTAS_LEQ_022
-
 logger = logging.getLogger(__name__)
 
 
@@ -109,7 +107,7 @@ def reduce_to_minimal_dict(d, keys=None):
             "stress",
             "prec",
             "evap",
-            "stressmodel" if PASTAS_LEQ_022 else "class",
+            "class",
         ]
 
     # also keep stressmodels by adding names to keys list
@@ -291,11 +289,11 @@ class PastastoreYAML:
         if "rfunc" not in d:
             logger.info("  | no 'rfunc' provided, using 'Exponential'")
         # for pastas >= 0.23.0, convert rfunc value to dictionary with 'class' key
-        elif not isinstance(d["rfunc"], dict) and not PASTAS_LEQ_022:
+        elif not isinstance(d["rfunc"], dict):
             d["rfunc"] = {"class": d["rfunc"]}
 
         # stressmodel
-        classkey = "stressmodel" if PASTAS_LEQ_022 else "class"
+        classkey = "class"
         if classkey not in d:
             d[classkey] = "RechargeModel"
 
@@ -303,7 +301,7 @@ class PastastoreYAML:
         if ("recharge" not in d) and (d[classkey] == "RechargeModel"):
             logger.info("  | no 'recharge' type provided, using 'Linear'")
         # if pastas >= 0.23.0, recharge value must be dict with class key
-        elif not isinstance(d["recharge"], dict) and not PASTAS_LEQ_022:
+        elif not isinstance(d["recharge"], dict):
             d["recharge"] = {"class": d["recharge"]}
 
         # tarsomodel logic
@@ -374,7 +372,7 @@ class PastastoreYAML:
             "metadata": smeta,
             "series": s.squeeze(),
         }
-        d["stress"] = [s] if PASTAS_LEQ_022 else s
+        d["stress"] = s
 
         # use stress name if not provided
         if "name" not in d:
@@ -383,9 +381,9 @@ class PastastoreYAML:
         # rfunc
         if "rfunc" not in d:
             logger.info("  | no 'rfunc' provided, using 'Gamma'")
-            d["rfunc"] = "Gamma" if PASTAS_LEQ_022 else {"class": "Gamma"}
+            d["rfunc"] = {"class": "Gamma"}
         # for pastas >= 0.23.0, convert rfunc value to dictionary with 'class' key
-        elif not isinstance(d["rfunc"], dict) and not PASTAS_LEQ_022:
+        elif not isinstance(d["rfunc"], dict):
             d["rfunc"] = {"class": d["rfunc"]}
 
         return d
@@ -472,11 +470,9 @@ class PastastoreYAML:
         # rfunc
         if "rfunc" not in d:
             logger.info("  | no 'rfunc' provided, using 'HantushWellModel'")
-            d["rfunc"] = (
-                "HantushWellModel" if PASTAS_LEQ_022 else {"class": "HantushWellModel"}
-            )
+            d["rfunc"] = {"class": "HantushWellModel"}
         # for pastas >= 0.23.0, convert rfunc value to dictionary with 'class' key
-        elif not isinstance(d["rfunc"], dict) and not PASTAS_LEQ_022:
+        elif not isinstance(d["rfunc"], dict):
             d["rfunc"] = {"class": d["rfunc"]}
 
         if "up" not in d:
@@ -531,11 +527,8 @@ class PastastoreYAML:
             logger.info(f"| parsing stressmodel: '{name}'")
 
             # check whether smtyp is defined
-            classkey = "stressmodel" if PASTAS_LEQ_022 else "class"
+            classkey = "class"
             if smyml is not None:
-                if PASTAS_LEQ_022:
-                    if "class" in smyml:
-                        smyml["stressmodel"] = smyml.pop("class")
                 if classkey in smyml:
                     smtyp = True
                 else:
