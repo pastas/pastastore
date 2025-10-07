@@ -802,7 +802,7 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
         self.models = ModelAccessor(self)
         # for older versions of PastaStore, if oseries_models library is empty
         # populate oseries - models database
-        self._update_all_oseries_model_links()
+        self._update_time_series_model_links()
         # write pstore file to store database info that can be used to load pstore
         if "lmdb" in self.uri:
             self.write_pstore_config_file()
@@ -916,7 +916,7 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
         lib = self._get_library(libname)
         return lib.read(name).data
 
-    def _del_item(self, libname: str, name: str) -> None:
+    def _del_item(self, libname: str, name: str, force: bool = False) -> None:
         """Delete items (series or models) (internal method).
 
         Parameters
@@ -925,8 +925,12 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
             name of library to delete item from
         name : str
             name of item to delete
+        force : bool, optional
+            force deletion even if series is used in models, by default False
         """
         lib = self._get_library(libname)
+        if self.PROTECT_SERIES_IN_MODELS and not force:
+            self._check_series_in_models(libname, name)
         lib.delete(name)
 
     def _get_metadata(self, libname: str, name: str) -> dict:
@@ -1076,7 +1080,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         self.models = ModelAccessor(self)
         # for older versions of PastaStore, if oseries_models library is empty
         # populate oseries - models database
-        self._update_all_oseries_model_links()
+        self._update_time_series_model_links()
 
     def _get_library(self, libname: str):
         """Get reference to dictionary holding data.
@@ -1146,7 +1150,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
             item = deepcopy(lib[name][1])
         return item
 
-    def _del_item(self, libname: str, name: str) -> None:
+    def _del_item(self, libname: str, name: str, force: bool = False) -> None:
         """Delete items (series or models) (internal method).
 
         Parameters
@@ -1155,7 +1159,12 @@ class DictConnector(BaseConnector, ConnectorUtil):
             name of library to delete item from
         name : str
             name of item to delete
+        force : bool, optional
+            if True, force delete item and do not perform check if series
+            is used in a model, by default False
         """
+        if self.PROTECT_SERIES_IN_MODELS and not force:
+            self._check_series_in_models(libname, name)
         lib = self._get_library(libname)
         _ = lib.pop(name)
 
@@ -1243,7 +1252,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         self.models = ModelAccessor(self)
         # for older versions of PastaStore, if oseries_models library is empty
         # populate oseries_models library
-        self._update_all_oseries_model_links()
+        self._update_time_series_model_links()
         # write pstore file to store database info that can be used to load pstore
         self._write_pstore_config_file()
 
@@ -1375,7 +1384,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
             item = self._series_from_json(fjson)
         return item
 
-    def _del_item(self, libname: str, name: str) -> None:
+    def _del_item(self, libname: str, name: str, force: bool = False) -> None:
         """Delete items (series or models) (internal method).
 
         Parameters
@@ -1384,11 +1393,16 @@ class PasConnector(BaseConnector, ConnectorUtil):
             name of library to delete item from
         name : str
             name of item to delete
+        force : bool, optional
+            if True, force delete item and do not perform check if series
+            is used in a model, by default False
         """
         lib = self._get_library(libname)
+        if self.PROTECT_SERIES_IN_MODELS and not force:
+            self._check_series_in_models(libname, name)
         os.remove(os.path.join(lib, f"{name}.pas"))
         # remove metadata for time series
-        if libname != "models":
+        if libname in ["oseries", "stresses"]:
             try:
                 os.remove(os.path.join(lib, f"{name}_meta.pas"))
             except FileNotFoundError:
