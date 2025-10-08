@@ -59,9 +59,7 @@ class ConnectorUtil:
         list
             list of names
         """
-        if not isinstance(names, str) and isinstance(names, Iterable):
-            return names
-        elif isinstance(names, str) and names != "all":
+        if isinstance(names, str) and names != "all":
             return [names]
         elif names is None or names == "all":
             if libname == "oseries":
@@ -72,13 +70,17 @@ class ConnectorUtil:
                 return self.model_names
             elif libname == "oseries_models":
                 return self.oseries_with_models
+            elif libname == "stresses_models":
+                return self.stresses_with_models
             else:
                 raise ValueError(f"No library '{libname}'!")
+        elif isinstance(names, Iterable):
+            return names
         else:
             raise NotImplementedError(f"Cannot parse 'names': {names}")
 
     def _check_filename(self, libname: str, name: str) -> str:
-        """Check filename for invalid characters (internal method).
+        """Check filename for dir separator characters (internal method).
 
         Parameters
         ----------
@@ -90,7 +92,7 @@ class ConnectorUtil:
         Returns
         -------
         str
-            validated name
+            validated name, removing dir separator characters
         """
         # check name for invalid characters in name
         new_name = validate_names(name, deletechars=r"\/" + os.sep, replace_space=None)
@@ -103,12 +105,12 @@ class ConnectorUtil:
             name = new_name
         return name
 
-    def check_config_connector_type(self, path: str) -> None:
+    def check_config_connector_type(self, path: Path) -> None:
         """Check if config file connector type matches connector instance.
 
         Parameters
         ----------
-        path : str
+        path : pathlib.Path
             path to directory containing the pastastore config file
         """
         if path.exists() and path.is_dir():
@@ -245,7 +247,8 @@ class ConnectorUtil:
                             msg = "stress '{}' not present in library".format(name)
                             raise KeyError(msg)
 
-        # hack for pcov w dtype object (when filled with NaNs on store?)
+        # convert pcov dataframe to float
+        # (this dataframe is sometimes filled with NaNs and is loaded as dtype object)
         if "fit" in mdict:
             if "pcov" in mdict["fit"]:
                 pcov = mdict["fit"]["pcov"]
@@ -324,7 +327,6 @@ class ConnectorUtil:
     def _check_stressmodels_supported(ml):
         supported_stressmodels = [
             "StressModel",
-            "StressModel2",
             "RechargeModel",
             "WellModel",
             "TarsoModel",
@@ -337,7 +339,7 @@ class ConnectorUtil:
         elif isinstance(ml, dict):
             classkey = "class"
             smtyps = [sm[classkey] for sm in ml["stressmodels"].values()]
-        check = isin(smtyps, supported_stressmodels)
+        check = set(smtyps).issubset(supported_stressmodels)
         if not all(check):
             unsupported = set(smtyps) - set(supported_stressmodels)
             raise NotImplementedError(
@@ -347,6 +349,7 @@ class ConnectorUtil:
 
     @staticmethod
     def _check_model_series_names_for_store(ml):
+        """Collect all time series names from model and check for duplicates."""
         prec_evap_model = ["RechargeModel", "TarsoModel"]
 
         if isinstance(ml, ps.Model):
@@ -357,34 +360,31 @@ class ConnectorUtil:
             ]
 
         elif isinstance(ml, dict):
-            # non RechargeModel, Tarsomodel, WellModel stressmodels
+            stress_models = ml["stressmodels"].values()
             classkey = "class"
+            stress_model_classes = [sm["class"] for sm in stress_models]
+
+            # StressModel
             series_names = [
                 sm["stress"]["name"]
-                for sm in ml["stressmodels"].values()
+                for sm in stress_models
                 if sm[classkey] not in (prec_evap_model + ["WellModel"])
             ]
 
             # WellModel
-            if isin(
-                ["WellModel"],
-                [i[classkey] for i in ml["stressmodels"].values()],
-            ).any():
+            if "WellModel" in stress_model_classes:
                 series_names += [
                     istress["name"]
-                    for sm in ml["stressmodels"].values()
+                    for sm in stress_models
                     if sm[classkey] in ["WellModel"]
                     for istress in sm["stress"]
                 ]
 
             # RechargeModel, TarsoModel
-            if isin(
-                prec_evap_model,
-                [i[classkey] for i in ml["stressmodels"].values()],
-            ).any():
+            if isin(prec_evap_model, stress_model_classes).any():
                 series_names += [
                     istress["name"]
-                    for sm in ml["stressmodels"].values()
+                    for sm in stress_models
                     if sm[classkey] in prec_evap_model
                     for istress in [sm["prec"], sm["evap"]]
                 ]
@@ -400,6 +400,9 @@ class ConnectorUtil:
 
     def _check_oseries_in_store(self, ml: Union[ps.Model, dict]):
         """Check if Model oseries are contained in PastaStore (internal method).
+
+        Performs somewhat expensive check if CHECK_MODEL_SERIES_VALUES is True. This
+        requires an extra read and equality check on time series.
 
         Parameters
         ----------
@@ -417,7 +420,7 @@ class ConnectorUtil:
                 f"Cannot add model because oseries '{name}' is not contained in store."
             )
             raise LookupError(msg)
-        # expensive check
+        # expensive check, requires an extra read and equality check on time series
         if self.CHECK_MODEL_SERIES_VALUES and isinstance(ml, ps.Model):
             s_org = self.get_oseries(name).squeeze().dropna()
             so = ml.oseries._series_original
@@ -436,6 +439,9 @@ class ConnectorUtil:
 
     def _check_stresses_in_store(self, ml: Union[ps.Model, dict]):
         """Check if stresses time series are contained in PastaStore (internal method).
+
+        Performs somewhat expensive check if CHECK_MODEL_SERIES_VALUES is True. This
+        requires an extra read and equality check for each time series.
 
         Parameters
         ----------
@@ -642,6 +648,8 @@ class ConnectorUtil:
             DataFrame containing time series
         """
         s = pd.read_json(fjson, orient="columns", precise_float=True, dtype=False)
+        # convert index to DatetimeIndex, pastas validation forces time series to
+        # have DateTimeIndex on write.
         if not isinstance(s.index, pd.DatetimeIndex):
             s.index = pd.to_datetime(s.index, unit="ms")
         s = s.sort_index()  # needed for some reason ...
@@ -666,26 +674,6 @@ class ConnectorUtil:
         with open(fjson, "r") as f:
             meta = json.load(f)
         return meta
-
-    def _get_model_orphans(self):
-        """Get models whose oseries no longer exist in database.
-
-        Returns
-        -------
-        dict
-            dictionary with oseries names as keys and lists of model names
-            as values
-        """
-        d = {}
-        for mlnam in tqdm(self.model_names, desc="Identifying model orphans"):
-            mdict = self.get_models(mlnam, return_dict=True)
-            onam = mdict["oseries"]["name"]
-            if onam not in self.oseries_names:
-                if onam in d:
-                    d[onam] = d[onam].append(mlnam)
-                else:
-                    d[onam] = [mlnam]
-        return d
 
     @staticmethod
     def _solve_model(
