@@ -920,7 +920,7 @@ class PastaStore:
             if solve:
                 iml.solve(**kwargs)
             if store_models:
-                self.conn.add_model(iml, overwrite=True)
+                self.add_model(iml, overwrite=True)
             else:
                 models[o] = iml
         if len(errors) > 0:
@@ -1309,7 +1309,7 @@ class PastaStore:
         if isinstance(ml, str):
             ml = self.get_model(ml)
             ml.add_stressmodel(sm)
-            self.conn.add_model(ml, overwrite=True)
+            self.add_model(ml, overwrite=True)
             logger.info(
                 f"Stressmodel '{sm.name}' added to model '{ml.name}' "
                 "and stored in database."
