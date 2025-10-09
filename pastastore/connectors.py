@@ -340,7 +340,7 @@ class ConnectorUtil:
             classkey = "class"
             smtyps = [sm[classkey] for sm in ml["stressmodels"].values()]
         check = set(smtyps).issubset(supported_stressmodels)
-        if not all(check):
+        if not check:
             unsupported = set(smtyps) - set(supported_stressmodels)
             raise NotImplementedError(
                 "PastaStore does not support storing models with the "
