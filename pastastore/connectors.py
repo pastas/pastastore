@@ -59,7 +59,9 @@ class ConnectorUtil:
         list
             list of names
         """
-        if isinstance(names, str) and names != "all":
+        if not isinstance(names, str) and isinstance(names, Iterable):
+            return names
+        elif isinstance(names, str) and names != "all":
             return [names]
         elif names is None or names == "all":
             if libname == "oseries":
@@ -74,8 +76,6 @@ class ConnectorUtil:
                 return self.stresses_with_models
             else:
                 raise ValueError(f"No library '{libname}'!")
-        elif isinstance(names, Iterable):
-            return names
         else:
             raise NotImplementedError(f"Cannot parse 'names': {names}")
 
