@@ -6,8 +6,6 @@ import os
 import shutil
 import sys
 from pathlib import Path
-
-# import weakref
 from typing import Dict, List, Optional, Union
 
 import numpy as np
