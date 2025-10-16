@@ -1485,7 +1485,7 @@ class Maps:
             m_idx = self.pstore.search(libname="models", s=model_names)
         else:
             m_idx = self.pstore.model_names
-        struct = self.pstore.get_model_timeseries_names(progressbar=False).loc[m_idx]
+        struct = self.pstore.get_model_time_series_names(progressbar=False).loc[m_idx]
 
         oseries = self.pstore.oseries
         stresses = self.pstore.stresses

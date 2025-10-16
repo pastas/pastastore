@@ -23,6 +23,12 @@ class ItemInLibraryException(Exception):
     pass
 
 
+class SeriesUsedByModel(Exception):
+    """Exception raised when a series is used by a model."""
+
+    pass
+
+
 def delete_arcticdb_connector(
     conn=None,
     uri: Optional[str] = None,

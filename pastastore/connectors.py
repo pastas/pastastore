@@ -72,13 +72,15 @@ class ConnectorUtil:
                 return self.model_names
             elif libname == "oseries_models":
                 return self.oseries_with_models
+            elif libname == "stresses_models":
+                return self.stresses_with_models
             else:
                 raise ValueError(f"No library '{libname}'!")
         else:
             raise NotImplementedError(f"Cannot parse 'names': {names}")
 
     def _check_filename(self, libname: str, name: str) -> str:
-        """Check filename for invalid characters (internal method).
+        """Check filename for dir separator characters (internal method).
 
         Parameters
         ----------
@@ -90,7 +92,7 @@ class ConnectorUtil:
         Returns
         -------
         str
-            validated name
+            validated name, removing dir separator characters
         """
         # check name for invalid characters in name
         new_name = validate_names(name, deletechars=r"\/" + os.sep, replace_space=None)
@@ -103,12 +105,12 @@ class ConnectorUtil:
             name = new_name
         return name
 
-    def check_config_connector_type(self, path: str) -> None:
+    def check_config_connector_type(self, path: Path) -> None:
         """Check if config file connector type matches connector instance.
 
         Parameters
         ----------
-        path : str
+        path : pathlib.Path
             path to directory containing the pastastore config file
         """
         if path.exists() and path.is_dir():
@@ -245,7 +247,8 @@ class ConnectorUtil:
                             msg = "stress '{}' not present in library".format(name)
                             raise KeyError(msg)
 
-        # hack for pcov w dtype object (when filled with NaNs on store?)
+        # convert pcov dataframe to float
+        # (this dataframe is sometimes filled with NaNs and is loaded as dtype object)
         if "fit" in mdict:
             if "pcov" in mdict["fit"]:
                 pcov = mdict["fit"]["pcov"]
@@ -324,7 +327,6 @@ class ConnectorUtil:
     def _check_stressmodels_supported(ml):
         supported_stressmodels = [
             "StressModel",
-            "StressModel2",
             "RechargeModel",
             "WellModel",
             "TarsoModel",
@@ -337,8 +339,8 @@ class ConnectorUtil:
         elif isinstance(ml, dict):
             classkey = "class"
             smtyps = [sm[classkey] for sm in ml["stressmodels"].values()]
-        check = isin(smtyps, supported_stressmodels)
-        if not all(check):
+        check = set(smtyps).issubset(supported_stressmodels)
+        if not check:
             unsupported = set(smtyps) - set(supported_stressmodels)
             raise NotImplementedError(
                 "PastaStore does not support storing models with the "
@@ -347,6 +349,7 @@ class ConnectorUtil:
 
     @staticmethod
     def _check_model_series_names_for_store(ml):
+        """Collect all time series names from model and check for duplicates."""
         prec_evap_model = ["RechargeModel", "TarsoModel"]
 
         if isinstance(ml, ps.Model):
@@ -357,34 +360,31 @@ class ConnectorUtil:
             ]
 
         elif isinstance(ml, dict):
-            # non RechargeModel, Tarsomodel, WellModel stressmodels
+            stress_models = ml["stressmodels"].values()
             classkey = "class"
+            stress_model_classes = [sm["class"] for sm in stress_models]
+
+            # StressModel
             series_names = [
                 sm["stress"]["name"]
-                for sm in ml["stressmodels"].values()
+                for sm in stress_models
                 if sm[classkey] not in (prec_evap_model + ["WellModel"])
             ]
 
             # WellModel
-            if isin(
-                ["WellModel"],
-                [i[classkey] for i in ml["stressmodels"].values()],
-            ).any():
+            if "WellModel" in stress_model_classes:
                 series_names += [
                     istress["name"]
-                    for sm in ml["stressmodels"].values()
+                    for sm in stress_models
                     if sm[classkey] in ["WellModel"]
                     for istress in sm["stress"]
                 ]
 
             # RechargeModel, TarsoModel
-            if isin(
-                prec_evap_model,
-                [i[classkey] for i in ml["stressmodels"].values()],
-            ).any():
+            if isin(prec_evap_model, stress_model_classes).any():
                 series_names += [
                     istress["name"]
-                    for sm in ml["stressmodels"].values()
+                    for sm in stress_models
                     if sm[classkey] in prec_evap_model
                     for istress in [sm["prec"], sm["evap"]]
                 ]
@@ -400,6 +400,9 @@ class ConnectorUtil:
 
     def _check_oseries_in_store(self, ml: Union[ps.Model, dict]):
         """Check if Model oseries are contained in PastaStore (internal method).
+
+        Performs somewhat expensive check if CHECK_MODEL_SERIES_VALUES is True. This
+        requires an extra read and equality check on time series.
 
         Parameters
         ----------
@@ -417,7 +420,7 @@ class ConnectorUtil:
                 f"Cannot add model because oseries '{name}' is not contained in store."
             )
             raise LookupError(msg)
-        # expensive check
+        # expensive check, requires an extra read and equality check on time series
         if self.CHECK_MODEL_SERIES_VALUES and isinstance(ml, ps.Model):
             s_org = self.get_oseries(name).squeeze().dropna()
             so = ml.oseries._series_original
@@ -436,6 +439,9 @@ class ConnectorUtil:
 
     def _check_stresses_in_store(self, ml: Union[ps.Model, dict]):
         """Check if stresses time series are contained in PastaStore (internal method).
+
+        Performs somewhat expensive check if CHECK_MODEL_SERIES_VALUES is True. This
+        requires an extra read and equality check for each time series.
 
         Parameters
         ----------
@@ -642,6 +648,8 @@ class ConnectorUtil:
             DataFrame containing time series
         """
         s = pd.read_json(fjson, orient="columns", precise_float=True, dtype=False)
+        # convert index to DatetimeIndex, pastas validation forces time series to
+        # have DateTimeIndex on write.
         if not isinstance(s.index, pd.DatetimeIndex):
             s.index = pd.to_datetime(s.index, unit="ms")
         s = s.sort_index()  # needed for some reason ...
@@ -666,26 +674,6 @@ class ConnectorUtil:
         with open(fjson, "r") as f:
             meta = json.load(f)
         return meta
-
-    def _get_model_orphans(self):
-        """Get models whose oseries no longer exist in database.
-
-        Returns
-        -------
-        dict
-            dictionary with oseries names as keys and lists of model names
-            as values
-        """
-        d = {}
-        for mlnam in tqdm(self.model_names, desc="Identifying model orphans"):
-            mdict = self.get_models(mlnam, return_dict=True)
-            onam = mdict["oseries"]["name"]
-            if onam not in self.oseries_names:
-                if onam in d:
-                    d[onam] = d[onam].append(mlnam)
-                else:
-                    d[onam] = [mlnam]
-        return d
 
     @staticmethod
     def _solve_model(
@@ -814,7 +802,7 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
         self.models = ModelAccessor(self)
         # for older versions of PastaStore, if oseries_models library is empty
         # populate oseries - models database
-        self._update_all_oseries_model_links()
+        self._update_time_series_model_links()
         # write pstore file to store database info that can be used to load pstore
         if "lmdb" in self.uri:
             self.write_pstore_config_file()
@@ -931,7 +919,7 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
         lib = self._get_library(libname)
         return lib.read(name).data
 
-    def _del_item(self, libname: str, name: str) -> None:
+    def _del_item(self, libname: str, name: str, force: bool = False) -> None:
         """Delete items (series or models) (internal method).
 
         Parameters
@@ -940,8 +928,12 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
             name of library to delete item from
         name : str
             name of item to delete
+        force : bool, optional
+            force deletion even if series is used in models, by default False
         """
         lib = self._get_library(libname)
+        if self.PROTECT_SERIES_IN_MODELS and not force:
+            self._check_series_in_models(libname, name)
         lib.delete(name)
 
     def _get_metadata(self, libname: str, name: str) -> dict:
@@ -1064,6 +1056,11 @@ class ArcticDBConnector(BaseConnector, ConnectorUtil):
         """List of oseries with models."""
         return self._get_library("oseries_models").list_symbols()
 
+    @property
+    def stresses_with_models(self):
+        """List of stresses with models."""
+        return self._get_library("stresses_models").list_symbols()
+
 
 class DictConnector(BaseConnector, ConnectorUtil):
     """DictConnector object that stores timeseries and models in dictionaries."""
@@ -1086,7 +1083,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         self.models = ModelAccessor(self)
         # for older versions of PastaStore, if oseries_models library is empty
         # populate oseries - models database
-        self._update_all_oseries_model_links()
+        self._update_time_series_model_links()
 
     def _get_library(self, libname: str):
         """Get reference to dictionary holding data.
@@ -1129,7 +1126,7 @@ class DictConnector(BaseConnector, ConnectorUtil):
         # check file name for illegal characters
         name = self._check_filename(libname, name)
 
-        if libname in ["models", "oseries_models"]:
+        if libname in ["models", "oseries_models", "stresses_models"]:
             lib[name] = item
         else:
             lib[name] = (metadata, item)
@@ -1150,13 +1147,13 @@ class DictConnector(BaseConnector, ConnectorUtil):
             time series or model dictionary
         """
         lib = self._get_library(libname)
-        if libname in ["models", "oseries_models"]:
+        if libname in ["models", "oseries_models", "stresses_models"]:
             item = deepcopy(lib[name])
         else:
             item = deepcopy(lib[name][1])
         return item
 
-    def _del_item(self, libname: str, name: str) -> None:
+    def _del_item(self, libname: str, name: str, force: bool = False) -> None:
         """Delete items (series or models) (internal method).
 
         Parameters
@@ -1165,7 +1162,12 @@ class DictConnector(BaseConnector, ConnectorUtil):
             name of library to delete item from
         name : str
             name of item to delete
+        force : bool, optional
+            if True, force delete item and do not perform check if series
+            is used in a model, by default False
         """
+        if self.PROTECT_SERIES_IN_MODELS and not force:
+            self._check_series_in_models(libname, name)
         lib = self._get_library(libname)
         _ = lib.pop(name)
 
@@ -1218,6 +1220,12 @@ class DictConnector(BaseConnector, ConnectorUtil):
         lib = self._get_library("oseries_models")
         return list(lib.keys())
 
+    @property
+    def stresses_with_models(self):
+        """List of stresses with models."""
+        lib = self._get_library("stresses_models")
+        return list(lib.keys())
+
 
 class PasConnector(BaseConnector, ConnectorUtil):
     """PasConnector object that stores time series and models as JSON files on disk."""
@@ -1247,7 +1255,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
         self.models = ModelAccessor(self)
         # for older versions of PastaStore, if oseries_models library is empty
         # populate oseries_models library
-        self._update_all_oseries_model_links()
+        self._update_time_series_model_links()
         # write pstore file to store database info that can be used to load pstore
         self._write_pstore_config_file()
 
@@ -1338,7 +1346,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
             fmodel = lib / f"{name}.pas"
             with fmodel.open("w", encoding="utf-8") as fm:
                 fm.write(jsondict)
-        # oseries_models list
+        # oseries_models or stresses_models list
         elif isinstance(item, list):
             jsondict = json.dumps(item)
             fname = lib / f"{name}.pas"
@@ -1370,7 +1378,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
             with fjson.open("r", encoding="utf-8") as ml_json:
                 item = json.load(ml_json, object_hook=pastas_hook)
         # list of models per oseries
-        elif libname == "oseries_models":
+        elif libname in ["oseries_models", "stresses_models"]:
             with fjson.open("r", encoding="utf-8") as f:
                 item = json.load(f)
         # time series
@@ -1378,7 +1386,7 @@ class PasConnector(BaseConnector, ConnectorUtil):
             item = self._series_from_json(fjson)
         return item
 
-    def _del_item(self, libname: str, name: str) -> None:
+    def _del_item(self, libname: str, name: str, force: bool = False) -> None:
         """Delete items (series or models) (internal method).
 
         Parameters
@@ -1387,13 +1395,18 @@ class PasConnector(BaseConnector, ConnectorUtil):
             name of library to delete item from
         name : str
             name of item to delete
+        force : bool, optional
+            if True, force delete item and do not perform check if series
+            is used in a model, by default False
         """
         lib = self._get_library(libname)
-        os.remove(lib / f"{name}.pas")
+        if self.PROTECT_SERIES_IN_MODELS and not force:
+            self._check_series_in_models(libname, name)
+        (lib / f"{name}.pas").unlink()
         # remove metadata for time series
-        if libname != "models":
+        if libname in ["oseries", "stresses"]:
             try:
-                os.remove(lib / f"{name}_meta.pas")
+                (lib / f"{name}_meta.pas").unlink()
             except FileNotFoundError:
                 # Nothing to delete
                 pass
@@ -1477,32 +1490,28 @@ class PasConnector(BaseConnector, ConnectorUtil):
     def oseries_names(self):
         """List of oseries names."""
         lib = self._get_library("oseries")
-        return [
-            i[:-4]
-            for i in os.listdir(lib)
-            if i.endswith(".pas")
-            if not i.endswith("_meta.pas")
-        ]
+        return [i.stem for i in lib.glob("*.pas") if "_meta" not in i.stem]
 
     @property
     def stresses_names(self):
         """List of stresses names."""
         lib = self._get_library("stresses")
-        return [
-            i[:-4]
-            for i in os.listdir(lib)
-            if i.endswith(".pas")
-            if not i.endswith("_meta.pas")
-        ]
+        return [i.stem for i in lib.glob("*.pas") if "_meta" not in i.stem]
 
     @property
     def model_names(self):
         """List of model names."""
         lib = self._get_library("models")
-        return [i[:-4] for i in os.listdir(lib) if i.endswith(".pas")]
+        return [i.stem for i in lib.glob("*.pas")]
 
     @property
     def oseries_with_models(self):
         """List of oseries with models."""
         lib = self._get_library("oseries_models")
-        return [i[:-4] for i in os.listdir(lib) if i.endswith(".pas")]
+        return [i.stem for i in lib.glob("*.pas")]
+
+    @property
+    def stresses_with_models(self):
+        """List of stresses with models."""
+        lib = self._get_library("stresses_models")
+        return [i.stem for i in lib.glob("*.pas")]

@@ -13,7 +13,12 @@ import pandas as pd
 import pastas as ps
 from tqdm.auto import tqdm
 
-from pastastore.util import ItemInLibraryException, _custom_warning, validate_names
+from pastastore.util import (
+    ItemInLibraryException,
+    SeriesUsedByModel,
+    _custom_warning,
+    validate_names,
+)
 from pastastore.version import PASTAS_GEQ_150
 
 FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
@@ -33,6 +38,7 @@ class BaseConnector(ABC):
         "stresses",
         "models",
         "oseries_models",
+        "stresses_models",
     ]
 
     # whether to check model time series contents against stored copies
@@ -40,6 +46,9 @@ class BaseConnector(ABC):
 
     # whether to validate time series according to pastas rules
     USE_PASTAS_VALIDATE_SERIES = True
+
+    # whether to protect series when used by a model
+    PROTECT_SERIES_IN_MODELS = True
 
     # set series equality comparison settings (using assert_series_equal)
     SERIES_EQUALITY_ABSOLUTE_TOLERANCE = 1e-10
@@ -53,6 +62,21 @@ class BaseConnector(ABC):
             f"{self.n_stresses} stresses, "
             f"{self.n_models} models"
         )
+
+    @property
+    def settings(self):
+        """Return current connector settings as dictionary."""
+        return {
+            "CHECK_MODEL_SERIES_VALUES": self.CHECK_MODEL_SERIES_VALUES,
+            "USE_PASTAS_VALIDATE_SERIES": self.USE_PASTAS_VALIDATE_SERIES,
+            "PROTECT_SERIES_IN_MODELS": self.PROTECT_SERIES_IN_MODELS,
+            "SERIES_EQUALITY_ABSOLUTE_TOLERANCE": (
+                self.SERIES_EQUALITY_ABSOLUTE_TOLERANCE
+            ),
+            "SERIES_EQUALITY_RELATIVE_TOLERANCE": (
+                self.SERIES_EQUALITY_RELATIVE_TOLERANCE
+            ),
+        }
 
     @property
     def empty(self):
@@ -121,7 +145,7 @@ class BaseConnector(ABC):
         """
 
     @abstractmethod
-    def _del_item(self, libname: str, name: str) -> None:
+    def _del_item(self, libname: str, name: str, force: bool = False) -> None:
         """Delete items (series or models) (internal method).
 
         Must be overridden by subclass.
@@ -251,6 +275,42 @@ class BaseConnector(ABC):
         self.USE_PASTAS_VALIDATE_SERIES = b
         print(f"Model time series checking set to: {b}.")
 
+    def set_protect_series_in_models(self, b: bool):
+        """Turn PROTECT_SERIES_IN_MODELS option on (True) or off (False).
+
+        The default option is on. When turned on, deleting a time series that
+        is used in a model will raise an error. This prevents models from
+        breaking because a required time series has been deleted. If you really
+        want to delete such a time series, use the force=True option in
+        del_oseries() or del_stress().
+
+        Parameters
+        ----------
+        b : bool
+            boolean indicating whether option should be turned on (True) or
+            off (False). Option is on by default.
+        """
+        self.PROTECT_SERIES_IN_MODELS = b
+        print(f"Protect series in models set to: {b}.")
+
+    def _check_series_in_models(self, libname, name):
+        msg = (
+            "{libname} '{name}' is used in {n_models} model(s)! Either "
+            "delete model(s) first, or use force=True."
+        )
+        if libname == "oseries":
+            if name in self.oseries_models:
+                n_models = len(self.oseries_models[name])
+                raise SeriesUsedByModel(
+                    msg.format(libname=libname, name=name, n_models=n_models)
+                )
+        elif libname == "stresses":
+            if name in self.stresses_models:
+                n_models = len(self.stresses_models[name])
+                raise SeriesUsedByModel(
+                    msg.format(libname=libname, name=name, n_models=n_models)
+                )
+
     def _pastas_validate(self, validate):
         """Whether to validate time series.
 
@@ -329,6 +389,13 @@ class BaseConnector(ABC):
                 libname, series, name, metadata=metadata, overwrite=overwrite
             )
             self._clear_cache(libname)
+        elif (libname == "oseries" and name in self.oseries_models) or (
+            libname == "stresses" and name in self.stresses_models
+        ):
+            raise SeriesUsedByModel(
+                f"Time series with name '{name}' is used by a model! "
+                "Use overwrite=True to replace existing time series."
+            )
         else:
             raise ItemInLibraryException(
                 f"Time series with name '{name}' already in '{libname}' library! "
@@ -342,6 +409,7 @@ class BaseConnector(ABC):
         name: str,
         metadata: Optional[dict] = None,
         validate: Optional[bool] = None,
+        force: bool = False,
     ) -> None:
         """Update time series (internal method).
 
@@ -359,9 +427,14 @@ class BaseConnector(ABC):
         validate: bool, optional
             use pastas to validate series, default is None, which will use the
             USE_PASTAS_VALIDATE_SERIES value (default is True).
+        force : bool, optional
+            force update even if time series is used in a model, by default False
+
         """
         if libname not in ["oseries", "stresses"]:
             raise ValueError("Library must be 'oseries' or 'stresses'!")
+        if not force:
+            self._check_series_in_models(libname, name)
         self._validate_input_series(series)
         series = self._set_series_name(series, name)
         stored = self._get_series(libname, name, progressbar=False)
@@ -573,13 +646,14 @@ class BaseConnector(ABC):
             self._add_item(
                 "models", mldict, name, metadata=metadata, overwrite=overwrite
             )
+            self._clear_cache("_modelnames_cache")
+            self._add_oseries_model_links(str(mldict["oseries"]["name"]), name)
+            self._add_stresses_model_links(self._get_model_stress_names(mldict), name)
         else:
             raise ItemInLibraryException(
                 f"Model with name '{name}' already in 'models' library! "
                 "Use overwrite=True to replace existing model."
             )
-        self._clear_cache("_modelnames_cache")
-        self._add_oseries_model_links(str(mldict["oseries"]["name"]), name)
 
     @staticmethod
     def _parse_series_input(
@@ -716,6 +790,7 @@ class BaseConnector(ABC):
             oname = mldict["oseries"]["name"]
             self._del_item("models", n)
             self._del_oseries_model_link(oname, n)
+            self._del_stress_model_link(self._get_model_stress_names(mldict), n)
         self._clear_cache("_modelnames_cache")
         if verbose:
             print(f"Deleted {len(names)} model(s) from database.")
@@ -735,7 +810,11 @@ class BaseConnector(ABC):
         self.del_models(names=names, verbose=verbose)
 
     def del_oseries(
-        self, names: Union[list, str], remove_models: bool = False, verbose: bool = True
+        self,
+        names: Union[list, str],
+        remove_models: bool = False,
+        force: bool = False,
+        verbose: bool = True,
     ):
         """Delete oseries from the database.
 
@@ -745,12 +824,14 @@ class BaseConnector(ABC):
             name(s) of the oseries to delete
         remove_models : bool, optional
             also delete models for deleted oseries, default is False
+        force : bool, optional
+            force deletion of oseries that are used in models, by default False
         verbose : bool, optional
             print information about deleted oseries, by default True
         """
         names = self._parse_names(names, libname="oseries")
         for n in names:
-            self._del_item("oseries", n)
+            self._del_item("oseries", n, force=force)
         self._clear_cache("oseries")
         if verbose:
             print(f"Deleted {len(names)} oseries from database.")
@@ -760,23 +841,43 @@ class BaseConnector(ABC):
                 chain.from_iterable([self.oseries_models.get(n, []) for n in names])
             )
             self.del_models(modelnames, verbose=verbose)
+            if verbose:
+                print(f"Deleted {len(modelnames)} models(s) from database.")
 
-    def del_stress(self, names: Union[list, str], verbose: bool = True):
+    def del_stress(
+        self,
+        names: Union[list, str],
+        remove_models: bool = False,
+        force: bool = False,
+        verbose: bool = True,
+    ):
         """Delete stress from the database.
 
         Parameters
         ----------
         names : str or list of str
             name(s) of the stress to delete
+        remove_models : bool, optional
+            also delete models for deleted stresses, default is False
+        force : bool, optional
+            force deletion of stresses that are used in models, by default False
         verbose : bool, optional
             print information about deleted stresses, by default True
         """
         names = self._parse_names(names, libname="stresses")
         for n in names:
-            self._del_item("stresses", n)
+            self._del_item("stresses", n, force=force)
         self._clear_cache("stresses")
         if verbose:
             print(f"Deleted {len(names)} stress(es) from database.")
+        # remove associated models from database
+        if remove_models:
+            modelnames = list(
+                chain.from_iterable([self.stresses_models.get(n, []) for n in names])
+            )
+            self.del_models(modelnames, verbose=verbose)
+            if verbose:
+                print(f"Deleted {len(modelnames)} models(s) from database.")
 
     def _get_series(
         self,
@@ -1113,7 +1214,7 @@ class BaseConnector(ABC):
                 if progressbar
                 else names
             ):
-                self._del_item(libname, name)
+                self._del_item(libname, name, force=True)
             self._clear_cache(libname)
             print(f"Emptied library {libname} in {self.name}: {self.__class__}")
 
@@ -1195,33 +1296,63 @@ class BaseConnector(ABC):
         for mlnam in modelnames:
             yield self.get_models(mlnam, return_dict=return_dict, progressbar=False)
 
-    def _add_oseries_model_links(self, onam: str, mlnames: Union[str, List[str]]):
+    def _add_oseries_model_links(
+        self, oseries_name: str, model_names: Union[str, List[str]]
+    ):
         """Add model name to stored list of models per oseries.
 
         Parameters
         ----------
-        onam : str
+        oseries_name : str
             name of oseries
-        mlnames : Union[str, List[str]]
+        model_names : Union[str, List[str]]
             model name or list of model names for an oseries with name
-            onam.
+            oseries_name.
         """
         # get stored list of model names
-        if str(onam) in self.oseries_with_models:
-            modellist = self._get_item("oseries_models", onam)
+        if str(oseries_name) in self.oseries_with_models:
+            modellist = self._get_item("oseries_models", oseries_name)
         else:
             # else empty list
             modellist = []
         # if one model name, make list for loop
-        if isinstance(mlnames, str):
-            mlnames = [mlnames]
+        if isinstance(model_names, str):
+            model_names = [model_names]
         # loop over model names
-        for iml in mlnames:
+        for iml in model_names:
             # if not present, add to list
             if iml not in modellist:
                 modellist.append(iml)
-        self._add_item("oseries_models", modellist, onam, overwrite=True)
+        self._add_item("oseries_models", modellist, oseries_name, overwrite=True)
         self._clear_cache("oseries_models")
+
+    def _add_stresses_model_links(self, stress_names, model_names):
+        """Add model name to stored list of models per stress.
+
+        Parameters
+        ----------
+        stress_names : list of str
+            names of stresses
+        model_names : Union[str, List[str]]
+            model name or list of model names for a stress with name
+        """
+        # if one model name, make list for loop
+        if isinstance(model_names, str):
+            model_names = [model_names]
+        for snam in stress_names:
+            # get stored list of model names
+            if str(snam) in self.stresses_with_models:
+                modellist = self._get_item("stresses_models", snam)
+            else:
+                # else empty list
+                modellist = []
+            # loop over model names
+            for iml in model_names:
+                # if not present, add to list
+                if iml not in modellist:
+                    modellist.append(iml)
+            self._add_item("stresses_models", modellist, snam, overwrite=True)
+        self._clear_cache("stresses_models")
 
     def _del_oseries_model_link(self, onam, mlnam):
         """Delete model name from stored list of models per oseries.
@@ -1241,48 +1372,174 @@ class BaseConnector(ABC):
             self._add_item("oseries_models", modellist, onam, overwrite=True)
         self._clear_cache("oseries_models")
 
-    def _update_all_oseries_model_links(self):
-        """Add all model names to oseries metadata dictionaries.
+    def _get_model_stress_names(self, ml: ps.Model | dict) -> List[str]:
+        """Get list of stress names used in model.
 
-        Used for old PastaStore versions, where relationship between oseries and models
-        was not stored. If there are any models in the database and if the
-        oseries_models library is empty, loops through all models to determine which
-        oseries each model belongs to.
+        Parameters
+        ----------
+        ml : pastas.Model or dict
+            model to get stress names from
+
+        Returns
+        -------
+        list of str
+            list of stress names used in model
         """
-        # get oseries_models library if there are any contents, if empty
-        # add all model links.
-        if self.n_models > 0:
-            if len(self.oseries_models) == 0:
-                links = self._get_all_oseries_model_links()
-                for onam, mllinks in tqdm(
-                    links.items(),
-                    desc="Store models per oseries",
-                    total=len(links),
-                ):
-                    self._add_oseries_model_links(onam, mllinks)
+        stresses = []
+        if isinstance(ml, dict):
+            for sm in ml["stressmodels"].values():
+                class_key = "class"
+                if sm[class_key] == "RechargeModel":
+                    stresses.append(sm["prec"]["name"])
+                    stresses.append(sm["evap"]["name"])
+                    if sm["temp"] is not None:
+                        stresses.append(sm["temp"]["name"])
+                elif "stress" in sm:
+                    smstress = sm["stress"]
+                    if isinstance(smstress, dict):
+                        smstress = [smstress]
+                    for s in smstress:
+                        stresses.append(s["name"])
+        else:
+            for sm in ml.stressmodels.values():
+                if sm._name == "RechargeModel":
+                    stresses.append(sm.prec.name)
+                    stresses.append(sm.evap.name)
+                    if sm.temp is not None:
+                        stresses.append(sm.temp.name)
+                elif hasattr(sm, "stress"):
+                    smstress = sm.stress
+                    if not isinstance(smstress, list):
+                        smstress = [smstress]
+                    for s in smstress:
+                        stresses.append(s.name)
+        return list(set(stresses))
 
-    def _get_all_oseries_model_links(self):
-        """Get all model names per oseries in dictionary.
+    def _del_stress_model_link(self, stress_names, model_name):
+        """Delete model name from stored list of models per stress.
+
+        Parameters
+        ----------
+        stress_names : list of str
+            List of stress names for which to remove the model link.
+        model_name : str
+            Name of the model to remove from the stress links.
+        """
+        for stress_name in stress_names:
+            modellist = self._get_item("stresses_models", stress_name)
+            modellist.remove(model_name)
+            if len(modellist) == 0:
+                self._del_item("stresses_models", stress_name)
+            else:
+                self._add_item(
+                    "stresses_models", modellist, stress_name, overwrite=True
+                )
+        self._clear_cache("stresses_models")
+
+    def _update_time_series_model_links(self):
+        """Add all model names to reverse lookup time series dictionaries.
+
+        Used for old PastaStore versions, where relationship between time series and
+        models was not stored. If there are any models in the database and if the
+        oseries_models or stresses_models libraries are empty, loop through all models
+        to determine which time series are used in each model.
+        """
+        # get oseries_models and stresses_models libraries,
+        # if empty add all time series -> model links.
+        if self.n_models > 0:
+            if len(self.oseries_models) == 0 or len(self.stresses_models) == 0:
+                links = self._get_time_series_model_links()
+                for k in ["oseries", "stresses"]:
+                    for name, model_links in tqdm(
+                        links[k],
+                        desc=f"Store models per {k}",
+                        total=len(links[k]),
+                    ):
+                        if k == "oseries":
+                            self._add_oseries_model_links(name, model_links)
+                        elif k == "stresses":
+                            self._add_stresses_model_links(name, model_links)
+
+    def _get_time_series_model_links(self):
+        """Get model names per oseries and stresses time series in a dictionary.
 
         Returns
         -------
         links : dict
-            dictionary with oseries names as keys and lists of model names as
-            values
+            dictionary with 'oseries' and 'stresses' as keys containing
+            dictionaries with time series names as keys and lists of model
+            names as values.
         """
-        links = {}
+        oseries_links = {}
+        stresses_links = {}
         for mldict in tqdm(
             self.iter_models(return_dict=True),
             total=self.n_models,
-            desc="Get models per oseries",
+            desc="Get models per time series",
         ):
-            onam = mldict["oseries"]["name"]
             mlnam = mldict["name"]
-            if onam in links:
-                links[onam].append(mlnam)
+            # oseries
+            onam = mldict["oseries"]["name"]
+            if onam in oseries_links:
+                oseries_links[onam].append(mlnam)
             else:
-                links[onam] = [mlnam]
-        return links
+                oseries_links[onam] = [mlnam]
+            # stresses
+            stress_names = self._get_model_stress_names(mldict)
+            for snam in stress_names:
+                if snam in stresses_links:
+                    stresses_links[snam].append(mlnam)
+                else:
+                    stresses_links[snam] = [mlnam]
+        return {"oseries": oseries_links, "stresses": stresses_links}
+
+    def get_model_time_series_names(
+        self,
+        modelnames: Optional[Union[list, str]] = None,
+        dropna: bool = True,
+        progressbar: bool = True,
+    ) -> FrameorSeriesUnion:
+        """Get time series names contained in model.
+
+        Parameters
+        ----------
+        modelnames : Optional[Union[list, str]], optional
+            list or name of models to get time series names for,
+            by default None which will use all modelnames
+        dropna : bool, optional
+            drop stresses from table if stress is not included in any
+            model, by default True
+        progressbar : bool, optional
+            show progressbar, by default True
+
+        Returns
+        -------
+        structure : pandas.DataFrame
+            returns DataFrame with oseries name per model, and a flag
+            indicating whether a stress is contained within a time series
+            model.
+        """
+        model_names = self._parse_names(modelnames, libname="models")
+        structure = pd.DataFrame(
+            index=model_names, columns=["oseries"] + self.stresses_names
+        )
+        structure.index.name = "model"
+
+        for mlnam in (
+            tqdm(model_names, desc="Get model time series names")
+            if progressbar
+            else model_names
+        ):
+            mldict = self.get_models(mlnam, return_dict=True)
+            stresses_names = self._get_model_stress_names(mldict)
+            # oseries
+            structure.loc[mlnam, "oseries"] = mldict["oseries"]["name"]
+            # stresses
+            structure.loc[mlnam, stresses_names] = 1
+        if dropna:
+            return structure.dropna(how="all", axis=1)
+        else:
+            return structure
 
     @staticmethod
     def _clear_cache(libname: str) -> None:
@@ -1359,6 +1616,22 @@ class BaseConnector(ABC):
         d = {}
         for onam in self.oseries_with_models:
             d[onam] = self._get_item("oseries_models", onam)
+        return d
+
+    @property  # type: ignore
+    @functools.lru_cache()
+    def stresses_models(self):
+        """List of model names per stress.
+
+        Returns
+        -------
+        d : dict
+            dictionary with stress names as keys and list of model names as
+            values
+        """
+        d = {}
+        for stress_name in self.stresses_with_models:
+            d[stress_name] = self._get_item("stresses_models", stress_name)
         return d
 
 
