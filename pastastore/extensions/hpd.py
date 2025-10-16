@@ -173,7 +173,7 @@ class HydroPandasExtension:
             )
 
         # gather metadata from obs object
-        metadata = {key: getattr(obs, key) for key in obs._metadata}
+        metadata = {key: getattr(obs, key) for key in obs._metadata}  # noqa: SLF001
 
         # convert np dtypes to builtins
         for k, v in metadata.items():
@@ -242,10 +242,10 @@ class HydroPandasExtension:
             tmintmax = self._store.get_tmin_tmax(
                 "oseries", names=[oseries] if oseries else None
             )
-        if tmin is None:
-            tmin = tmintmax.loc[:, "tmin"].min() - Timedelta(days=10 * 365)
-        if tmax is None:
-            tmax = tmintmax.loc[:, "tmax"].max()
+            if tmin is None:
+                tmin = tmintmax.loc[:, "tmin"].min() - Timedelta(days=10 * 365)
+            if tmax is None:
+                tmax = tmintmax.loc[:, "tmax"].max()
         return tmin, tmax
 
     @staticmethod
@@ -263,7 +263,7 @@ class HydroPandasExtension:
             observation series with normalized datetime index
         """
         if isinstance(obs, hpd.Obs):
-            metadata = {k: getattr(obs, k) for k in obs._metadata}
+            metadata = {k: getattr(obs, k) for k in obs._metadata}  # noqa: SLF001
         else:
             metadata = {}
         return obs.__class__(
@@ -625,7 +625,7 @@ class HydroPandasExtension:
 
         if tmax is not None:
             if tmintmax["tmax"].min() >= Timestamp(tmax):
-                logger.info(f"All KNMI stresses are up to date till {tmax}.")
+                logger.info("All KNMI stresses are up to date till %s.", tmax)
                 return
 
         try:
@@ -639,7 +639,7 @@ class HydroPandasExtension:
             maxtmax_rd = maxtmax_ev24 = Timestamp.today() - Timedelta(days=28)
             logger.info(
                 "Using 28 days (4 weeks) prior to today as maxtmax: %s."
-                % str(maxtmax_rd)
+                % maxtmax_rd.strftime("%Y-%m-%d")
             )
 
         for name in tqdm(names, desc="Updating KNMI meteo stresses"):
@@ -700,7 +700,7 @@ class HydroPandasExtension:
             elif unit == "mm":
                 unit_multiplier = 1e3
             elif unit.count("m") == 1 and unit.endswith("m"):
-                unit_multiplier = float(unit.replace("m", ""))
+                unit_multiplier = float(unit.replace("m", "").replace("*", ""))
             else:
                 unit_multiplier = 1.0
                 logger.warning(
