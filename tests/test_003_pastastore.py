@@ -357,6 +357,7 @@ def test_models_metadata(request, pstore):
 
 @pytest.mark.dependency
 def test_check_models(request, pstore):
+    depends(request, [f"test_solve_models_and_get_stats[{pstore.type}]"])
     _ = pstore.check_models(style_output=True)
 
 
