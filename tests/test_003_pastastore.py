@@ -356,4 +356,5 @@ def test_models_metadata(request, pstore):
 
 
 def test_pstore_validator_settings(pstore):
-    _ = pstore.validation_settings
+    _ = pstore.validator.settings
+    _ = pstore.conn.validation_settings
