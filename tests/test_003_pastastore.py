@@ -226,6 +226,12 @@ def test_solve_models_and_get_stats(request, pstore):
 
 
 @pytest.mark.dependency
+def test_check_models(request, pstore):
+    depends(request, [f"test_solve_models_and_get_stats[{pstore.type}]"])
+    _ = pstore.check_models(style_output=True)
+
+
+@pytest.mark.dependency
 def test_solve_models_parallel(request, pstore):
     depends(request, [f"test_create_models[{pstore.type}]"])
     _ = pstore.solve_models(ignore_solve_errors=False, progressbar=False, parallel=True)
@@ -353,12 +359,6 @@ def test_models_metadata(request, pstore):
     df = pstore.models.metadata
     assert df.index.size == 2
     assert (df["n_stressmodels"] == 1).all()
-
-
-@pytest.mark.dependency
-def test_check_models(request, pstore):
-    depends(request, [f"test_solve_models_and_get_stats[{pstore.type}]"])
-    _ = pstore.check_models(style_output=True)
 
 
 def test_pstore_validator_settings(pstore):
