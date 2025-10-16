@@ -921,7 +921,8 @@ class Maps:
             df, column=column, figsize=figsize, **scatter_kwargs
         )
         if label:
-            df.set_index("index", inplace=True)
+            if "index" in df:
+                df.set_index("index", inplace=True)
             self.add_labels(df, ax, adjust=adjust)
 
         if backgroundmap:
@@ -1011,6 +1012,7 @@ class Maps:
     def modelparam(
         self,
         parameter,
+        param_value="optimal",
         modelnames=None,
         label=True,
         adjust=False,
@@ -1029,6 +1031,9 @@ class Maps:
         ----------
         parameter: str
             name of the parameter, e.g. "rech_A" or "river_a"
+        param_value: str, optional
+            which parameter value to plot, by default "optimal", other options
+            are "initial", "pmin", "pmax"
         modelnames : list of str, optional
             list of modelnames to include
         label: bool, optional
@@ -1064,6 +1069,7 @@ class Maps:
         """
         paramdf = self.pstore.get_parameters(
             [parameter],
+            param_value=param_value,
             modelnames=modelnames,
             progressbar=progressbar,
             ignore_errors=True,
@@ -1145,11 +1151,11 @@ class Maps:
         self.add_background_map
         """
         signature_df = self.pstore.get_signatures(
-            [signature],
             names=names,
+            signatures=[signature],
             progressbar=progressbar,
             ignore_errors=True,
-        )
+        ).transpose()
         df = signature_df.join(self.pstore.oseries, how="left")
 
         return self.dataframe(

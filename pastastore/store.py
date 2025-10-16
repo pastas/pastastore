@@ -17,6 +17,7 @@ from tqdm.auto import tqdm
 from pastastore.base import BaseConnector
 from pastastore.connectors import ArcticDBConnector, DictConnector, PasConnector
 from pastastore.plotting import Maps, Plots
+from pastastore.styling import boolean_styler
 from pastastore.typing import FrameOrSeriesUnion
 from pastastore.util import ZipUtils, _custom_warning
 from pastastore.version import PASTAS_GEQ_150
@@ -529,6 +530,10 @@ class PastaStore:
         -------
         signatures_df : pandas.DataFrame or pandas.Series
             Containing the time series (columns) and the signatures (index).
+
+        Note
+        ----
+        Names is set as the first argument to allow parallelization.
         """
         names = self.conn.parse_names(names, libname=libname)
 
@@ -557,7 +562,7 @@ class PastaStore:
             try:
                 i_signatures: pd.Series = ps.stats.signatures.summary(
                     s.squeeze(), signatures
-                ).squeeze()
+                ).squeeze("columns")
             except Exception as e:
                 if ignore_errors:
                     i_signatures = []
@@ -722,8 +727,7 @@ class PastaStore:
                 else:
                     p.loc[mlname, c] = np.nan
 
-        p = p.squeeze()
-        return p.astype(float)
+        return p.astype(float).squeeze()
 
     def get_statistics(
         self,
@@ -775,7 +779,7 @@ class PastaStore:
                 kwargs["connector"] = self.conn
             return self.apply(
                 "models",
-                self._get_statistics,
+                self.conn._get_statistics,
                 modelnames,
                 kwargs=kwargs,
                 parallel=parallel,
@@ -800,8 +804,7 @@ class PastaStore:
                     value = getattr(ml.stats, stat)(**kwargs)
                     s.loc[mlname, stat] = value
 
-            s = s.squeeze()
-            return s.astype(float)
+            return s.astype(float).squeeze()
 
     def create_model(
         self,
@@ -1430,7 +1433,7 @@ class PastaStore:
             ):
                 solve_model(ml_name=ml_name)
 
-    def check_models(self, checklist=None, modelnames=None):
+    def check_models(self, checklist=None, modelnames=None, style_output: bool = False):
         """Check models against checklist.
 
         Parameters
@@ -1445,6 +1448,9 @@ class PastaStore:
                - model parameters are not on bounds
         modelnames : list of str, optional
             list of modelnames to perform checks on, by default None
+        style_output : bool, optional
+            if True, return styled dataframe with pass/fail colors,
+            by default False
 
         Returns
         -------
@@ -1463,7 +1469,10 @@ class PastaStore:
             check_dfs.append(cdf)
         chkdf = pd.concat(check_dfs, axis=1)
         chkdf.columns.name = "models"
-        return chkdf
+        if style_output:
+            return chkdf.style.map(boolean_styler)
+        else:
+            return chkdf
 
     def to_zip(self, fname: str, overwrite=False, progressbar: bool = True):
         """Write data to zipfile.
@@ -1770,12 +1779,12 @@ class PastaStore:
                 progressbar=progressbar,
                 max_workers=max_workers,
                 chunksize=None,
-                desc=f"Applying {func.__name__} (parallel)",
+                desc=f"Computing {func.__name__} (parallel)",
             )
         else:
             result = []
             for n in tqdm(
-                names, desc=f"Applying {func.__name__}", disable=not progressbar
+                names, desc=f"Computing {func.__name__}", disable=not progressbar
             ):
                 result.append(func(n, **kwargs))
         if fancy_output:

@@ -355,6 +355,11 @@ def test_models_metadata(request, pstore):
     assert (df["n_stressmodels"] == 1).all()
 
 
+@pytest.mark.dependency
+def test_check_models(request, pstore):
+    _ = pstore.check_models(style_output=True)
+
+
 def test_pstore_validator_settings(pstore):
     _ = pstore.validator.settings
     _ = pstore.conn.validation_settings
