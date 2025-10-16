@@ -100,7 +100,6 @@ def delete_arcticdb_test_db():
     name = "test_project"
     connector = pst.ArcticDBConnector(name, connstr)
     pst.util.delete_arcticdb_connector(connector)
-    print("ArcticDBConnector 'test_project' deleted.")
 
 
 _has_pkg_cache = {}

@@ -93,7 +93,7 @@ def test_add_pastas_timeseries(request, conn):
     ts = ps.timeseries.TimeSeries(o1, metadata={"x": 100000.0, "y": 400000.0})
     try:
         conn.add_oseries(ts, "test_pastas_ts", metadata=None)
-    except DeprecationWarning:
+    except TypeError:
         pass
 
 
