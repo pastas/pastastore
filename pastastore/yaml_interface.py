@@ -37,9 +37,9 @@ def _convert_dict_dtypes_for_yaml(d: Dict[str, Any]):
         elif isinstance(v, datetime.datetime):
             d[k] = pd.to_datetime(v).strftime("%Y-%m-%d %H:%M:%S")
         elif isinstance(v, pd.Timedelta):
-            d[k] = v.to_timedelta64().__str__()
+            d[k] = str(v.to_timedelta64())
         elif isinstance(v, datetime.timedelta):
-            d[k] = pd.to_timedelta(v).to_timedelta64().__str__()
+            d[k] = str(pd.to_timedelta(v).to_timedelta64())
         elif isinstance(v, np.int64):
             d[k] = int(v)
         elif isinstance(v, np.float64):
@@ -229,7 +229,7 @@ class PastastoreYAML:
             else:
                 kind = "prec"
             pnam = self.pstore.get_nearest_stresses(onam, kind=kind).iloc[0, 0]
-            logger.info(f"  | using nearest stress with kind='{kind}': '{pnam}'")
+            logger.info("  | using nearest stress with kind='%s': '%s'", kind, pnam)
             p, pmeta = self.pstore.get_stresses(pnam, return_metadata=True)
             prec = {
                 "name": pnam,
@@ -265,7 +265,7 @@ class PastastoreYAML:
             else:
                 kind = "evap"
             enam = self.pstore.get_nearest_stresses(onam, kind=kind).iloc[0, 0]
-            logger.info(f"  | using nearest stress with kind='{kind}': '{enam}'")
+            logger.info("  | using nearest stress with kind='%s': '%s'", kind, enam)
             e, emeta = self.pstore.get_stresses(enam, return_metadata=True)
             evap = {
                 "name": enam,
@@ -313,7 +313,8 @@ class PastastoreYAML:
             if ((dmin is None) or (dmax is None)) and (oseries is None):
                 logger.info(
                     "  | no 'dmin/dmax' or 'oseries' provided,"
-                    f" filling in 'oseries': '{onam}'"
+                    " filling in 'oseries': '%s'",
+                    onam,
                 )
                 d["oseries"] = onam
 
@@ -364,7 +365,7 @@ class PastastoreYAML:
                 snam = self.pstore.get_nearest_oseries(onam).iloc[0, 0]
             else:
                 snam = self.pstore.get_nearest_stresses(onam, kind=kind).iloc[0, 0]
-            logger.info(f"  | using nearest stress with kind='{kind}': {snam}")
+            logger.info("  | using nearest stress with kind='%s': %s", kind, snam)
 
         s, smeta = self.pstore.get_stresses(snam, return_metadata=True)
         s = {
@@ -440,7 +441,10 @@ class PastastoreYAML:
                     .values
                 )
                 logger.info(
-                    f"  | using {n} nearest stress(es) with kind='{kind}': {snames}"
+                    "  | using %d nearest stress(es) with kind='%s': %s",
+                    n,
+                    kind,
+                    snames,
                 )
             else:
                 snames = [snames]
@@ -507,7 +511,7 @@ class PastastoreYAML:
         else:
             onam = str(mlyml.pop("oseries"))
 
-        logger.info(f"Building model '{mlnam}' for oseries '{onam}'")
+        logger.info("Building model '%s' for oseries '%s'", mlnam, onam)
         o, ometa = self.pstore.get_oseries(onam, return_metadata=True)
 
         # create model to obtain default model settings
@@ -525,7 +529,7 @@ class PastastoreYAML:
                 name = smyml.get("name", smnam)
             else:
                 name = smnam
-            logger.info(f"| parsing stressmodel: '{name}'")
+            logger.info("| parsing stressmodel: '%s'", name)
 
             # check whether smtyp is defined
             classkey = "class"
@@ -649,8 +653,8 @@ class PastastoreYAML:
 
             mldict = self.construct_mldict(mlyml, mlnam)
 
-            # load model
-            ml = ps.io.base._load_model(mldict)
+            # Use pastas' internal _load_model - required for model reconstruction
+            ml = ps.io.base._load_model(mldict)  # noqa: SLF001
             models.append(ml)
 
         return models
@@ -684,7 +688,7 @@ class PastastoreYAML:
             the time series are actually the nearest ones! Only used
             when minimal_yaml=True. Default is False.
         """
-        onames = self.pstore.conn._parse_names(oseries, "oseries")
+        onames = self.pstore.conn.parse_names(oseries, "oseries")
 
         for onam in onames:
             try:
@@ -752,7 +756,7 @@ class PastastoreYAML:
             filename for YAML file, only used if `split=False`
         """
         if models is None:
-            modelnames = self.pstore.conn._parse_names(modelnames, "models")
+            modelnames = self.pstore.conn.parse_names(modelnames, "models")
             model_list = self.pstore.get_models(
                 modelnames, return_dict=True, squeeze=False
             )
