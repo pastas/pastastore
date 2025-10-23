@@ -6,7 +6,7 @@ import os
 import warnings
 from functools import partial
 from pathlib import Path
-from typing import Dict, Iterable, List, Literal, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -18,7 +18,7 @@ from pastastore.base import BaseConnector
 from pastastore.connectors import ArcticDBConnector, DictConnector, PasConnector
 from pastastore.plotting import Maps, Plots
 from pastastore.styling import boolean_styler
-from pastastore.typing import FrameOrSeriesUnion
+from pastastore.typing import FrameOrSeriesUnion, PastasLibs, TimeSeriesLibs
 from pastastore.util import ZipUtils, _custom_warning
 from pastastore.version import PASTAS_GEQ_150
 from pastastore.yaml_interface import PastastoreYAML
@@ -501,7 +501,7 @@ class PastaStore:
         self,
         names: list[str] | str | None = None,
         signatures: list[str] | None = None,
-        libname: Literal["oseries", "stresses"] = "oseries",
+        libname: TimeSeriesLibs = "oseries",
         progressbar: bool = False,
         ignore_errors: bool = False,
     ) -> pd.DataFrame | pd.Series:
@@ -585,17 +585,18 @@ class PastaStore:
 
     def get_tmin_tmax(
         self,
-        libname: Literal["oseries", "stresses", "models"],
+        libname: Optional[PastasLibs] = None,
         names: Union[str, List[str], None] = None,
         progressbar: bool = False,
-    ):
-        """Get tmin and tmax for time series.
+    ) -> pd.DataFrame:
+        """Get tmin and tmax for time series and/or models.
 
         Parameters
         ----------
-        libname : str
-            name of the library containing the time series
-            ('oseries' or 'stresses')
+        libname : str, optional
+            name of the library containing the time series ('oseries', 'stresses',
+            'models', or None), by default None which returns tmin/tmax for all
+            libraries
         names : str, list of str, or None, optional
             names of the time series, by default None which
             uses all the time series in the library
@@ -605,31 +606,43 @@ class PastaStore:
         Returns
         -------
         tmintmax : pd.dataframe
-            Dataframe containing tmin and tmax per time series
+            Dataframe containing tmin and tmax per time series and/or model
         """
-        names = self.conn.parse_names(names, libname=libname)
-        tmintmax = pd.DataFrame(
-            index=names, columns=["tmin", "tmax"], dtype="datetime64[ns]"
-        )
-        desc = f"Get tmin/tmax {libname}"
-        for n in tqdm(names, desc=desc) if progressbar else names:
-            if libname == "models":
-                mld = self.conn.get_models(
-                    n,
-                    return_dict=True,
-                )
-                tmintmax.loc[n, "tmin"] = mld["settings"]["tmin"]
-                tmintmax.loc[n, "tmax"] = mld["settings"]["tmax"]
-            else:
-                s = (
-                    self.conn.get_oseries(n)
-                    if libname == "oseries"
-                    else self.conn.get_stresses(n)
-                )
-                tmintmax.loc[n, "tmin"] = s.first_valid_index()
-                tmintmax.loc[n, "tmax"] = s.last_valid_index()
+        results = {}
+        if libname is None:
+            libs = ["oseries", "stresses", "models"]
+        else:
+            libs = [libname]
 
-        return tmintmax
+        for lib in libs:
+            _names = self.conn.parse_names(names, libname=lib)
+            tmintmax = pd.DataFrame(
+                index=names, columns=["tmin", "tmax"], dtype="datetime64[ns]"
+            )
+            desc = f"Get tmin/tmax {lib}"
+            for n in tqdm(_names, desc=desc) if progressbar else _names:
+                if lib == "models":
+                    mld = self.conn.get_models(
+                        n,
+                        return_dict=True,
+                    )
+                    tmintmax.loc[n, "tmin"] = mld["settings"]["tmin"]
+                    tmintmax.loc[n, "tmax"] = mld["settings"]["tmax"]
+                else:
+                    s = (
+                        self.conn.get_oseries(n)
+                        if lib == "oseries"
+                        else self.conn.get_stresses(n)
+                    )
+                    tmintmax.loc[n, "tmin"] = s.first_valid_index()
+                    tmintmax.loc[n, "tmax"] = s.last_valid_index()
+
+            results[lib] = tmintmax
+
+        if len(results) == 1:
+            return results[lib]
+        else:
+            return pd.concat(results, axis=0)
 
     def get_extent(self, libname, names=None, buffer=0.0):
         """Get extent [xmin, xmax, ymin, ymax] from library.
@@ -1639,8 +1652,8 @@ class PastaStore:
 
     def search(
         self,
-        libname: str,
         s: Optional[Union[list, str]] = None,
+        libname: Optional[PastasLibs] = None,
         case_sensitive: bool = True,
         sort=True,
     ):
@@ -1662,6 +1675,16 @@ class PastaStore:
         matches : list
             list of names that match search result
         """
+        if s in [None, "models", "stresses", "oseries"]:
+            warnings.warn(
+                "The order of arguments 's' and 'libname' has been flipped since v1.11."
+                "Please update your code to use pstore.search(s=..., libname=...).",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            _ = str(s)
+            s = libname
+            libname = _
         if libname == "models":
             lib_names = {"models": self.model_names}
         elif libname == "stresses":
@@ -1702,13 +1725,13 @@ class PastaStore:
             result[lib] = matches
 
         if len(result) == 1:
-            return result[lib]
+            return result[libname[0]]
         else:
             return result
 
     def apply(
         self,
-        libname: str,
+        libname: PastasLibs,
         func: callable,
         names: Optional[Union[str, List[str]]] = None,
         kwargs: Optional[dict] = None,
@@ -1838,7 +1861,7 @@ class PastaStore:
         self,
         extent: list,
         names: Optional[list[str]] = None,
-        libname: str = "oseries",
+        libname: PastasLibs = "oseries",
     ):
         """Get names of items within extent.
 

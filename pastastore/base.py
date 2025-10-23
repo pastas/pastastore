@@ -19,7 +19,7 @@ import pastas as ps
 from packaging.version import parse as parse_version
 from tqdm.auto import tqdm
 
-from pastastore.typing import FrameOrSeriesUnion
+from pastastore.typing import AllLibs, FrameOrSeriesUnion, TimeSeriesLibs
 from pastastore.util import (
     ItemInLibraryException,
     SeriesUsedByModel,
@@ -51,7 +51,7 @@ class ConnectorUtil:
     def _parse_names(
         self,
         names: list[str] | str | None = None,
-        libname: Literal["oseries", "stresses", "models", "oseries_models"] = "oseries",
+        libname: AllLibs = "oseries",
     ) -> list:
         """Parse names kwarg, returns iterable with name(s) (internal method).
 
@@ -287,7 +287,7 @@ class BaseConnector(ABC, ConnectorUtil):
         return self._conn_type
 
     @abstractmethod
-    def _get_library(self, libname: str):
+    def _get_library(self, libname: AllLibs):
         """Get library handle.
 
         Must be overridden by subclass.
@@ -306,7 +306,7 @@ class BaseConnector(ABC, ConnectorUtil):
     @abstractmethod
     def _add_item(
         self,
-        libname: str,
+        libname: AllLibs,
         item: Union[FrameOrSeriesUnion, Dict],
         name: str,
         metadata: Optional[Dict] = None,
@@ -335,7 +335,7 @@ class BaseConnector(ABC, ConnectorUtil):
         """
 
     @abstractmethod
-    def _get_item(self, libname: str, name: str) -> Union[FrameOrSeriesUnion, Dict]:
+    def _get_item(self, libname: AllLibs, name: str) -> Union[FrameOrSeriesUnion, Dict]:
         """Get item (series or pastas.Models) (internal method).
 
         Must be overridden by subclass.
@@ -354,7 +354,7 @@ class BaseConnector(ABC, ConnectorUtil):
         """
 
     @abstractmethod
-    def _del_item(self, libname: str, name: str, force: bool = False) -> None:
+    def _del_item(self, libname: AllLibs, name: str, force: bool = False) -> None:
         """Delete items (series or models) (internal method).
 
         Must be overridden by subclass.
@@ -368,7 +368,7 @@ class BaseConnector(ABC, ConnectorUtil):
         """
 
     @abstractmethod
-    def _get_metadata(self, libname: str, name: str) -> Dict:
+    def _get_metadata(self, libname: TimeSeriesLibs, name: str) -> Dict:
         """Get metadata (internal method).
 
         Must be overridden by subclass.
@@ -387,7 +387,7 @@ class BaseConnector(ABC, ConnectorUtil):
         """
 
     @abstractmethod
-    def _list_symbols(self, libname: str) -> List[str]:
+    def _list_symbols(self, libname: AllLibs) -> List[str]:
         """Return list of symbol names in library."""
 
     @property
@@ -487,13 +487,6 @@ class BaseConnector(ABC, ConnectorUtil):
         """
         return self._parse_names(names, libname)
 
-    @staticmethod
-    def _clear_cache(libname: str) -> None:
-        """Clear cached property."""
-        if libname == "models":
-            libname = "_modelnames_cache"
-        getattr(BaseConnector, libname).fget.cache_clear()
-
     @property  # type: ignore
     @functools.lru_cache()
     def oseries(self):
@@ -582,7 +575,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def _add_series(
         self,
-        libname: str,
+        libname: TimeSeriesLibs,
         series: FrameOrSeriesUnion,
         name: str,
         metadata: Optional[dict] = None,
@@ -654,7 +647,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def _update_series(
         self,
-        libname: str,
+        libname: TimeSeriesLibs,
         series: FrameOrSeriesUnion,
         name: str,
         metadata: Optional[dict] = None,
@@ -711,7 +704,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def _upsert_series(
         self,
-        libname: str,
+        libname: TimeSeriesLibs,
         series: FrameOrSeriesUnion,
         name: str,
         metadata: Optional[dict] = None,
@@ -747,7 +740,9 @@ class BaseConnector(ABC, ConnectorUtil):
                 libname, series, name, metadata=metadata, validate=validate
             )
 
-    def update_metadata(self, libname: str, name: str, metadata: dict) -> None:
+    def update_metadata(
+        self, libname: TimeSeriesLibs, name: str, metadata: dict
+    ) -> None:
         """Update metadata.
 
         Note: also retrieves and stores time series as updating only metadata
@@ -1467,7 +1462,7 @@ class BaseConnector(ABC, ConnectorUtil):
         )
 
     def empty_library(
-        self, libname: str, prompt: bool = True, progressbar: bool = True
+        self, libname: AllLibs, prompt: bool = True, progressbar: bool = True
     ):
         """Empty library of all its contents.
 
@@ -1509,7 +1504,7 @@ class BaseConnector(ABC, ConnectorUtil):
                 "Emptied library %s in %s: %s", libname, self.name, self.__class__
             )
 
-    def _iter_series(self, libname: str, names: Optional[List[str]] = None):
+    def _iter_series(self, libname: TimeSeriesLibs, names: Optional[List[str]] = None):
         """Iterate over time series in library (internal method).
 
         Parameters
@@ -1832,7 +1827,7 @@ class BaseConnector(ABC, ConnectorUtil):
             return structure
 
     @staticmethod
-    def _clear_cache(libname: str) -> None:
+    def _clear_cache(libname: AllLibs) -> None:
         """Clear cached property."""
         if libname == "models":
             libname = "_modelnames_cache"

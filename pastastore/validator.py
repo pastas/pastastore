@@ -14,6 +14,7 @@ import pastas as ps
 from numpy import isin
 from pandas.testing import assert_series_equal
 
+from pastastore.typing import PastasLibs
 from pastastore.util import SeriesUsedByModel, _custom_warning, validate_names
 
 if TYPE_CHECKING:
@@ -168,7 +169,7 @@ class Validator:
             return validate
 
     @staticmethod
-    def check_filename_illegal_chars(libname: str, name: str) -> str:
+    def check_filename_illegal_chars(libname: PastasLibs, name: str) -> str:
         """Check filename for invalid characters (internal method).
 
         Parameters

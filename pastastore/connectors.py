@@ -18,7 +18,7 @@ from tqdm.auto import tqdm
 from tqdm.contrib.concurrent import process_map
 
 from pastastore.base import BaseConnector, ModelAccessor
-from pastastore.typing import FrameOrSeriesUnion
+from pastastore.typing import AllLibs, FrameOrSeriesUnion, TimeSeriesLibs
 from pastastore.util import _custom_warning, metadata_from_json, series_from_json
 from pastastore.validator import Validator
 
@@ -221,11 +221,11 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         ) as f:
             json.dump(config, f)
 
-    def _library_name(self, libname: str) -> str:
+    def _library_name(self, libname: AllLibs) -> str:
         """Get full library name according to ArcticDB (internal method)."""
         return ".".join([self.name, libname])
 
-    def _get_library(self, libname: str):
+    def _get_library(self, libname: AllLibs):
         """Get ArcticDB library handle.
 
         Parameters
@@ -246,7 +246,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
 
     def _add_item(
         self,
-        libname: str,
+        libname: AllLibs,
         item: Union[FrameOrSeriesUnion, Dict],
         name: str,
         metadata: Optional[Dict] = None,
@@ -277,7 +277,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         else:
             lib.write(name, item, metadata=metadata)
 
-    def _get_item(self, libname: str, name: str) -> Union[FrameOrSeriesUnion, Dict]:
+    def _get_item(self, libname: AllLibs, name: str) -> Union[FrameOrSeriesUnion, Dict]:
         """Retrieve item from library (internal method).
 
         Parameters
@@ -295,7 +295,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         lib = self._get_library(libname)
         return lib.read(name).data
 
-    def _del_item(self, libname: str, name: str, force: bool = False) -> None:
+    def _del_item(self, libname: AllLibs, name: str, force: bool = False) -> None:
         """Delete items (series or models) (internal method).
 
         Parameters
@@ -312,7 +312,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
             self.validator.check_series_in_models(libname, name)
         lib.delete(name)
 
-    def _get_metadata(self, libname: str, name: str) -> dict:
+    def _get_metadata(self, libname: TimeSeriesLibs, name: str) -> dict:
         """Retrieve metadata for an item (internal method).
 
         Parameters
@@ -408,7 +408,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
                 )
         return result
 
-    def _list_symbols(self, libname: str) -> List[str]:
+    def _list_symbols(self, libname: AllLibs) -> List[str]:
         """List symbols in a library (internal method).
 
         Parameters
@@ -449,7 +449,7 @@ class DictConnector(BaseConnector, ParallelUtil):
         # populate oseries - models database
         self._update_time_series_model_links()
 
-    def _get_library(self, libname: str):
+    def _get_library(self, libname: AllLibs):
         """Get reference to dictionary holding data.
 
         Parameters
@@ -495,7 +495,7 @@ class DictConnector(BaseConnector, ParallelUtil):
         else:
             lib[name] = (metadata, item)
 
-    def _get_item(self, libname: str, name: str) -> Union[FrameOrSeriesUnion, Dict]:
+    def _get_item(self, libname: AllLibs, name: str) -> Union[FrameOrSeriesUnion, Dict]:
         """Retrieve item from database (internal method).
 
         Parameters
@@ -519,7 +519,7 @@ class DictConnector(BaseConnector, ParallelUtil):
             item = deepcopy(lib[name][1])
         return item
 
-    def _del_item(self, libname: str, name: str, force: bool = False) -> None:
+    def _del_item(self, libname: AllLibs, name: str, force: bool = False) -> None:
         """Delete items (series or models) (internal method).
 
         Parameters
@@ -537,7 +537,7 @@ class DictConnector(BaseConnector, ParallelUtil):
         lib = self._get_library(libname)
         _ = lib.pop(name)
 
-    def _get_metadata(self, libname: str, name: str) -> dict:
+    def _get_metadata(self, libname: TimeSeriesLibs, name: str) -> dict:
         """Read metadata (internal method).
 
         Parameters
@@ -570,7 +570,7 @@ class DictConnector(BaseConnector, ParallelUtil):
             " use PasConnector or ArcticDBConnector."
         )
 
-    def _list_symbols(self, libname: str) -> List[str]:
+    def _list_symbols(self, libname: AllLibs) -> List[str]:
         """List symbols in a library (internal method).
 
         Parameters
@@ -652,7 +652,7 @@ class PasConnector(BaseConnector, ParallelUtil):
         with (self.path / f"{self.name}.pastastore").open("w", encoding="utf-8") as f:
             json.dump(config, f)
 
-    def _get_library(self, libname: str) -> Path:
+    def _get_library(self, libname: AllLibs) -> Path:
         """Get path to directory holding data.
 
         Parameters
@@ -719,7 +719,7 @@ class PasConnector(BaseConnector, ParallelUtil):
             with fname.open("w", encoding="utf-8") as fm:
                 fm.write(jsondict)
 
-    def _get_item(self, libname: str, name: str) -> Union[FrameOrSeriesUnion, Dict]:
+    def _get_item(self, libname: AllLibs, name: str) -> Union[FrameOrSeriesUnion, Dict]:
         """Retrieve item (internal method).
 
         Parameters
@@ -752,7 +752,7 @@ class PasConnector(BaseConnector, ParallelUtil):
             item = series_from_json(fjson)
         return item
 
-    def _del_item(self, libname: str, name: str, force: bool = False) -> None:
+    def _del_item(self, libname: AllLibs, name: str, force: bool = False) -> None:
         """Delete items (series or models) (internal method).
 
         Parameters
@@ -777,7 +777,7 @@ class PasConnector(BaseConnector, ParallelUtil):
                 # Nothing to delete
                 pass
 
-    def _get_metadata(self, libname: str, name: str) -> dict:
+    def _get_metadata(self, libname: TimeSeriesLibs, name: str) -> dict:
         """Read metadata (internal method).
 
         Parameters
@@ -852,7 +852,7 @@ class PasConnector(BaseConnector, ParallelUtil):
                 )
             return result
 
-    def _list_symbols(self, libname: str) -> List[str]:
+    def _list_symbols(self, libname: AllLibs) -> List[str]:
         """List symbols in a library (internal method).
 
         Parameters

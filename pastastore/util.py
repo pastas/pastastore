@@ -19,6 +19,7 @@ from pastas.stats.tests import runs_test, stoffer_toloi
 from tqdm.auto import tqdm
 
 from pastastore.styling import boolean_row_styler
+from pastastore.typing import TimeSeriesLibs
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ class ZipUtils:
 
     def _stored_series_to_json(
         self,
-        libname: str,
+        libname: TimeSeriesLibs,
         names: Optional[Union[list, str]] = None,
         squeeze: bool = True,
         progressbar: bool = False,
@@ -82,7 +83,7 @@ class ZipUtils:
 
     def _stored_metadata_to_json(
         self,
-        libname: str,
+        libname: TimeSeriesLibs,
         names: Optional[Union[list, str]] = None,
         squeeze: bool = True,
         progressbar: bool = False,
@@ -119,7 +120,7 @@ class ZipUtils:
     def series_to_archive(
         self,
         archive,
-        libname: str,
+        libname: TimeSeriesLibs,
         names: Optional[Union[list, str]] = None,
         progressbar: bool = True,
     ):

@@ -18,6 +18,7 @@ from pastas.timeseries_utils import timestep_weighted_resample
 from tqdm.auto import tqdm
 
 from pastastore.extensions.accessor import register_pastastore_accessor
+from pastastore.typing import TimeSeriesLibs
 
 logger = logging.getLogger("hydropandas_extension")
 
@@ -68,7 +69,7 @@ class HydroPandasExtension:
 
     def add_obscollection(
         self,
-        libname: str,
+        libname: TimeSeriesLibs,
         oc: hpd.ObsCollection,
         kind: Optional[str] = None,
         data_column: Optional[str] = None,
@@ -113,7 +114,7 @@ class HydroPandasExtension:
 
     def add_observation(
         self,
-        libname: str,
+        libname: TimeSeriesLibs,
         obs: hpd.Obs,
         name: Optional[str] = None,
         kind: Optional[str] = None,
