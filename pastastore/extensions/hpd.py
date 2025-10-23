@@ -200,7 +200,9 @@ class HydroPandasExtension:
             action_msg = "added to"
 
         if libname == "oseries":
-            self._store.upsert_oseries(o.squeeze(axis=1), name, metadata=metadata)
+            self._store.upsert_oseries(
+                o.squeeze(axis=1), name, metadata=metadata, force=True
+            )
             logger.info(
                 "%sobservation '%s' %s oseries library.", source, name, action_msg
             )
@@ -208,7 +210,11 @@ class HydroPandasExtension:
             if kind is None:
                 raise ValueError("`kind` must be specified for stresses!")
             self._store.upsert_stress(
-                (o * unit_multiplier).squeeze(axis=1), name, kind, metadata=metadata
+                (o * unit_multiplier).squeeze(axis=1),
+                name,
+                kind,
+                metadata=metadata,
+                force=True,
             )
             logger.info(
                 "%sstress '%s' (kind='%s') %s stresses library.",
@@ -268,7 +274,8 @@ class HydroPandasExtension:
             metadata = {}
         return obs.__class__(
             timestep_weighted_resample(
-                obs,
+                # force series, see https://github.com/pastas/pastas/issues/1020
+                obs.squeeze(),
                 obs.index.normalize(),
             ).rename(obs.name),
             **metadata,
@@ -585,6 +592,17 @@ class HydroPandasExtension:
     ):
         """Update meteorological data from KNMI in PastaStore.
 
+        Warning
+        -------
+        When fill_missing_obs is True, time series will be filled with observations
+        from nearest stations with data. If certain stations are generally more up to
+        date than others, this can lead to time series being permanently filled with
+        data from another station. To overwrite these filled values with data from the
+        actual station in a subsequent update, ensure that tmin is set to a date prior
+        to the first update call, or to be very safe, set tmin to the beginning of the
+        time series. This will force re-downloading of all data from the actual
+        station.
+
         Parameters
         ----------
         names : list of str, optional
@@ -596,7 +614,7 @@ class HydroPandasExtension:
             end time, by default None, which defaults to today
         fill_missing_obs : bool, optional
             if True, fill missing observations by getting observations from nearest
-            station with data.
+            station with data. Default is True.
         normalize_datetime_index : bool, optional
             if True, normalize the datetime so stress value at midnight represents
             the daily total, by default True.
@@ -671,11 +689,14 @@ class HydroPandasExtension:
             # fix for duplicate station entry in metadata:
             stress_station = (
                 self._store.stresses.at[name, "station"]
-                if "station" in self._store.stresses.columns
+                if (
+                    "station" in self._store.stresses.columns
+                    and np.isfinite(self._store.stresses.at[name, "station"])
+                )
                 else None
             )
             if stress_station is not None and not isinstance(
-                stress_station, (int, np.integer)
+                stress_station, (int, np.integer, float)
             ):
                 stress_station = stress_station.squeeze().unique().item()
 
