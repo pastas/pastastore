@@ -1,8 +1,29 @@
 # ruff: noqa: D100 D103
 import pytest
 from pandas import Timestamp
+from pandas.testing import assert_series_equal
+from pastas.timeseries_utils import timestep_weighted_resample
 
 import pastastore as pst
+
+
+def create_test_zip():
+    from pastastore.extensions import activate_hydropandas_extension
+
+    activate_hydropandas_extension()
+    pstore = pst.PastaStore()
+    pstore.hpd.download_bro_gmw(
+        extent=(117_850, 118_180, 439_550, 439_900),
+        tmin="2022-01-01",
+        tmax="2022-01-02",
+    )
+    pstore.hpd.download_knmi_precipitation(
+        stns=[260], meteo_var="RH", tmin="2022-01-01", tmax="2022-01-31"
+    )
+    pstore.hpd.download_knmi_evaporation(
+        stns=[260], tmin="2022-01-01", tmax="2022-01-31"
+    )
+    pstore.to_zip("tests/data/test_hpd_update.zip", overwrite=True)
 
 
 @pytest.mark.pastas150
@@ -12,7 +33,9 @@ def test_hpd_download_from_bro():
     activate_hydropandas_extension()
     pstore = pst.PastaStore()
     pstore.hpd.download_bro_gmw(
-        extent=(117850, 118180, 439550, 439900), tmin="2022-01-01", tmax="2022-01-02"
+        extent=(117_850, 118_180, 439_550, 439_900),
+        tmin="2022-01-01",
+        tmax="2022-01-02",
     )
     assert pstore.n_oseries == 3
 
@@ -59,6 +82,8 @@ def test_update_oseries():
 # @pytest.mark.xfail(reason="KNMI is being flaky, so allow this test to xfail/xpass.")
 @pytest.mark.pastas150
 def test_update_stresses():
+    import hydropandas as hpd
+
     from pastastore.extensions import activate_hydropandas_extension
 
     activate_hydropandas_extension()
@@ -67,6 +92,19 @@ def test_update_stresses():
     pstore.hpd.update_knmi_meteo(tmax="2022-02-28", normalize_datetime_index=True)
     tmintmax = pstore.get_tmin_tmax("stresses")
     assert (tmintmax["tmax"] >= Timestamp("2022-02-27")).all()
+
+    # check if result is equal to hydropandas result after resampling
+    oc = hpd.read_knmi(
+        stns=[260], meteo_vars=["RH", "EV24"], starts="2022-01-01", ends="2022-02-28"
+    )
+    for i in range(2):
+        o = oc.obs.iloc[i].squeeze("columns") * 1e3
+        resampled_result = (timestep_weighted_resample(o, o.index.normalize())).dropna()
+        assert_series_equal(
+            pstore.get_stress(pstore.stresses_names[i]).squeeze(),
+            resampled_result,
+            check_names=False,
+        )
 
 
 # @pytest.mark.xfail(reason="KNMI is being flaky, so allow this test to xfail/xpass.")
