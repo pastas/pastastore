@@ -1679,7 +1679,7 @@ class BaseConnector(ABC, ConnectorUtil):
                 links = self._get_time_series_model_links()
                 for k in ["oseries", "stresses"]:
                     for name, model_links in tqdm(
-                        links[k],
+                        links[k].items(),
                         desc=f"Store models per {k}",
                         total=len(links[k]),
                     ):
