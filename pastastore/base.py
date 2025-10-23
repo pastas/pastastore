@@ -716,6 +716,7 @@ class BaseConnector(ABC, ConnectorUtil):
         name: str,
         metadata: Optional[dict] = None,
         validate: Optional[bool] = None,
+        force: bool = False,
     ) -> None:
         """Update or insert series depending on whether it exists in store.
 
@@ -732,12 +733,14 @@ class BaseConnector(ABC, ConnectorUtil):
         validate : bool, optional
             use pastas to validate series, default is None, which will use the
             USE_PASTAS_VALIDATE_SERIES value (default is True).
+        force : bool, optional
+            force update even if time series is used in a model, by default False
         """
         if libname not in ["oseries", "stresses"]:
             raise ValueError("Library must be 'oseries' or 'stresses'!")
         if name in getattr(self, f"{libname}_names"):
             self._update_series(
-                libname, series, name, metadata=metadata, validate=validate
+                libname, series, name, metadata=metadata, validate=validate, force=force
             )
         else:
             self._add_series(
@@ -962,6 +965,7 @@ class BaseConnector(ABC, ConnectorUtil):
         series: FrameOrSeriesUnion,
         name: str,
         metadata: Optional[dict] = None,
+        force: bool = False,
     ) -> None:
         """Update oseries values.
 
@@ -974,14 +978,17 @@ class BaseConnector(ABC, ConnectorUtil):
         metadata : Optional[dict], optional
             optionally provide metadata, which will update
             the stored metadata dictionary, by default None
+        force : bool, optional
+            force update even if time series is used in a model, by default False
         """
-        self._update_series("oseries", series, name, metadata=metadata)
+        self._update_series("oseries", series, name, metadata=metadata, force=force)
 
     def update_stress(
         self,
         series: FrameOrSeriesUnion,
         name: str,
         metadata: Optional[dict] = None,
+        force: bool = False,
     ) -> None:
         """Update stresses values.
 
@@ -997,14 +1004,17 @@ class BaseConnector(ABC, ConnectorUtil):
         metadata : Optional[dict], optional
             optionally provide metadata, which will update
             the stored metadata dictionary, by default None
+        force : bool, optional
+            force update even if time series is used in a model, by default False
         """
-        self._update_series("stresses", series, name, metadata=metadata)
+        self._update_series("stresses", series, name, metadata=metadata, force=force)
 
     def upsert_oseries(
         self,
         series: FrameOrSeriesUnion,
         name: str,
         metadata: Optional[dict] = None,
+        force: bool = False,
     ) -> None:
         """Update or insert oseries values depending on whether it exists.
 
@@ -1017,8 +1027,10 @@ class BaseConnector(ABC, ConnectorUtil):
         metadata : Optional[dict], optional
             optionally provide metadata, which will update
             the stored metadata dictionary if it exists, by default None
+        force : bool, optional
+            force update even if time series is used in a model, by default False
         """
-        self._upsert_series("oseries", series, name, metadata=metadata)
+        self._upsert_series("oseries", series, name, metadata=metadata, force=force)
 
     def upsert_stress(
         self,
@@ -1026,6 +1038,7 @@ class BaseConnector(ABC, ConnectorUtil):
         name: str,
         kind: str,
         metadata: Optional[dict] = None,
+        force: bool = False,
     ) -> None:
         """Update or insert stress values depending on whether it exists.
 
@@ -1038,11 +1051,16 @@ class BaseConnector(ABC, ConnectorUtil):
         metadata : Optional[dict], optional
             optionally provide metadata, which will update
             the stored metadata dictionary if it exists, by default None
+        kind : str
+            category to identify type of stress, this label is added to the
+            metadata dictionary.
+        force : bool, optional
+            force update even if time series is used in a model, by default False
         """
         if metadata is None:
             metadata = {}
         metadata["kind"] = kind
-        self._upsert_series("stresses", series, name, metadata=metadata)
+        self._upsert_series("stresses", series, name, metadata=metadata, force=force)
 
     def del_models(self, names: Union[list, str], verbose: bool = True) -> None:
         """Delete model(s) from the database.
