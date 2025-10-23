@@ -684,9 +684,9 @@ class BaseConnector(ABC, ConnectorUtil):
         if libname not in ["oseries", "stresses"]:
             raise ValueError("Library must be 'oseries' or 'stresses'!")
         if not force:
-            self._check_series_in_models(libname, name)
-        self._validate_input_series(series)
-        series = self._set_series_name(series, name)
+            self.validator.check_series_in_models(libname, name)
+        self.validator.validate_input_series(series)
+        series = self.validator.set_series_name(series, name)
         stored = self._get_series(libname, name, progressbar=False)
         if self.conn_type == "pas" and not isinstance(series, type(stored)):
             if isinstance(series, pd.DataFrame):
