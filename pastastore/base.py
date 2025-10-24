@@ -466,7 +466,7 @@ class BaseConnector(ABC, ConnectorUtil):
     def parse_names(
         self,
         names: list[str] | str | None = None,
-        libname: Literal["oseries", "stresses", "models", "oseries_models"] = "oseries",
+        libname: AllLibs = "oseries",
     ) -> list:
         """Parse names argument and return list of names.
 
