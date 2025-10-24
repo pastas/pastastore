@@ -1675,16 +1675,16 @@ class PastaStore:
         matches : list
             list of names that match search result
         """
-        if s in [None, "models", "stresses", "oseries"]:
+        if isinstance(s, str) and s in [None, "models", "stresses", "oseries"]:
             warnings.warn(
                 "The order of arguments 's' and 'libname' has been flipped since v1.11."
-                "Please update your code to use pstore.search(s=..., libname=...).",
+                " Please update your code to use pstore.search(s=..., libname=...).",
                 DeprecationWarning,
                 stacklevel=2,
             )
-            _ = str(s)
-            s = libname
-            libname = _
+            temp = str(s)  # create copy
+            s = str(libname)  # create copy
+            libname = temp
         if libname == "models":
             lib_names = {"models": self.model_names}
         elif libname == "stresses":
