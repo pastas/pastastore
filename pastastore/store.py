@@ -1725,7 +1725,7 @@ class PastaStore:
             result[lib] = matches
 
         if len(result) == 1:
-            return result[libname[0]]
+            return result[libname]
         else:
             return result
 
