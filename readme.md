@@ -92,4 +92,4 @@ pstore.to_zip("my_backup.zip")
 ```
 
 For more elaborate examples, refer to the
-[Notebooks](https://pastastore.readthedocs.io/latest/examples.html#example-notebooks).
+[Notebooks](https://pastastore.readthedocs.io/en/latest/examples.html).
