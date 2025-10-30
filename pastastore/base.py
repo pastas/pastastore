@@ -12,7 +12,7 @@ from itertools import chain
 from random import choice
 
 # import weakref
-from typing import Callable, Dict, List, Literal, Optional, Union
+from typing import Callable, Dict, List, Optional, Union
 
 import pandas as pd
 import pastas as ps
