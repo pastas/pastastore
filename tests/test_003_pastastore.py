@@ -85,10 +85,10 @@ def test_del_oseries_used_by_model(request, pstore):
         pstore.del_oseries("oseries1")
     pstore.del_oseries("oseries1", force=True)
     pstore.add_oseries(oseries, "oseries1", metadata=ometa)
-    pstore.set_protect_series_in_models(False)
+    pstore.validator.set_protect_series_in_models(False)
     pstore.del_oseries("oseries1")
     pstore.add_oseries(oseries, "oseries1", metadata=ometa)
-    pstore.set_protect_series_in_models(True)
+    pstore.validator.set_protect_series_in_models(True)
 
 
 @pytest.mark.dependency
@@ -99,10 +99,10 @@ def test_del_stress_used_by_model(request, pstore):
         pstore.del_stress("prec1")
     pstore.del_stress("prec1", force=True)
     pstore.add_stress(stress, "prec1", kind="prec", metadata=smeta)
-    pstore.set_protect_series_in_models(False)
+    pstore.validator.set_protect_series_in_models(False)
     pstore.del_stress("prec1")
     pstore.add_stress(stress, "prec1", kind="prec", metadata=smeta)
-    pstore.set_protect_series_in_models(True)
+    pstore.validator.set_protect_series_in_models(True)
 
 
 @pytest.mark.dependency
@@ -226,6 +226,13 @@ def test_solve_models_and_get_stats(request, pstore):
 
 
 @pytest.mark.dependency
+def test_check_models(request, pstore):
+    depends(request, [f"test_solve_models_and_get_stats[{pstore.type}]"])
+    if parse(ps.__version__) >= parse("1.8.0"):
+        _ = pstore.check_models(style_output=True)
+
+
+@pytest.mark.dependency
 def test_solve_models_parallel(request, pstore):
     depends(request, [f"test_create_models[{pstore.type}]"])
     _ = pstore.solve_models(ignore_solve_errors=False, progressbar=False, parallel=True)
@@ -255,7 +262,7 @@ def test_save_and_load_model(request, pstore):
 
 
 def test_update_ts_settings(request, pstore):
-    pstore.set_check_model_series_values(False)
+    pstore.validator.set_check_model_series_values(False)
 
     o = pstore.get_oseries("oseries2")
     ml = ps.Model(o.loc[:"2013"], name="ml_oseries2")
@@ -281,7 +288,7 @@ def test_update_ts_settings(request, pstore):
     assert ml2.stressmodels["recharge"].evap.settings["tmax"] == tmax
     assert ml2.stressmodels["prec"].stress[0].settings["tmax"] == p2.index[-1]
     pstore.del_models("ml_oseries2")
-    pstore.set_check_model_series_values(True)
+    pstore.validator.set_check_model_series_values(True)
 
 
 def test_oseries_distances(pstore):
@@ -353,3 +360,8 @@ def test_models_metadata(request, pstore):
     df = pstore.models.metadata
     assert df.index.size == 2
     assert (df["n_stressmodels"] == 1).all()
+
+
+def test_pstore_validator_settings(pstore):
+    _ = pstore.validator.settings
+    _ = pstore.conn.validation_settings

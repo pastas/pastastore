@@ -1,11 +1,11 @@
 # ruff: noqa: D104 F401
-from logging import getLogger
+import logging
 
 from pastastore.extensions.accessor import (
     register_pastastore_accessor as register_pastastore_accessor,
 )
 
-logger = getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 def activate_hydropandas_extension():

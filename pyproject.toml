@@ -16,7 +16,7 @@ maintainers = [
     { name = "M.A. Vonk", email = "m.vonk@artesia-water.nl" },
 ]
 requires-python = ">= 3.10"
-dependencies = ["pastas>=0.13", "tqdm>=4.36", "pyyaml"]
+dependencies = ["pastas>=0.13", "tqdm>=4.36", "pyyaml", "colorama"]
 
 keywords = ["hydrology", "groundwater", "time series", "analysis", "database"]
 classifiers = [

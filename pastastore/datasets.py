@@ -178,12 +178,12 @@ def _default_connector(conntype: str):
         default Connector based on type.
     """
     Conn = getattr(pst, conntype)
-    if Conn.conn_type == "arcticdb":
+    if Conn._conn_type == "arcticdb":
         uri = "lmdb://./arctic_db"
         conn = Conn("my_db", uri)
-    elif Conn.conn_type == "dict":
+    elif Conn._conn_type == "dict":
         conn = Conn("my_db")
-    elif Conn.conn_type == "pas":
+    elif Conn._conn_type == "pas":
         conn = Conn("my_db", "./pas_db")
     else:
         raise ValueError(f"Unrecognized connector type! '{conntype}'")

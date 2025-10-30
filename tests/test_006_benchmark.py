@@ -128,7 +128,7 @@ def test_benchmark_write_model_arcticdb(benchmark):
 
 
 def write_model_nocheckts(conn, ml):
-    conn.set_check_model_series_values(False)
+    conn.validator.set_check_model_series_values(False)
     conn.add_model(ml, overwrite=True)
 
 

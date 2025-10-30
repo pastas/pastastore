@@ -15,6 +15,9 @@ follows::
     pstore.maps.add_background_map(ax)  # for adding a background map
 """
 
+import logging
+import warnings
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -24,6 +27,8 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import BoundaryNorm, LogNorm
 from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+logger = logging.getLogger(__name__)
 
 
 class Plots:
@@ -101,7 +106,7 @@ class Plots:
             split=True is only supported if there are less than 20 time series
             to plot.
         """
-        names = self.pstore.conn._parse_names(names, libname)
+        names = self.pstore.conn.parse_names(names, libname)
 
         if len(names) > 20 and split:
             raise ValueError(
@@ -116,7 +121,7 @@ class Plots:
         else:
             axes = ax
 
-        tsdict = self.pstore.conn._get_series(
+        tsdict = self.pstore.conn._get_series(  # noqa: SLF001
             libname, names, progressbar=progressbar, squeeze=False
         )
         for i, (n, ts) in enumerate(tsdict.items()):
@@ -236,7 +241,7 @@ class Plots:
         ax : matplotlib.Axes
             axes handle
         """
-        names = self.pstore.conn._parse_names(names, "stresses")
+        names = self.pstore.conn.parse_names(names, "stresses")
         masknames = self.pstore.stresses.index.isin(names)
         stresses = self.pstore.stresses.loc[masknames]
 
@@ -315,7 +320,7 @@ class Plots:
         ax : matplotlib Axes
             The axes in which the data-availability is plotted
         """
-        names = self.pstore.conn._parse_names(names, libname)
+        names = self.pstore.conn.parse_names(names, libname)
 
         if libname == "stresses":
             masknames = self.pstore.stresses.index.isin(names)
@@ -324,7 +329,7 @@ class Plots:
                 mask = stresses["kind"] == kind
                 names = stresses.loc[mask].index.to_list()
 
-        series = self.pstore.conn._get_series(
+        series = self.pstore.conn._get_series(  # noqa: SLF001
             libname, names, progressbar=progressbar, squeeze=False
         ).values()
 
@@ -434,6 +439,7 @@ class Plots:
         cmap = plt.get_cmap(cmap, 256)
         cmap.set_over((1.0, 1.0, 1.0))
 
+        pc = None
         for i, s in enumerate(series):
             if not s.empty:
                 if dropna:
@@ -450,10 +456,14 @@ class Plots:
 
         # make a colorbar in an ax on the
         # right side, then set the current axes to ax again
-        cb = fig.colorbar(pc, ax=ax, cax=cax, extend="both")
-        cb.set_ticks(bounds)
-        cb.ax.set_yticklabels(labels)
-        cb.ax.minorticks_off()
+        if pc is not None:
+            cb = fig.colorbar(pc, ax=ax, cax=cax, extend="both")
+            cb.set_ticks(bounds)
+            cb.ax.set_yticklabels(labels)
+            cb.ax.minorticks_off()
+        else:
+            # nothing was plotted; skip colorbar to avoid UnboundLocalError
+            cb = None
 
         if set_yticks:
             ax.set_yticks(np.arange(0.5, len(series) + 0.5), minor=False)
@@ -600,6 +610,8 @@ class Plots:
         elif len(np.unique(onames)) > 1:
             names = modelnames
         cm = ps.CompareModels(models, names=names)
+        if ax is not None:
+            kwargs.setdefault("ax", ax)
         cm.plot(**kwargs)
         return cm
 
@@ -684,7 +696,7 @@ class Maps:
         --------
         self.add_background_map
         """
-        names = self.pstore.conn._parse_names(names, "stresses")
+        names = self.pstore.conn.parse_names(names, "stresses")
         if extent is not None:
             names = self.pstore.within(extent, names=names, libname="stresses")
         df = self.pstore.stresses.loc[names]
@@ -768,7 +780,7 @@ class Maps:
         --------
         self.add_background_map
         """
-        names = self.pstore.conn._parse_names(names, "oseries")
+        names = self.pstore.conn.parse_names(names, "oseries")
         if extent is not None:
             names = self.pstore.within(extent, names=names)
         oseries = self.pstore.oseries.loc[names]
@@ -909,7 +921,8 @@ class Maps:
             df, column=column, figsize=figsize, **scatter_kwargs
         )
         if label:
-            df.set_index("index", inplace=True)
+            if "index" in df:
+                df.set_index("index", inplace=True)
             self.add_labels(df, ax, adjust=adjust)
 
         if backgroundmap:
@@ -999,6 +1012,7 @@ class Maps:
     def modelparam(
         self,
         parameter,
+        param_value="optimal",
         modelnames=None,
         label=True,
         adjust=False,
@@ -1017,6 +1031,9 @@ class Maps:
         ----------
         parameter: str
             name of the parameter, e.g. "rech_A" or "river_a"
+        param_value: str, optional
+            which parameter value to plot, by default "optimal", other options
+            are "initial", "pmin", "pmax"
         modelnames : list of str, optional
             list of modelnames to include
         label: bool, optional
@@ -1052,6 +1069,7 @@ class Maps:
         """
         paramdf = self.pstore.get_parameters(
             [parameter],
+            param_value=param_value,
             modelnames=modelnames,
             progressbar=progressbar,
             ignore_errors=True,
@@ -1133,11 +1151,11 @@ class Maps:
         self.add_background_map
         """
         signature_df = self.pstore.get_signatures(
-            [signature],
             names=names,
+            signatures=[signature],
             progressbar=progressbar,
             ignore_errors=True,
-        )
+        ).transpose()
         df = signature_df.join(self.pstore.oseries, how="left")
 
         return self.dataframe(
@@ -1156,8 +1174,6 @@ class Maps:
 
     def _plotmap_dataframe(self, *args, **kwargs):
         """Deprecated, use dataframe method."""  # noqa: D401
-        import warnings
-
         warnings.warn(
             "maps._plotmap_dataframe is deprecated, use maps.dataframe_scatter instead",
             DeprecationWarning,
@@ -1319,10 +1335,12 @@ class Maps:
                         "metadata_source must be either 'model' or 'store'!"
                     )
                 if np.isnan(xi) or np.isnan(yi):
-                    print(f"No x,y-data for {istress.name}!")
+                    logger.warning("No x,y-data for %s!", istress.name)
                     continue
                 if xi == 0.0 or yi == 0.0:
-                    print(f"x,y-data is 0.0 for {istress.name}, not plotting!")
+                    logger.warning(
+                        "x,y-data is 0.0 for %s, not plotting!", istress.name
+                    )
                     continue
 
                 stresses.loc[istress.name, :] = (xi, yi, name, f"C{count % 10}")
