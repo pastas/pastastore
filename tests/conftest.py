@@ -44,14 +44,10 @@ def initialize_project(conn):
 
     # well 1
     s = pd.read_csv("./tests/data/well_month_end.csv", index_col=0, parse_dates=True)
-    try:
-        s = ps.ts.timestep_weighted_resample(
-            s,
-            pd.date_range(s.index[0] - pd.offsets.MonthBegin(), s.index[-1], freq="D"),
-        ).bfill()
-    except AttributeError:
-        # pastas<=0.22.0
-        pass
+    s = ps.ts.timestep_weighted_resample(
+        s,
+        pd.date_range(s.index[0] - pd.offsets.MonthBegin(), s.index[-1], freq="D"),
+    ).bfill()
     pstore.add_stress(s, "well1", kind="well", metadata={"x": 164691, "y": 423579})
     # add second well
     pstore.add_stress(
@@ -104,7 +100,6 @@ def delete_arcticdb_test_db():
     name = "test_project"
     connector = pst.ArcticDBConnector(name, connstr)
     pst.util.delete_arcticdb_connector(connector)
-    print("ArcticDBConnector 'test_project' deleted.")
 
 
 _has_pkg_cache = {}

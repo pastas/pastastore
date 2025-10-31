@@ -1,27 +1,287 @@
 """Useful utilities for pastastore."""
 
+import json
+import logging
 import os
 import shutil
+import sys
+from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
+from colorama import Back, Fore, Style
 from numpy.lib._iotools import NameValidator
 from pandas.testing import assert_series_equal
+from pastas import Model
+from pastas.io.pas import PastasEncoder
 from pastas.stats.tests import runs_test, stoffer_toloi
 from tqdm.auto import tqdm
 
-from pastastore.version import PASTAS_LEQ_022
+from pastastore.styling import boolean_row_styler
+from pastastore.typing import TimeSeriesLibs
+
+logger = logging.getLogger(__name__)
 
 
 def _custom_warning(message, category=UserWarning, filename="", lineno=-1, *args):
     print(f"{filename}:{lineno}: {category.__name__}: {message}")
 
 
+class ZipUtils:
+    """Utility class for zip file operations."""
+
+    def __init__(self, pstore):
+        self.pstore = pstore
+
+    def _stored_series_to_json(
+        self,
+        libname: TimeSeriesLibs,
+        names: Optional[Union[list, str]] = None,
+        squeeze: bool = True,
+        progressbar: bool = False,
+    ):
+        """Write stored series to JSON.
+
+        Parameters
+        ----------
+        libname : str
+            library name
+        names : Optional[Union[list, str]], optional
+            names of series, by default None
+        squeeze : bool, optional
+            return single entry as json string instead
+            of list, by default True
+        progressbar : bool, optional
+            show progressbar, by default False
+
+        Returns
+        -------
+        files : list or str
+            list of series converted to JSON string or single string
+            if single entry is returned and squeeze is True
+        """
+        names = self.pstore.parse_names(names, libname=libname)
+        files = []
+        for n in tqdm(names, desc=libname) if progressbar else names:
+            s = self.pstore.conn._get_series(libname, n, progressbar=False)
+            if isinstance(s, pd.Series):
+                s = s.to_frame()
+            try:
+                sjson = s.to_json(orient="columns")
+            except ValueError as e:
+                msg = (
+                    f"DatetimeIndex of '{n}' probably contains NaT "
+                    "or duplicate timestamps!"
+                )
+                raise ValueError(msg) from e
+            files.append(sjson)
+        if len(files) == 1 and squeeze:
+            return files[0]
+        else:
+            return files
+
+    def _stored_metadata_to_json(
+        self,
+        libname: TimeSeriesLibs,
+        names: Optional[Union[list, str]] = None,
+        squeeze: bool = True,
+        progressbar: bool = False,
+    ):
+        """Write metadata from stored series to JSON.
+
+        Parameters
+        ----------
+        libname : str
+            library containing series
+        names : Optional[Union[list, str]], optional
+            names to parse, by default None
+        squeeze : bool, optional
+            return single entry as json string instead of list, by default True
+        progressbar : bool, optional
+            show progressbar, by default False
+
+        Returns
+        -------
+        files : list or str
+            list of json string
+        """
+        names = self.pstore.parse_names(names, libname=libname)
+        files = []
+        for n in tqdm(names, desc=libname) if progressbar else names:
+            meta = self.pstore.get_metadata(libname, n, as_frame=False)
+            meta_json = json.dumps(meta, cls=PastasEncoder, indent=4)
+            files.append(meta_json)
+        if len(files) == 1 and squeeze:
+            return files[0]
+        else:
+            return files
+
+    def series_to_archive(
+        self,
+        archive,
+        libname: TimeSeriesLibs,
+        names: Optional[Union[list, str]] = None,
+        progressbar: bool = True,
+    ):
+        """Write DataFrame or Series to zipfile (internal method).
+
+        Parameters
+        ----------
+        archive : zipfile.ZipFile
+            reference to an archive to write data to
+        libname : str
+            name of the library to write to zipfile
+        names : str or list of str, optional
+            names of the time series to write to archive, by default None,
+            which writes all time series to archive
+        progressbar : bool, optional
+            show progressbar, by default True
+        """
+        names = self.pstore.parse_names(names, libname=libname)
+        for n in tqdm(names, desc=libname) if progressbar else names:
+            sjson = self._stored_series_to_json(
+                libname, names=n, progressbar=False, squeeze=True
+            )
+            meta_json = self._stored_metadata_to_json(
+                libname, names=n, progressbar=False, squeeze=True
+            )
+            archive.writestr(f"{libname}/{n}.pas", sjson)
+            archive.writestr(f"{libname}/{n}_meta.pas", meta_json)
+
+    def models_to_archive(self, archive, names=None, progressbar=True):
+        """Write pastas.Model to zipfile (internal method).
+
+        Parameters
+        ----------
+        archive : zipfile.ZipFile
+            reference to an archive to write data to
+        names : str or list of str, optional
+            names of the models to write to archive, by default None,
+            which writes all models to archive
+        progressbar : bool, optional
+            show progressbar, by default True
+        """
+        names = self.pstore.parse_names(names, libname="models")
+        for n in tqdm(names, desc="models") if progressbar else names:
+            m = self.pstore.get_models(n, return_dict=True)
+            jsondict = json.dumps(m, cls=PastasEncoder, indent=4)
+            archive.writestr(f"models/{n}.pas", jsondict)
+
+
+class ColoredFormatter(logging.Formatter):
+    """Colored log formatter.
+
+    Taken from
+    https://gist.github.com/joshbode/58fac7ababc700f51e2a9ecdebe563ad
+    """
+
+    def __init__(
+        self, *args, colors: Optional[Dict[str, str]] = None, **kwargs
+    ) -> None:
+        """Initialize the formatter with specified format strings."""
+        super().__init__(*args, **kwargs)
+
+        self.colors = colors if colors else {}
+
+    def format(self, record) -> str:
+        """Format the specified record as text."""
+        record.color = self.colors.get(record.levelname, "")
+        record.reset = Style.RESET_ALL
+
+        return super().format(record)
+
+
+def get_color_logger(level="INFO", logger_name=None):
+    """Get a logger with colored output.
+
+    Parameters
+    ----------
+    level : str, optional
+        The logging level to set for the logger. Default is "INFO".
+
+    Returns
+    -------
+    logger : logging.Logger
+        The configured logger object.
+    """
+    if level == "DEBUG":
+        FORMAT = "{color}{levelname}:{name}.{funcName}:{lineno}:{message}{reset}"
+    else:
+        FORMAT = "{color}{message}{reset}"
+    formatter = ColoredFormatter(
+        FORMAT,
+        style="{",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        colors={
+            "DEBUG": Fore.CYAN,
+            "INFO": Fore.GREEN,
+            "WARNING": Fore.YELLOW,
+            "ERROR": Fore.RED,
+            "CRITICAL": Fore.RED + Back.WHITE + Style.BRIGHT,
+        },
+    )
+
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
+
+    logger = logging.getLogger(logger_name)
+    logger.handlers[:] = []
+    logger.addHandler(handler)
+    logger.setLevel(getattr(logging, level))
+
+    logging.captureWarnings(True)
+    return logger
+
+
 class ItemInLibraryException(Exception):
     """Exception when item is already in library."""
 
-    pass
+
+class SeriesUsedByModel(Exception):
+    """Exception raised when a series is used by a model."""
+
+
+def series_from_json(fjson: str, squeeze: bool = True):
+    """Load time series from JSON.
+
+    Parameters
+    ----------
+    fjson : str
+        path to file
+    squeeze : bool, optional
+        squeeze time series object to obtain pandas Series
+
+    Returns
+    -------
+    s : pd.DataFrame
+        DataFrame containing time series
+    """
+    s = pd.read_json(fjson, orient="columns", precise_float=True, dtype=False)
+    if not isinstance(s.index, pd.DatetimeIndex):
+        s.index = pd.to_datetime(s.index, unit="ms")
+    s = s.sort_index()  # needed for some reason ...
+    if squeeze:
+        return s.squeeze(axis="columns")
+    return s
+
+
+def metadata_from_json(fjson: str):
+    """Load metadata dictionary from JSON.
+
+    Parameters
+    ----------
+    fjson : str
+        path to file
+
+    Returns
+    -------
+    meta : dict
+        dictionary containing metadata
+    """
+    with open(fjson, "r", encoding="utf-8") as f:
+        meta = json.load(f)
+    return meta
 
 
 def delete_arcticdb_connector(
@@ -54,7 +314,7 @@ def delete_arcticdb_connector(
 
     arc = arcticdb.Arctic(uri)
 
-    print(f"Deleting ArcticDBConnector database: '{name}' ... ", end="")
+    logger.info("Deleting ArcticDBConnector database: '%s' ... ", name)
     # get library names
     if libraries is None:
         libs = []
@@ -68,53 +328,49 @@ def delete_arcticdb_connector(
 
     for lib in libs:
         arc.delete_library(lib)
-        # shutil.rmtree(os.path.join(conn.uri.split("//")[-1], lib))
 
         if libraries is not None:
-            print()
-            print(f" - deleted: {lib}")
+            logger.info(" - deleted: %s", lib)
 
     # delete .pastastore file if entire pastastore is deleted
     remaining_libs = [
         ilib for ilib in arc.list_libraries() if ilib.split(".")[0] == name
     ]
     if remaining_libs == 0:
-        os.unlink(os.path.join(uri.split("//")[-1], f"{name}.pastastore"))
+        os.unlink(uri.split("//")[-1] / f"{name}.pastastore")
 
     # check if any remaining libraries in lmdb dir, if none, delete entire folder
     remaining = arc.list_libraries()
     if len(remaining) == 0:
-        shutil.rmtree(os.path.join(conn.uri.split("//")[-1]))
+        shutil.rmtree(Path(conn.uri.split("://")[-1]))
 
-    print("Done!")
+    logger.info("Done!")
 
 
 def delete_dict_connector(conn, libraries: Optional[List[str]] = None) -> None:
     """Delete DictConnector object."""
-    print(f"Deleting DictConnector: '{conn.name}' ... ", end="")
+    logger.info("Deleting DictConnector: '%s' ... ", conn.name)
     if libraries is None:
         del conn
-        print(" Done!")
+        logger.info("Done!")
     else:
         for lib in libraries:
-            print()
             delattr(conn, f"lib_{conn.libname[lib]}")
-            print(f" - deleted: {lib}")
-    print("Done!")
+            logger.info(" - deleted: %s", lib)
+    logger.info("Done!")
 
 
 def delete_pas_connector(conn, libraries: Optional[List[str]] = None) -> None:
     """Delete PasConnector object."""
-    print(f"Deleting PasConnector database: '{conn.name}' ... ", end="")
+    logger.info("Deleting PasConnector database: '%s' ... ", conn.name)
     if libraries is None:
         shutil.rmtree(conn.path)
-        print(" Done!")
+        logger.info("Done!")
     else:
         for lib in libraries:
-            print()
-            shutil.rmtree(os.path.join(conn.path, lib))
-            print(f" - deleted: {lib}")
-        print("Done!")
+            shutil.rmtree(conn.path / lib)
+            logger.info(" - deleted: %s", lib)
+        logger.info("Done!")
 
 
 def delete_pastastore(pstore, libraries: Optional[List[str]] = None) -> None:
@@ -195,7 +451,13 @@ def validate_names(
         raise ValueError("Provide one of 's' (string) or 'd' (dict)!")
 
 
-def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
+def compare_models(
+    ml1: Model,
+    ml2: Model,
+    stats: List[str] = None,
+    detailed_comparison: bool = False,
+    style_output: bool = False,
+) -> pd.DataFrame:
     """Compare two Pastas models.
 
     Parameters
@@ -210,6 +472,9 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
         if True return DataFrame containing comparison details,
         by default False which returns True if models are equivalent
         or False if they are not
+    style_output : bool, optional
+        if True and detailed_comparison is True, return styled DataFrame
+        with colored output, by default False
 
     Returns
     -------
@@ -219,7 +484,6 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
     """
     df = pd.DataFrame(columns=["model 0", "model 1"])
     so1 = []  # for storing series_original
-    sv1 = []  # for storing series_validated
     ss1 = []  # for storing series
 
     for i, ml in enumerate([ml1, ml2]):
@@ -230,42 +494,19 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
             df.loc[f"- settings: {k}", f"model {i}"] = ml.settings.get(k)
 
         if i == 0:
-            oso = (
-                ml.oseries.series_original
-                if PASTAS_LEQ_022
-                else ml.oseries._series_original
-            )
+            oso = ml.oseries._series_original  # noqa: SLF001
             df.loc["oseries: series_original", f"model {i}"] = True
 
-            if PASTAS_LEQ_022:
-                osv = ml.oseries.series_validated
-                df.loc["oseries: series_validated", f"model {i}"] = True
-
             oss = ml.oseries.series
-            df.loc["oseries: series_series", f"model {i}"] = True
+            df.loc["oseries: series", f"model {i}"] = True
 
         elif i == 1:
             try:
-                assert_series_equal(
-                    oso,
-                    (
-                        ml.oseries.series_original
-                        if PASTAS_LEQ_022
-                        else ml.oseries._series_original
-                    ),
-                )
+                assert_series_equal(oso, ml.oseries._series_original)  # noqa: SLF001
                 compare_oso = True
             except (ValueError, AssertionError):
                 # series are not identical in length or index does not match
                 compare_oso = False
-
-            if PASTAS_LEQ_022:
-                try:
-                    assert_series_equal(osv, ml.oseries.series_validated)
-                    compare_osv = True
-                except (ValueError, AssertionError):
-                    # series are not identical in length or index does not match
-                    compare_osv = False
 
             try:
                 assert_series_equal(oss, ml.oseries.series)
@@ -275,17 +516,15 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                 compare_oss = False
 
             df.loc["oseries: series_original", f"model {i}"] = compare_oso
-
-            if PASTAS_LEQ_022:
-                df.loc["oseries: series_validated", f"model {i}"] = compare_osv
-
-            df.loc["oseries: series_series", f"model {i}"] = compare_oss
+            df.loc["oseries: series", f"model {i}"] = compare_oss
 
         for sm_name, sm in ml.stressmodels.items():
             df.loc[f"stressmodel: '{sm_name}'"] = sm_name
-            df.loc["- rfunc"] = sm.rfunc._name if sm.rfunc is not None else "NA"
+            df.loc["- rfunc"] = (
+                type(sm.rfunc).__name__ if sm.rfunc is not None else "NA"
+            )
 
-            if sm._name == "RechargeModel":
+            if type(sm).__name__ == "RechargeModel":
                 stresses = [sm.prec, sm.evap]
             else:
                 stresses = sm.stress
@@ -298,16 +537,8 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                     )
 
                 if i == 0:
-                    if PASTAS_LEQ_022:
-                        so1.append(ts.series_original.copy())
-                        sv1.append(ts.series_validated.copy())
-                    else:
-                        so1.append(ts._series_original.copy())
-
+                    so1.append(ts._series_original.copy())  # noqa: SLF001
                     ss1.append(ts.series.copy())
-
-                    if PASTAS_LEQ_022:
-                        df.loc[f"  - {ts.name}: series_validated"] = True
 
                     df.loc[f"  - {ts.name}: series_original"] = True
                     df.loc[f"  - {ts.name}: series"] = True
@@ -318,22 +549,11 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                     try:
                         assert_series_equal(
                             so1[counter],
-                            (
-                                ts.series_original
-                                if PASTAS_LEQ_022
-                                else ts._series_original
-                            ),
+                            ts._series_original,  # noqa: SLF001
                         )
                         compare_so1 = True
                     except (ValueError, AssertionError):
                         compare_so1 = False
-
-                    if PASTAS_LEQ_022:
-                        try:
-                            assert_series_equal(sv1[counter], ts.series_validated)
-                            compare_sv1 = True
-                        except (ValueError, AssertionError):
-                            compare_sv1 = False
 
                     try:
                         assert_series_equal(ss1[counter], ts.series)
@@ -341,8 +561,6 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
                     except (ValueError, AssertionError):
                         compare_ss1 = False
                     df.loc[f"  - {ts.name}: series_original"] = compare_so1
-                    if PASTAS_LEQ_022:
-                        df.loc[f"  - {ts.name}: series_validated"] = compare_sv1
                     df.loc[f"  - {ts.name}: series"] = compare_ss1
 
                 counter += 1
@@ -380,7 +598,20 @@ def compare_models(ml1, ml2, stats=None, detailed_comparison=False):
         df.loc[stats_idx, "comparison"] = b
 
     if detailed_comparison:
-        return df
+        if style_output:
+            return df.style.apply(
+                boolean_row_styler, column="comparison", axis=1
+            ).set_table_styles(
+                [
+                    {"selector": "th.col_heading", "props": [("text-align", "center")]},
+                    {
+                        "selector": "th.row_heading",
+                        "props": [("text-align", "left"), ("white-space", "pre")],
+                    },
+                ],
+            )
+        else:
+            return df
     else:
         return df["comparison"].iloc[1:].all()  # ignore name difference
 
@@ -533,7 +764,7 @@ def frontiers_checks(
     if modelnames is not None:
         models = modelnames
         if oseries is not None:
-            print(
+            logger.warning(
                 "Warning! Both 'modelnames' and 'oseries' provided,"
                 " only using 'modelnames'!"
             )
@@ -550,7 +781,9 @@ def frontiers_checks(
         ml = pstore.get_models(mlnam)
 
         if ml.parameters["optimal"].hasnans:
-            print(f"Warning! Skipping model '{mlnam}' because it is not solved!")
+            logger.warning(
+                "Warning! Skipping model '%s' because it is not solved!", mlnam
+            )
             continue
 
         checks = pd.DataFrame(columns=["stat", "threshold", "units", "check_passed"])
@@ -571,7 +804,7 @@ def frontiers_checks(
             noise = ml.noise()
             if noise is None:
                 noise = ml.residuals()
-                print(
+                logger.warning(
                     "Warning! Checking autocorrelation on the residuals not the noise!"
                 )
             if check2_test == "runs" or check2_test == "both":
@@ -605,7 +838,7 @@ def frontiers_checks(
         if check3_tmem:
             len_oseries_calib = (ml.settings["tmax"] - ml.settings["tmin"]).days
             for sm_name, sm in ml.stressmodels.items():
-                if sm._name == "WellModel":
+                if type(sm).__name__ == "WellModel":
                     nwells = sm.distances.index.size
                     for iw in range(nwells):
                         p = sm.get_parameters(model=ml, istress=iw)
@@ -638,7 +871,7 @@ def frontiers_checks(
         # Check 4 - Uncertainty Gain
         if check4_gain:
             for sm_name, sm in ml.stressmodels.items():
-                if sm._name == "WellModel":
+                if type(sm).__name__ == "WellModel":
                     for iw in range(sm.distances.index.size):
                         p = sm.get_parameters(model=ml, istress=iw)
                         gain = sm.rfunc.gain(p)
@@ -663,10 +896,10 @@ def frontiers_checks(
                             check_gain_passed,
                         )
                     continue
-                elif sm._name == "LinearTrend":
+                elif type(sm).__name__ == "LinearTrend":
                     gain = ml.parameters.loc[f"{sm_name}_a", "optimal"]
                     gain_std = ml.parameters.loc[f"{sm_name}_a", "stderr"]
-                elif sm._name == "StepModel":
+                elif type(sm).__name__ == "StepModel":
                     gain = ml.parameters.loc[f"{sm_name}_d", "optimal"]
                     gain_std = ml.parameters.loc[f"{sm_name}_d", "stderr"]
                 else:
@@ -689,7 +922,7 @@ def frontiers_checks(
 
         # Check 5 - Parameter Bounds
         if check5_parambounds:
-            upper, lower = ml._check_parameters_bounds()
+            upper, lower = ml._check_parameters_bounds()  # noqa: SLF001
             for param in ml.parameters.index:
                 bounds = (
                     ml.parameters.loc[param, "pmin"],
@@ -756,7 +989,7 @@ def frontiers_aic_select(
         for o in oseries:
             modelnames += pstore.oseries_models[o]
     elif oseries is not None:
-        print(
+        logger.warning(
             "Warning! Both 'modelnames' and 'oseries' provided, using only 'modelnames'"
         )
 

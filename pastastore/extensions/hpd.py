@@ -18,6 +18,7 @@ from pastas.timeseries_utils import timestep_weighted_resample
 from tqdm.auto import tqdm
 
 from pastastore.extensions.accessor import register_pastastore_accessor
+from pastastore.typing import TimeSeriesLibs
 
 logger = logging.getLogger("hydropandas_extension")
 
@@ -68,7 +69,7 @@ class HydroPandasExtension:
 
     def add_obscollection(
         self,
-        libname: str,
+        libname: TimeSeriesLibs,
         oc: hpd.ObsCollection,
         kind: Optional[str] = None,
         data_column: Optional[str] = None,
@@ -113,7 +114,7 @@ class HydroPandasExtension:
 
     def add_observation(
         self,
-        libname: str,
+        libname: TimeSeriesLibs,
         obs: hpd.Obs,
         name: Optional[str] = None,
         kind: Optional[str] = None,
@@ -173,7 +174,7 @@ class HydroPandasExtension:
             )
 
         # gather metadata from obs object
-        metadata = {key: getattr(obs, key) for key in obs._metadata}
+        metadata = {key: getattr(obs, key) for key in obs._metadata}  # noqa: SLF001
 
         # convert np dtypes to builtins
         for k, v in metadata.items():
@@ -200,7 +201,9 @@ class HydroPandasExtension:
             action_msg = "added to"
 
         if libname == "oseries":
-            self._store.upsert_oseries(o.squeeze(axis=1), name, metadata=metadata)
+            self._store.upsert_oseries(
+                o.squeeze(axis=1), name, metadata=metadata, force=True
+            )
             logger.info(
                 "%sobservation '%s' %s oseries library.", source, name, action_msg
             )
@@ -208,7 +211,11 @@ class HydroPandasExtension:
             if kind is None:
                 raise ValueError("`kind` must be specified for stresses!")
             self._store.upsert_stress(
-                (o * unit_multiplier).squeeze(axis=1), name, kind, metadata=metadata
+                (o * unit_multiplier).squeeze(axis=1),
+                name,
+                kind,
+                metadata=metadata,
+                force=True,
             )
             logger.info(
                 "%sstress '%s' (kind='%s') %s stresses library.",
@@ -242,10 +249,10 @@ class HydroPandasExtension:
             tmintmax = self._store.get_tmin_tmax(
                 "oseries", names=[oseries] if oseries else None
             )
-        if tmin is None:
-            tmin = tmintmax.loc[:, "tmin"].min() - Timedelta(days=10 * 365)
-        if tmax is None:
-            tmax = tmintmax.loc[:, "tmax"].max()
+            if tmin is None:
+                tmin = tmintmax.loc[:, "tmin"].min() - Timedelta(days=10 * 365)
+            if tmax is None:
+                tmax = tmintmax.loc[:, "tmax"].max()
         return tmin, tmax
 
     @staticmethod
@@ -263,12 +270,13 @@ class HydroPandasExtension:
             observation series with normalized datetime index
         """
         if isinstance(obs, hpd.Obs):
-            metadata = {k: getattr(obs, k) for k in obs._metadata}
+            metadata = {k: getattr(obs, k) for k in obs._metadata}  # noqa: SLF001
         else:
             metadata = {}
         return obs.__class__(
             timestep_weighted_resample(
-                obs,
+                # force series, see https://github.com/pastas/pastas/issues/1020
+                obs.squeeze(),
                 obs.index.normalize(),
             ).rename(obs.name),
             **metadata,
@@ -585,6 +593,17 @@ class HydroPandasExtension:
     ):
         """Update meteorological data from KNMI in PastaStore.
 
+        Warning
+        -------
+        When fill_missing_obs is True, time series will be filled with observations
+        from nearest stations with data. If certain stations are generally more up to
+        date than others, this can lead to time series being permanently filled with
+        data from another station. To overwrite these filled values with data from the
+        actual station in a subsequent update, ensure that tmin is set to a date prior
+        to the first update call, or to be very safe, set tmin to the beginning of the
+        time series. This will force re-downloading of all data from the actual
+        station.
+
         Parameters
         ----------
         names : list of str, optional
@@ -596,7 +615,7 @@ class HydroPandasExtension:
             end time, by default None, which defaults to today
         fill_missing_obs : bool, optional
             if True, fill missing observations by getting observations from nearest
-            station with data.
+            station with data. Default is True.
         normalize_datetime_index : bool, optional
             if True, normalize the datetime so stress value at midnight represents
             the daily total, by default True.
@@ -625,7 +644,7 @@ class HydroPandasExtension:
 
         if tmax is not None:
             if tmintmax["tmax"].min() >= Timestamp(tmax):
-                logger.info(f"All KNMI stresses are up to date till {tmax}.")
+                logger.info("All KNMI stresses are up to date till %s.", tmax)
                 return
 
         try:
@@ -639,7 +658,7 @@ class HydroPandasExtension:
             maxtmax_rd = maxtmax_ev24 = Timestamp.today() - Timedelta(days=28)
             logger.info(
                 "Using 28 days (4 weeks) prior to today as maxtmax: %s."
-                % str(maxtmax_rd)
+                % maxtmax_rd.strftime("%Y-%m-%d")
             )
 
         for name in tqdm(names, desc="Updating KNMI meteo stresses"):
@@ -671,11 +690,14 @@ class HydroPandasExtension:
             # fix for duplicate station entry in metadata:
             stress_station = (
                 self._store.stresses.at[name, "station"]
-                if "station" in self._store.stresses.columns
+                if (
+                    "station" in self._store.stresses.columns
+                    and np.isfinite(self._store.stresses.at[name, "station"])
+                )
                 else None
             )
             if stress_station is not None and not isinstance(
-                stress_station, (int, np.integer)
+                stress_station, (int, np.integer, float)
             ):
                 stress_station = stress_station.squeeze().unique().item()
 
@@ -700,7 +722,7 @@ class HydroPandasExtension:
             elif unit == "mm":
                 unit_multiplier = 1e3
             elif unit.count("m") == 1 and unit.endswith("m"):
-                unit_multiplier = float(unit.replace("m", ""))
+                unit_multiplier = float(unit.replace("m", "").replace("*", ""))
             else:
                 unit_multiplier = 1.0
                 logger.warning(

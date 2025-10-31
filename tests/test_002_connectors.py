@@ -73,7 +73,7 @@ def test_add_get_dataframe(request, conn):
     o1.index.name = "test_idx"
     conn.add_oseries(o1, "test_df", metadata=None)
     o2 = conn.get_oseries("test_df")
-    # little hack as PasConnector does preserve DataFrames after load...
+    # PasConnector does not preserve DataFrames after load, so convert if needed.
     if conn.conn_type == "pas":
         o2 = o2.to_frame()
     try:
@@ -93,8 +93,27 @@ def test_add_pastas_timeseries(request, conn):
     ts = ps.timeseries.TimeSeries(o1, metadata={"x": 100000.0, "y": 400000.0})
     try:
         conn.add_oseries(ts, "test_pastas_ts", metadata=None)
-    except DeprecationWarning:
+    except TypeError:
         pass
+
+
+def test_add_series_illegal_filename(request, conn):
+    o1 = pd.Series(
+        index=pd.date_range("2000", periods=10, freq="D"),
+        data=0.0,
+    )
+    o1.name = r"test\series/illegal_chars"
+    conn.add_oseries(o1, o1.name, metadata=None)
+    o2 = conn.get_oseries("testseriesillegal_chars")
+    try:
+        assert isinstance(o2, pd.Series)
+        assert o1.equals(o2)
+    finally:
+        conn.del_oseries("testseriesillegal_chars")
+
+    if conn.conn_type == "pas":
+        with pytest.raises(ValueError, match="cannot end with '_meta'"):
+            conn.add_oseries(o1, "illegal_meta", metadata=None)
 
 
 def test_update_series(request, conn):
@@ -281,10 +300,28 @@ def test_empty_library(request, conn):
 
 @pytest.mark.dependency
 def test_delete(request, conn):
-    # no need to delete dictconnector (in memory)
+    # No need to delete dictconnector (in memory)
     if conn.conn_type == "arcticdb":
         pst.util.delete_arcticdb_connector(conn, libraries=["oseries"])
         pst.util.delete_arcticdb_connector(conn)
     elif conn.conn_type == "pas":
         pst.util.delete_pas_connector(conn, libraries=["oseries"])
         pst.util.delete_pas_connector(conn)
+
+
+def test_new_connector_in_occupied_dir():
+    conn1 = pst.PasConnector("my_db", "./tests/data/pas")
+    with pytest.raises(
+        ValueError, match=f"Directory '{conn1.name}/' in use by another connector type!"
+    ):
+        pst.ArcticDBConnector("my_db", "lmdb://./tests/data/pas")
+
+    pst.util.delete_pas_connector(conn1)
+
+    conn1 = pst.ArcticDBConnector("my_db", "lmdb://./tests/data/arcticdb")
+    with pytest.raises(
+        ValueError, match=f"Directory '{conn1.name}/' in use by another connector type!"
+    ):
+        pst.PasConnector("my_db", "./tests/data/arcticdb")
+
+    pst.util.delete_arcticdb_connector(conn1)

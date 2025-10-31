@@ -6,10 +6,9 @@ import pastas as ps
 from packaging.version import parse as parse_version
 
 PASTAS_VERSION = parse_version(ps.__version__)
-PASTAS_LEQ_022 = PASTAS_VERSION <= parse_version("0.22.0")
 PASTAS_GEQ_150 = PASTAS_VERSION >= parse_version("1.5.0")
 
-__version__ = "1.10.2"
+__version__ = "1.11.0"
 
 
 def show_versions(optional=False) -> None:

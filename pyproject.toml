@@ -16,7 +16,7 @@ maintainers = [
     { name = "M.A. Vonk", email = "m.vonk@artesia-water.nl" },
 ]
 requires-python = ">= 3.10"
-dependencies = ["pastas>=0.13", "tqdm>=4.36", "pyyaml"]
+dependencies = ["pastas>=0.13", "tqdm>=4.36", "pyyaml", "colorama"]
 
 keywords = ["hydrology", "groundwater", "time series", "analysis", "database"]
 classifiers = [
@@ -47,7 +47,7 @@ documentation = "https://pastastore.readthedocs.io/en/latest/"
 full = ["pastastore[arcticdb,optional]", "hydropandas"]
 extensions = ["hydropandas"]
 optional = ["contextily", "pyproj", "adjustText"]
-arcticdb = ["arcticdb", "protobuf >=3.5.0.post1, < 6"]
+arcticdb = ["arcticdb"]
 lint = ["ruff"]
 pytest = [
     "coverage",
@@ -58,7 +58,6 @@ pytest = [
     "pytest-benchmark",
     "codacy-coverage",
 ]
-test = ["pastastore[arcticdb,lint,optional,pytest]", "hydropandas[full]"]
 docs = [
     "pastastore[optional]",
     "sphinx_rtd_theme",
@@ -67,6 +66,8 @@ docs = [
     "nbsphinx",
     "nbsphinx_link",
 ]
+test = ["pastastore[arcticdb,optional,pytest]", "hydropandas[full]"]
+dev = ["pastastore[test,lint,docs]"]
 
 [tool.setuptools.packages]
 find = {}
@@ -77,8 +78,11 @@ version = { attr = "pastastore.version.__version__" }
 [tool.ruff]
 line-length = 88
 extend-include = ["*.ipynb"]
+show-fixes = true
+fix = true
 
 [tool.ruff.lint]
+extend-select = ["I"]
 # See: https://docs.astral.sh/ruff/rules/
 select = [
     "C4",  # flake8-comprehensions

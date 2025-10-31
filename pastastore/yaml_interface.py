@@ -6,14 +6,13 @@ import os
 import tempfile
 from contextlib import contextmanager
 from copy import deepcopy
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
 import pastas as ps
 import yaml
-
-from pastastore.version import PASTAS_LEQ_022
 
 logger = logging.getLogger(__name__)
 
@@ -38,9 +37,9 @@ def _convert_dict_dtypes_for_yaml(d: Dict[str, Any]):
         elif isinstance(v, datetime.datetime):
             d[k] = pd.to_datetime(v).strftime("%Y-%m-%d %H:%M:%S")
         elif isinstance(v, pd.Timedelta):
-            d[k] = v.to_timedelta64().__str__()
+            d[k] = str(v.to_timedelta64())
         elif isinstance(v, datetime.timedelta):
-            d[k] = pd.to_timedelta(v).to_timedelta64().__str__()
+            d[k] = str(pd.to_timedelta(v).to_timedelta64())
         elif isinstance(v, np.int64):
             d[k] = int(v)
         elif isinstance(v, np.float64):
@@ -109,7 +108,7 @@ def reduce_to_minimal_dict(d, keys=None):
             "stress",
             "prec",
             "evap",
-            "stressmodel" if PASTAS_LEQ_022 else "class",
+            "class",
         ]
 
     # also keep stressmodels by adding names to keys list
@@ -133,7 +132,7 @@ def temporary_yaml_from_str(yaml):
     temp.write(yaml.encode("utf-8"))
     temp.close()
     try:
-        yield temp.name
+        yield Path(temp.name)
     finally:
         os.unlink(temp.name)
 
@@ -230,7 +229,7 @@ class PastastoreYAML:
             else:
                 kind = "prec"
             pnam = self.pstore.get_nearest_stresses(onam, kind=kind).iloc[0, 0]
-            logger.info(f"  | using nearest stress with kind='{kind}': '{pnam}'")
+            logger.info("  | using nearest stress with kind='%s': '%s'", kind, pnam)
             p, pmeta = self.pstore.get_stresses(pnam, return_metadata=True)
             prec = {
                 "name": pnam,
@@ -266,7 +265,7 @@ class PastastoreYAML:
             else:
                 kind = "evap"
             enam = self.pstore.get_nearest_stresses(onam, kind=kind).iloc[0, 0]
-            logger.info(f"  | using nearest stress with kind='{kind}': '{enam}'")
+            logger.info("  | using nearest stress with kind='%s': '%s'", kind, enam)
             e, emeta = self.pstore.get_stresses(enam, return_metadata=True)
             evap = {
                 "name": enam,
@@ -291,11 +290,11 @@ class PastastoreYAML:
         if "rfunc" not in d:
             logger.info("  | no 'rfunc' provided, using 'Exponential'")
         # for pastas >= 0.23.0, convert rfunc value to dictionary with 'class' key
-        elif not isinstance(d["rfunc"], dict) and not PASTAS_LEQ_022:
+        elif not isinstance(d["rfunc"], dict):
             d["rfunc"] = {"class": d["rfunc"]}
 
         # stressmodel
-        classkey = "stressmodel" if PASTAS_LEQ_022 else "class"
+        classkey = "class"
         if classkey not in d:
             d[classkey] = "RechargeModel"
 
@@ -303,7 +302,7 @@ class PastastoreYAML:
         if ("recharge" not in d) and (d[classkey] == "RechargeModel"):
             logger.info("  | no 'recharge' type provided, using 'Linear'")
         # if pastas >= 0.23.0, recharge value must be dict with class key
-        elif not isinstance(d["recharge"], dict) and not PASTAS_LEQ_022:
+        elif not isinstance(d["recharge"], dict):
             d["recharge"] = {"class": d["recharge"]}
 
         # tarsomodel logic
@@ -314,7 +313,8 @@ class PastastoreYAML:
             if ((dmin is None) or (dmax is None)) and (oseries is None):
                 logger.info(
                     "  | no 'dmin/dmax' or 'oseries' provided,"
-                    f" filling in 'oseries': '{onam}'"
+                    " filling in 'oseries': '%s'",
+                    onam,
                 )
                 d["oseries"] = onam
 
@@ -365,7 +365,7 @@ class PastastoreYAML:
                 snam = self.pstore.get_nearest_oseries(onam).iloc[0, 0]
             else:
                 snam = self.pstore.get_nearest_stresses(onam, kind=kind).iloc[0, 0]
-            logger.info(f"  | using nearest stress with kind='{kind}': {snam}")
+            logger.info("  | using nearest stress with kind='%s': %s", kind, snam)
 
         s, smeta = self.pstore.get_stresses(snam, return_metadata=True)
         s = {
@@ -374,7 +374,7 @@ class PastastoreYAML:
             "metadata": smeta,
             "series": s.squeeze(),
         }
-        d["stress"] = [s] if PASTAS_LEQ_022 else s
+        d["stress"] = s
 
         # use stress name if not provided
         if "name" not in d:
@@ -383,9 +383,9 @@ class PastastoreYAML:
         # rfunc
         if "rfunc" not in d:
             logger.info("  | no 'rfunc' provided, using 'Gamma'")
-            d["rfunc"] = "Gamma" if PASTAS_LEQ_022 else {"class": "Gamma"}
+            d["rfunc"] = {"class": "Gamma"}
         # for pastas >= 0.23.0, convert rfunc value to dictionary with 'class' key
-        elif not isinstance(d["rfunc"], dict) and not PASTAS_LEQ_022:
+        elif not isinstance(d["rfunc"], dict):
             d["rfunc"] = {"class": d["rfunc"]}
 
         return d
@@ -441,7 +441,10 @@ class PastastoreYAML:
                     .values
                 )
                 logger.info(
-                    f"  | using {n} nearest stress(es) with kind='{kind}': {snames}"
+                    "  | using %d nearest stress(es) with kind='%s': %s",
+                    n,
+                    kind,
+                    snames,
                 )
             else:
                 snames = [snames]
@@ -472,11 +475,9 @@ class PastastoreYAML:
         # rfunc
         if "rfunc" not in d:
             logger.info("  | no 'rfunc' provided, using 'HantushWellModel'")
-            d["rfunc"] = (
-                "HantushWellModel" if PASTAS_LEQ_022 else {"class": "HantushWellModel"}
-            )
+            d["rfunc"] = {"class": "HantushWellModel"}
         # for pastas >= 0.23.0, convert rfunc value to dictionary with 'class' key
-        elif not isinstance(d["rfunc"], dict) and not PASTAS_LEQ_022:
+        elif not isinstance(d["rfunc"], dict):
             d["rfunc"] = {"class": d["rfunc"]}
 
         if "up" not in d:
@@ -510,7 +511,7 @@ class PastastoreYAML:
         else:
             onam = str(mlyml.pop("oseries"))
 
-        logger.info(f"Building model '{mlnam}' for oseries '{onam}'")
+        logger.info("Building model '%s' for oseries '%s'", mlnam, onam)
         o, ometa = self.pstore.get_oseries(onam, return_metadata=True)
 
         # create model to obtain default model settings
@@ -528,14 +529,11 @@ class PastastoreYAML:
                 name = smyml.get("name", smnam)
             else:
                 name = smnam
-            logger.info(f"| parsing stressmodel: '{name}'")
+            logger.info("| parsing stressmodel: '%s'", name)
 
             # check whether smtyp is defined
-            classkey = "stressmodel" if PASTAS_LEQ_022 else "class"
+            classkey = "class"
             if smyml is not None:
-                if PASTAS_LEQ_022:
-                    if "class" in smyml:
-                        smyml["stressmodel"] = smyml.pop("class")
                 if classkey in smyml:
                     smtyp = True
                 else:
@@ -637,10 +635,10 @@ class PastastoreYAML:
         """
         if "\n" in fyaml or "\r" in fyaml:
             with temporary_yaml_from_str(fyaml) as fyaml:
-                with open(fyaml, "r") as f:
+                with fyaml.open("r", encoding="utf-8") as f:
                     yml = yaml.load(f, Loader=yaml.CFullLoader)
-        elif os.path.exists(fyaml):
-            with open(fyaml, "r") as f:
+        elif Path(fyaml).exists():
+            with Path(fyaml).open("r", encoding="utf-8") as f:
                 yml = yaml.load(f, Loader=yaml.CFullLoader)
         else:
             raise ValueError(
@@ -655,8 +653,8 @@ class PastastoreYAML:
 
             mldict = self.construct_mldict(mlyml, mlnam)
 
-            # load model
-            ml = ps.io.base._load_model(mldict)
+            # Use pastas' internal _load_model - required for model reconstruction
+            ml = ps.io.base._load_model(mldict)  # noqa: SLF001
             models.append(ml)
 
         return models
@@ -664,7 +662,7 @@ class PastastoreYAML:
     def export_stored_models_per_oseries(
         self,
         oseries: Optional[Union[List[str], str]] = None,
-        outdir: Optional[str] = ".",
+        outdir: Optional[Path | str] = ".",
         minimal_yaml: Optional[bool] = False,
         use_nearest: Optional[bool] = False,
     ):
@@ -690,7 +688,7 @@ class PastastoreYAML:
             the time series are actually the nearest ones! Only used
             when minimal_yaml=True. Default is False.
         """
-        onames = self.pstore.conn._parse_names(oseries, "oseries")
+        onames = self.pstore.conn.parse_names(oseries, "oseries")
 
         for onam in onames:
             try:
@@ -716,7 +714,7 @@ class PastastoreYAML:
                 name = d.pop("name")
                 model_dicts[name] = d
 
-            with open(os.path.join(outdir, f"{onam}.yaml"), "w") as f:
+            with (Path(outdir) / f"{onam}.yaml").open("w", encoding="utf-8") as f:
                 yaml.dump(model_dicts, f, Dumper=yaml.CDumper)
 
     def export_models(
@@ -758,7 +756,7 @@ class PastastoreYAML:
             filename for YAML file, only used if `split=False`
         """
         if models is None:
-            modelnames = self.pstore.conn._parse_names(modelnames, "models")
+            modelnames = self.pstore.conn.parse_names(modelnames, "models")
             model_list = self.pstore.get_models(
                 modelnames, return_dict=True, squeeze=False
             )
@@ -783,13 +781,13 @@ class PastastoreYAML:
                 name = d.pop("name")
                 model_dicts[name] = d
 
-            with open(os.path.join(outdir, filename), "w") as f:
+            with (Path(outdir) / filename).open("w", encoding="utf-8") as f:
                 yaml.dump(model_dicts, f, Dumper=yaml.CDumper)
 
     @staticmethod
     def export_model(
         ml: Union[ps.Model, dict],
-        outdir: Optional[str] = ".",
+        outdir: Optional[Path | str] = ".",
         minimal_yaml: Optional[bool] = False,
         use_nearest: Optional[bool] = False,
     ):
@@ -816,7 +814,7 @@ class PastastoreYAML:
             name = ml["name"]
         else:
             name = ml.name
-        with open(os.path.join(outdir, f"{name}.yaml"), "w") as f:
+        with (Path(outdir) / f"{name}.yaml").open("w", encoding="utf-8") as f:
             if isinstance(ml, ps.Model):
                 mldict = deepcopy(ml.to_dict(series=False))
             elif isinstance(ml, dict):

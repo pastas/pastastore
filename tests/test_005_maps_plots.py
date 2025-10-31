@@ -64,6 +64,18 @@ def test_map_models(request, pstore):
 
 
 @pytest.mark.dependency
+def test_map_signatures(request, pstore):
+    ax = pstore.maps.signature("mean_annual_maximum")
+    plt.close(ax.figure)
+
+
+@pytest.mark.dependency
+def test_map_modelparam(request, pstore):
+    ax = pstore.maps.modelparam("recharge_A")
+    plt.close(ax.figure)
+
+
+@pytest.mark.dependency
 def test_map_model(request, pstore):
     depends(request, [f"test_map_models[{pstore.type}]"])
     ax = pstore.maps.model("oseries1")

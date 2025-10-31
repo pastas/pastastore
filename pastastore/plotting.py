@@ -15,6 +15,9 @@ follows::
     pstore.maps.add_background_map(ax)  # for adding a background map
 """
 
+import logging
+import warnings
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -24,6 +27,8 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import BoundaryNorm, LogNorm
 from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+logger = logging.getLogger(__name__)
 
 
 class Plots:
@@ -101,7 +106,7 @@ class Plots:
             split=True is only supported if there are less than 20 time series
             to plot.
         """
-        names = self.pstore.conn._parse_names(names, libname)
+        names = self.pstore.conn.parse_names(names, libname)
 
         if len(names) > 20 and split:
             raise ValueError(
@@ -116,7 +121,7 @@ class Plots:
         else:
             axes = ax
 
-        tsdict = self.pstore.conn._get_series(
+        tsdict = self.pstore.conn._get_series(  # noqa: SLF001
             libname, names, progressbar=progressbar, squeeze=False
         )
         for i, (n, ts) in enumerate(tsdict.items()):
@@ -236,7 +241,7 @@ class Plots:
         ax : matplotlib.Axes
             axes handle
         """
-        names = self.pstore.conn._parse_names(names, "stresses")
+        names = self.pstore.conn.parse_names(names, "stresses")
         masknames = self.pstore.stresses.index.isin(names)
         stresses = self.pstore.stresses.loc[masknames]
 
@@ -315,7 +320,7 @@ class Plots:
         ax : matplotlib Axes
             The axes in which the data-availability is plotted
         """
-        names = self.pstore.conn._parse_names(names, libname)
+        names = self.pstore.conn.parse_names(names, libname)
 
         if libname == "stresses":
             masknames = self.pstore.stresses.index.isin(names)
@@ -324,7 +329,7 @@ class Plots:
                 mask = stresses["kind"] == kind
                 names = stresses.loc[mask].index.to_list()
 
-        series = self.pstore.conn._get_series(
+        series = self.pstore.conn._get_series(  # noqa: SLF001
             libname, names, progressbar=progressbar, squeeze=False
         ).values()
 
@@ -434,6 +439,7 @@ class Plots:
         cmap = plt.get_cmap(cmap, 256)
         cmap.set_over((1.0, 1.0, 1.0))
 
+        pc = None
         for i, s in enumerate(series):
             if not s.empty:
                 if dropna:
@@ -450,10 +456,14 @@ class Plots:
 
         # make a colorbar in an ax on the
         # right side, then set the current axes to ax again
-        cb = fig.colorbar(pc, ax=ax, cax=cax, extend="both")
-        cb.set_ticks(bounds)
-        cb.ax.set_yticklabels(labels)
-        cb.ax.minorticks_off()
+        if pc is not None:
+            cb = fig.colorbar(pc, ax=ax, cax=cax, extend="both")
+            cb.set_ticks(bounds)
+            cb.ax.set_yticklabels(labels)
+            cb.ax.minorticks_off()
+        else:
+            # nothing was plotted; skip colorbar to avoid UnboundLocalError
+            cb = None
 
         if set_yticks:
             ax.set_yticks(np.arange(0.5, len(series) + 0.5), minor=False)
@@ -600,6 +610,8 @@ class Plots:
         elif len(np.unique(onames)) > 1:
             names = modelnames
         cm = ps.CompareModels(models, names=names)
+        if ax is not None:
+            kwargs.setdefault("ax", ax)
         cm.plot(**kwargs)
         return cm
 
@@ -684,7 +696,7 @@ class Maps:
         --------
         self.add_background_map
         """
-        names = self.pstore.conn._parse_names(names, "stresses")
+        names = self.pstore.conn.parse_names(names, "stresses")
         if extent is not None:
             names = self.pstore.within(extent, names=names, libname="stresses")
         df = self.pstore.stresses.loc[names]
@@ -707,7 +719,7 @@ class Maps:
             kind_to_color = {k: f"C{i}" for i, k in enumerate(c.unique())}
             c = c.apply(lambda k: kind_to_color[k])
 
-        r = self._plotmap_dataframe(stresses.loc[mask0], c=c, figsize=figsize, **kwargs)
+        r = self.dataframe_scatter(stresses.loc[mask0], c=c, figsize=figsize, **kwargs)
         if "ax" in kwargs:
             ax = kwargs.pop("ax")
         else:
@@ -768,12 +780,12 @@ class Maps:
         --------
         self.add_background_map
         """
-        names = self.pstore.conn._parse_names(names, "oseries")
+        names = self.pstore.conn.parse_names(names, "oseries")
         if extent is not None:
             names = self.pstore.within(extent, names=names)
         oseries = self.pstore.oseries.loc[names]
         mask0 = (oseries["x"] != 0.0) | (oseries["y"] != 0.0)
-        r = self._plotmap_dataframe(oseries.loc[mask0], figsize=figsize, **kwargs)
+        r = self.dataframe_scatter(oseries.loc[mask0], figsize=figsize, **kwargs)
         if "ax" in kwargs:
             ax = kwargs["ax"]
         else:
@@ -829,7 +841,7 @@ class Maps:
 
         # mask out 0.0 coordinates
         mask0 = (models["x"] != 0.0) | (models["y"] != 0.0)
-        r = self._plotmap_dataframe(models.loc[mask0], figsize=figsize, **kwargs)
+        r = self.dataframe_scatter(models.loc[mask0], figsize=figsize, **kwargs)
         if "ax" in kwargs:
             ax = kwargs["ax"]
         else:
@@ -842,7 +854,7 @@ class Maps:
 
         return ax
 
-    def _map_helper(
+    def dataframe(
         self,
         df,
         column,
@@ -856,7 +868,7 @@ class Maps:
         backgroundmap=False,
         **kwargs,
     ):
-        """Help function for plotting values on map.
+        """Plot dataframe on a map.
 
         Parameters
         ----------
@@ -905,11 +917,12 @@ class Maps:
         }
         scatter_kwargs.update(kwargs)
 
-        ax = self._plotmap_dataframe(
+        ax = self.dataframe_scatter(
             df, column=column, figsize=figsize, **scatter_kwargs
         )
         if label:
-            df.set_index("index", inplace=True)
+            if "index" in df:
+                df.set_index("index", inplace=True)
             self.add_labels(df, ax, adjust=adjust)
 
         if backgroundmap:
@@ -982,7 +995,7 @@ class Maps:
         statsdf = statsdf.reset_index().set_index("oseries")
         df = statsdf.join(self.pstore.oseries, how="left")
 
-        return self._map_helper(
+        return self.dataframe(
             df,
             column=statistic,
             label=label,
@@ -999,6 +1012,7 @@ class Maps:
     def modelparam(
         self,
         parameter,
+        param_value="optimal",
         modelnames=None,
         label=True,
         adjust=False,
@@ -1017,6 +1031,9 @@ class Maps:
         ----------
         parameter: str
             name of the parameter, e.g. "rech_A" or "river_a"
+        param_value: str, optional
+            which parameter value to plot, by default "optimal", other options
+            are "initial", "pmin", "pmax"
         modelnames : list of str, optional
             list of modelnames to include
         label: bool, optional
@@ -1052,6 +1069,7 @@ class Maps:
         """
         paramdf = self.pstore.get_parameters(
             [parameter],
+            param_value=param_value,
             modelnames=modelnames,
             progressbar=progressbar,
             ignore_errors=True,
@@ -1064,7 +1082,7 @@ class Maps:
         paramdf = paramdf.reset_index().set_index("oseries")
         df = paramdf.join(self.pstore.oseries, how="left")
 
-        return self._map_helper(
+        return self.dataframe(
             df,
             column=parameter,
             label=label,
@@ -1133,14 +1151,14 @@ class Maps:
         self.add_background_map
         """
         signature_df = self.pstore.get_signatures(
-            [signature],
             names=names,
+            signatures=[signature],
             progressbar=progressbar,
             ignore_errors=True,
-        )
+        ).transpose()
         df = signature_df.join(self.pstore.oseries, how="left")
 
-        return self._map_helper(
+        return self.dataframe(
             df,
             column=signature,
             label=label,
@@ -1154,8 +1172,17 @@ class Maps:
             **kwargs,
         )
 
+    def _plotmap_dataframe(self, *args, **kwargs):
+        """Deprecated, use dataframe method."""  # noqa: D401
+        warnings.warn(
+            "maps._plotmap_dataframe is deprecated, use maps.dataframe_scatter instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.dataframe_scatter(*args, **kwargs)
+
     @staticmethod
-    def _plotmap_dataframe(
+    def dataframe_scatter(
         df,
         x="x",
         y="y",
@@ -1165,9 +1192,7 @@ class Maps:
         figsize=(10, 8),
         **kwargs,
     ):
-        """Plot dataframe with point locations (internal method).
-
-        Can be called directly for more control over plot characteristics.
+        """Plot dataframe.
 
         Parameters
         ----------
@@ -1310,10 +1335,12 @@ class Maps:
                         "metadata_source must be either 'model' or 'store'!"
                     )
                 if np.isnan(xi) or np.isnan(yi):
-                    print(f"No x,y-data for {istress.name}!")
+                    logger.warning("No x,y-data for %s!", istress.name)
                     continue
                 if xi == 0.0 or yi == 0.0:
-                    print(f"x,y-data is 0.0 for {istress.name}, not plotting!")
+                    logger.warning(
+                        "x,y-data is 0.0 for %s, not plotting!", istress.name
+                    )
                     continue
 
                 stresses.loc[istress.name, :] = (xi, yi, name, f"C{count % 10}")
@@ -1476,7 +1503,7 @@ class Maps:
             m_idx = self.pstore.search(libname="models", s=model_names)
         else:
             m_idx = self.pstore.model_names
-        struct = self.pstore.get_model_timeseries_names(progressbar=False).loc[m_idx]
+        struct = self.pstore.get_model_time_series_names(progressbar=False).loc[m_idx]
 
         oseries = self.pstore.oseries
         stresses = self.pstore.stresses
@@ -1614,23 +1641,27 @@ class Maps:
         ctx.add_basemap(ax, source=providers[map_provider], crs=proj.srs, **kwargs)
 
     @staticmethod
-    def add_labels(df, ax, adjust=False, objects=None, **kwargs):
+    def add_labels(
+        df, ax, adjust=False, objects=None, adjust_text_kwargs=None, **kwargs
+    ):
         """Add labels to points on plot.
 
         Uses dataframe index to label points.
 
         Parameters
         ----------
-        df: pd.DataFrame
+        df : pd.DataFrame
             DataFrame containing x, y - data. Index is used as label
-        ax: matplotlib.Axes
+        ax : matplotlib.Axes
             axes object to label points on
-        adjust: bool
+        adjust : bool
             automated smart label placement using adjustText
         objects : list of matplotlib objects
             use to avoid labels overlapping markers
-        **kwargs:
-            keyword arguments to ax.annotate or adjusttext
+        adjust_text_kwargs
+            keyword arguments to adjust_text function, only used if adjust=True
+        **kwargs
+            keyword arguments to ax.annotate or ax.text
         """
         stroke = [patheffects.withStroke(linewidth=3, foreground="w")]
         fontsize = kwargs.pop("fontsize", 10)
@@ -1647,14 +1678,15 @@ class Maps:
                         name,
                         fontsize=fontsize,
                         **{"path_effects": stroke},
+                        **kwargs,
                     )
                 )
-
+            if adjust_text_kwargs is None:
+                adjust_text_kwargs = {}
             adjust_text(
                 texts,
                 objects=objects,
                 force_text=(0.05, 0.10),
-                **kwargs,
                 **{
                     "arrowprops": {
                         "arrowstyle": "-",
@@ -1662,6 +1694,7 @@ class Maps:
                         "alpha": 0.5,
                     }
                 },
+                **adjust_text_kwargs,
             )
 
         else:
