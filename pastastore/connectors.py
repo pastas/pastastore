@@ -872,4 +872,3 @@ class PasConnector(BaseConnector, ParallelUtil):
         """
         lib = self._get_library(libname)
         return [i.stem for i in lib.glob("*.pas") if not i.stem.endswith("_meta")]
-
