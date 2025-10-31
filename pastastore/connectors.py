@@ -698,6 +698,11 @@ class PasConnector(BaseConnector, ParallelUtil):
             item = item.to_frame()
         if isinstance(item, pd.DataFrame):
             sjson = item.to_json(orient="columns")
+            if name.endswith("_meta"):
+                raise ValueError(
+                    "Time series name cannot end with '_meta'. "
+                    "Please use a different name for your time series."
+                )
             fname = lib / f"{name}.pas"
             with fname.open("w", encoding="utf-8") as f:
                 f.write(sjson)
@@ -866,4 +871,5 @@ class PasConnector(BaseConnector, ParallelUtil):
             list of symbols in the library
         """
         lib = self._get_library(libname)
-        return [i.stem for i in lib.glob("*.pas") if "_meta" not in i.stem]
+        return [i.stem for i in lib.glob("*.pas") if not i.stem.endswith("_meta")]
+

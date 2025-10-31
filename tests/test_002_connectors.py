@@ -111,6 +111,10 @@ def test_add_series_illegal_filename(request, conn):
     finally:
         conn.del_oseries("testseriesillegal_chars")
 
+    if conn.conn_type == "pas":
+        with pytest.raises(ValueError, match="cannot end with '_meta'"):
+            conn.add_oseries(o1, "illegal_meta", metadata=None)
+
 
 def test_update_series(request, conn):
     o1 = pd.DataFrame(
