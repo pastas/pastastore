@@ -108,7 +108,7 @@ class ConnectorUtil:
         if len(metalist) > 1:
             meta = pd.DataFrame(metalist)
             if len({"x", "y"}.difference(meta.columns)) == 0:
-                meta["x"] = meta["x"].astype(float)
+                meta["x"] = meta["x"]
                 meta["y"] = meta["y"].astype(float)
         elif len(metalist) == 1:
             meta = pd.DataFrame(metalist)
