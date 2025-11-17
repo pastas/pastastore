@@ -160,6 +160,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         except ModuleNotFoundError as e:
             logger.error("Please install arcticdb with `pip install arcticdb`!")
             raise e
+        # set shared memory flags for parallel processing
         super().__init__()
         self.uri = uri
         self.name = name
@@ -174,7 +175,10 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         self.models = ModelAccessor(self)
         # for older versions of PastaStore, if oseries_models library is empty
         # populate oseries - models database
-        self._update_time_series_model_links()
+        if (self.n_models > 0) and (
+            len(self.oseries_models) == 0 or len(self.stresses_models) == 0
+        ):
+            self._update_time_series_model_links()
         # write pstore file to store database info that can be used to load pstore
         if "lmdb" in self.uri:
             self.write_pstore_config_file()
@@ -447,7 +451,10 @@ class DictConnector(BaseConnector, ParallelUtil):
         self.models = ModelAccessor(self)
         # for older versions of PastaStore, if oseries_models library is empty
         # populate oseries - models database
-        self._update_time_series_model_links()
+        if (self.n_models > 0) and (
+            len(self.oseries_models) == 0 or len(self.stresses_models) == 0
+        ):
+            self._update_time_series_model_links()
 
     def _get_library(self, libname: AllLibs):
         """Get reference to dictionary holding data.
@@ -607,7 +614,8 @@ class PasConnector(BaseConnector, ParallelUtil):
         verbose : bool, optional
             whether to print message when database is initialized, by default True
         """
-        # super().__init__()
+        # set shared memory flags for parallel processing
+        super().__init__()
         self.name = name
         self.parentdir = Path(path)
         self.path = (self.parentdir / self.name).absolute()
@@ -615,9 +623,13 @@ class PasConnector(BaseConnector, ParallelUtil):
         self._validator = Validator(self)
         self._initialize(verbose=verbose)
         self.models = ModelAccessor(self)
+
         # for older versions of PastaStore, if oseries_models library is empty
         # populate oseries_models library
-        self._update_time_series_model_links()
+        if (self.n_models > 0) and (
+            len(self.oseries_models) == 0 or len(self.stresses_models) == 0
+        ):
+            self._update_time_series_model_links()
         # write pstore file to store database info that can be used to load pstore
         self._write_pstore_config_file()
 

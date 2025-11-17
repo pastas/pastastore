@@ -1804,6 +1804,17 @@ class PastaStore:
                 chunksize=None,
                 desc=f"Computing {func.__name__} (parallel)",
             )
+            # update links if models were stored using parallel_safe=True
+            if (
+                self.conn._oseries_links_need_update.value
+                or self.conn._stresses_links_need_update.value
+            ):
+                # reset values to False and do recompute
+                self.conn._oseries_links_need_update.value = False
+                self.conn._stresses_links_need_update.value = False
+                self.conn._update_time_series_model_links(
+                    recompute=True, progressbar=progressbar
+                )
         else:
             result = []
             for n in tqdm(

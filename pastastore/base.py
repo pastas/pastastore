@@ -9,6 +9,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from itertools import chain
+from multiprocessing import Manager
 from random import choice
 
 # import weakref
@@ -250,6 +251,44 @@ class BaseConnector(ABC, ConnectorUtil):
     _conn_type: Optional[str] = None
     _validator: Optional[Validator] = None
     name = None
+
+    def __init__(self):
+        # set shared memory manager flags for parallel operations
+        # NOTE: there is no stored reference to manager object, meaning
+        # that it cannot be properly shutdown. We let the Python garbage collector
+        # do this, but the downside is there are potentially some background processes
+        # that continue to run.
+        mgr = Manager()
+        self._oseries_links_need_update = mgr.Value(
+            "_oseries_links_need_update",
+            False,
+        )
+        self._stresses_links_need_update = mgr.Value(
+            "_stresses_links_need_update",
+            False,
+        )
+
+    def __getstate__(self):
+        """Replace Manager proxies with simple values for pickling.
+
+        Manager proxies cannot be pickled, so we convert them to simple booleans.
+        This allows connectors to be pickled for multiprocessing.
+        """
+        state = self.__dict__.copy()
+        # Replace unpicklable Manager proxies with their values
+        state["_oseries_links_need_update"] = self._oseries_links_need_update.value
+        state["_stresses_links_need_update"] = self._stresses_links_need_update.value
+        return state
+
+    def __setstate__(self, state):
+        """Replace Manager proxies with simple booleans after unpickling.
+
+        After unpickling, use simple booleans instead of recreating Manager.
+        This works because worker processes don't need shared memory - they
+        work on independent copies of the connector.
+        """
+        self.__dict__.update(state)
+        # Flags are already simple booleans from __getstate__
 
     def __repr__(self):
         """Representation string of the object."""
@@ -552,6 +591,23 @@ class BaseConnector(ABC, ConnectorUtil):
             dictionary with oseries names as keys and list of model names as
             values
         """
+        # Check if links need updating (e.g., after parallel_safe add_model calls)
+        # Handle both Manager proxies (main) and booleans (worker after pickle)
+        needs_update = (
+            self._oseries_links_need_update.value
+            if hasattr(self._oseries_links_need_update, "value")
+            else self._oseries_links_need_update
+        )
+        if needs_update:
+            # Set BOTH flags to False BEFORE updating to prevent recursion
+            # (update always recomputes both oseries and stresses links)
+            if hasattr(self._oseries_links_need_update, "value"):
+                self._oseries_links_need_update.value = False
+                self._stresses_links_need_update.value = False
+            else:
+                self._oseries_links_need_update = False
+                self._stresses_links_need_update = False
+            self._update_time_series_model_links()
         d = {}
         for onam in self.oseries_with_models:
             d[onam] = self._get_item("oseries_models", onam)
@@ -568,6 +624,23 @@ class BaseConnector(ABC, ConnectorUtil):
             dictionary with stress names as keys and list of model names as
             values
         """
+        # Check if links need updating (e.g., after parallel_safe add_model calls)
+        # Handle both Manager proxies (main) and booleans (worker after pickle)
+        needs_update = (
+            self._stresses_links_need_update.value
+            if hasattr(self._stresses_links_need_update, "value")
+            else self._stresses_links_need_update
+        )
+        if needs_update:
+            # Set BOTH flags to False BEFORE updating to prevent recursion
+            # (update always recomputes both oseries and stresses links)
+            if hasattr(self._oseries_links_need_update, "value"):
+                self._oseries_links_need_update.value = False
+                self._stresses_links_need_update.value = False
+            else:
+                self._oseries_links_need_update = False
+                self._stresses_links_need_update = False
+            self._update_time_series_model_links()
         d = {}
         for stress_name in self.stresses_with_models:
             d[stress_name] = self._get_item("stresses_models", stress_name)
@@ -847,6 +920,7 @@ class BaseConnector(ABC, ConnectorUtil):
         ml: Union[ps.Model, dict],
         overwrite: bool = False,
         validate_metadata: bool = False,
+        parallel_safe: bool = False,
     ) -> None:
         """Add model to the database.
 
@@ -858,6 +932,9 @@ class BaseConnector(ABC, ConnectorUtil):
             if True, overwrite existing model, by default False
         validate_metadata, bool optional
             remove unsupported characters from metadata dictionary keys
+        parallel_safe : bool, optional
+            if True, make sure adding the model is parallel safe by avoiding
+            adding the model name to the oseries_models and stresses_models lists.
 
         Raises
         ------
@@ -891,8 +968,23 @@ class BaseConnector(ABC, ConnectorUtil):
             # write model to store
             self._add_item("models", mldict, name, metadata=metadata)
             self._clear_cache("_modelnames_cache")
-            self._add_oseries_model_links(str(mldict["oseries"]["name"]), name)
-            self._add_stresses_model_links(self._get_model_stress_names(mldict), name)
+            if not parallel_safe:
+                self._add_oseries_model_links(str(mldict["oseries"]["name"]), name)
+                self._add_stresses_model_links(
+                    self._get_model_stress_names(mldict), name
+                )
+            else:
+                # avoid updating links in parallel safe mode but indicate
+                # that these links need updating and clear existing caches
+                # Handle both Manager proxies and booleans
+                if hasattr(self._oseries_links_need_update, "value"):
+                    self._oseries_links_need_update.value = True
+                    self._stresses_links_need_update.value = True
+                else:
+                    self._oseries_links_need_update = True
+                    self._stresses_links_need_update = True
+                self._clear_cache("oseries_models")
+                self._clear_cache("stresses_models")
         else:
             raise ItemInLibraryException(
                 f"Model with name '{name}' already in 'models' library! "
@@ -1583,7 +1675,10 @@ class BaseConnector(ABC, ConnectorUtil):
             yield self.get_models(mlnam, return_dict=return_dict, progressbar=False)
 
     def _add_oseries_model_links(
-        self, oseries_name: str, model_names: Union[str, List[str]]
+        self,
+        oseries_name: str,
+        model_names: Union[str, List[str]],
+        _clear_cache: bool = True,
     ):
         """Add model name to stored list of models per oseries.
 
@@ -1594,6 +1689,9 @@ class BaseConnector(ABC, ConnectorUtil):
         model_names : Union[str, List[str]]
             model name or list of model names for an oseries with name
             oseries_name.
+        _clear_cache : bool, optional
+            whether to clear the cache after adding, by default True.
+            Set to False during bulk operations to improve performance.
         """
         # get stored list of model names
         if str(oseries_name) in self.oseries_with_models:
@@ -1610,9 +1708,12 @@ class BaseConnector(ABC, ConnectorUtil):
             if iml not in modellist:
                 modellist.append(iml)
         self._add_item("oseries_models", modellist, oseries_name)
-        self._clear_cache("oseries_models")
+        if _clear_cache:
+            self._clear_cache("oseries_models")
 
-    def _add_stresses_model_links(self, stress_names, model_names):
+    def _add_stresses_model_links(
+        self, stress_names, model_names, _clear_cache: bool = True
+    ):
         """Add model name to stored list of models per stress.
 
         Parameters
@@ -1621,6 +1722,9 @@ class BaseConnector(ABC, ConnectorUtil):
             names of stresses
         model_names : Union[str, List[str]]
             model name or list of model names for a stress with name
+        _clear_cache : bool, optional
+            whether to clear the cache after adding, by default True.
+            Set to False during bulk operations to improve performance.
         """
         # if one model name, make list for loop
         if isinstance(model_names, str):
@@ -1638,7 +1742,8 @@ class BaseConnector(ABC, ConnectorUtil):
                 if iml not in modellist:
                     modellist.append(iml)
             self._add_item("stresses_models", modellist, snam)
-        self._clear_cache("stresses_models")
+        if _clear_cache:
+            self._clear_cache("stresses_models")
 
     def _del_oseries_model_link(self, onam, mlnam):
         """Delete model name from stored list of models per oseries.
@@ -1677,31 +1782,61 @@ class BaseConnector(ABC, ConnectorUtil):
                 self._add_item("stresses_models", modellist, stress_name)
         self._clear_cache("stresses_models")
 
-    def _update_time_series_model_links(self):
+    def _update_time_series_model_links(
+        self,
+        libraries: list[str] = None,
+        recompute: bool = False,
+        progressbar: bool = True,
+    ):
         """Add all model names to reverse lookup time series dictionaries.
 
         Used for old PastaStore versions, where relationship between time series and
         models was not stored. If there are any models in the database and if the
         oseries_models or stresses_models libraries are empty, loop through all models
         to determine which time series are used in each model.
+
+        Parameters
+        ----------
+        libraries : list of str, optional
+            list of time series libraries to update model links for,
+            by default None which will update both 'oseries' and 'stresses'
         """
         # get oseries_models and stresses_models libraries,
         # if empty add all time series -> model links.
+        if libraries is None:
+            libraries = ["oseries", "stresses"]
         if self.n_models > 0:
-            if len(self.oseries_models) == 0 or len(self.stresses_models) == 0:
-                links = self._get_time_series_model_links()
-                for k in ["oseries", "stresses"]:
-                    for name, model_links in tqdm(
-                        links[k].items(),
-                        desc=f"Store models per {k}",
-                        total=len(links[k]),
-                    ):
-                        if k == "oseries":
-                            self._add_oseries_model_links(name, model_links)
-                        elif k == "stresses":
-                            self._add_stresses_model_links(name, model_links)
+            links = self._get_time_series_model_links(
+                recompute=recompute, progressbar=progressbar
+            )
+            for k in libraries:
+                if recompute:
+                    desc = f"Updating {k}-models links"
+                else:
+                    desc = f"Storing {k}-models links"
+                for name, model_links in tqdm(
+                    links[k].items(),
+                    desc=desc,
+                    total=len(links[k]),
+                    disable=not progressbar,
+                ):
+                    if k == "oseries":
+                        self._add_oseries_model_links(
+                            name, model_links, _clear_cache=False
+                        )
+                    elif k == "stresses":
+                        self._add_stresses_model_links(
+                            [name], model_links, _clear_cache=False
+                        )
+        # Clear caches after all updates are complete
+        if "oseries" in libraries:
+            self._clear_cache("oseries_models")
+        if "stresses" in libraries:
+            self._clear_cache("stresses_models")
 
-    def _get_time_series_model_links(self):
+    def _get_time_series_model_links(
+        self, recompute: bool = False, progressbar: bool = True
+    ) -> dict:
         """Get model names per oseries and stresses time series in a dictionary.
 
         Returns
@@ -1716,7 +1851,8 @@ class BaseConnector(ABC, ConnectorUtil):
         for mldict in tqdm(
             self.iter_models(return_dict=True),
             total=self.n_models,
-            desc="Get models per time series",
+            desc=f"{'Recompute' if recompute else 'Get'} models per time series",
+            disable=not progressbar,
         ):
             mlnam = mldict["name"]
             # oseries
