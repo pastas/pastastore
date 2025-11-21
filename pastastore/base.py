@@ -895,7 +895,6 @@ class BaseConnector(ABC, ConnectorUtil):
         ml: Union[ps.Model, dict],
         overwrite: bool = False,
         validate_metadata: bool = False,
-        parallel_safe: bool = False,
     ) -> None:
         """Add model to the database.
 
@@ -907,9 +906,6 @@ class BaseConnector(ABC, ConnectorUtil):
             if True, overwrite existing model, by default False
         validate_metadata, bool optional
             remove unsupported characters from metadata dictionary keys
-        parallel_safe : bool, optional
-            if True, make sure adding the model is parallel safe by avoiding
-            adding the model name to the oseries_models and stresses_models lists.
 
         Raises
         ------
@@ -943,23 +939,20 @@ class BaseConnector(ABC, ConnectorUtil):
             # write model to store
             self._add_item("models", mldict, name, metadata=metadata)
             self._clear_cache("_modelnames_cache")
-            if not parallel_safe:
-                self._add_oseries_model_links(str(mldict["oseries"]["name"]), name)
-                self._add_stresses_model_links(
-                    self._get_model_stress_names(mldict), name
-                )
+            # avoid updating links so parallel operations do not simultaneously
+            # access the same object. Indicate that these links need updating and
+            # clear existing caches. Handle both Manager proxies and booleans
+            if hasattr(self._oseries_links_need_update, "value"):
+                self._oseries_links_need_update.value = True
+                self._stresses_links_need_update.value = True
+                # this won't update main instance in parallel
+                self._added_models.append(name)
             else:
-                # avoid updating links in parallel safe mode but indicate
-                # that these links need updating and clear existing caches
-                # Handle both Manager proxies and booleans
-                if hasattr(self._oseries_links_need_update, "value"):
-                    self._oseries_links_need_update.value = True
-                    self._stresses_links_need_update.value = True
-                else:
-                    self._oseries_links_need_update = True
-                    self._stresses_links_need_update = True
-                self._clear_cache("oseries_models")
-                self._clear_cache("stresses_models")
+                self._oseries_links_need_update = True
+                self._stresses_links_need_update = True
+                self._added_models.append(name)
+            self._clear_cache("oseries_models")
+            self._clear_cache("stresses_models")
         else:
             raise ItemInLibraryException(
                 f"Model with name '{name}' already in 'models' library! "
