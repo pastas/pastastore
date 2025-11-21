@@ -1843,7 +1843,10 @@ class BaseConnector(ABC, ConnectorUtil):
             self._added_models = []  # reset list of added models
 
     def _get_time_series_model_links(
-        self, recompute: bool = False, progressbar: bool = True
+        self,
+        modelnames: Optional[list[str]] = None,
+        recompute: bool = False,
+        progressbar: bool = True,
     ) -> dict:
         """Get model names per oseries and stresses time series in a dictionary.
 
@@ -1857,7 +1860,7 @@ class BaseConnector(ABC, ConnectorUtil):
         oseries_links = {}
         stresses_links = {}
         for mldict in tqdm(
-            self.iter_models(return_dict=True),
+            self.iter_models(modelnames=modelnames, return_dict=True),
             total=self.n_models,
             desc=f"{'Recompute' if recompute else 'Get'} models per time series",
             disable=not progressbar,
