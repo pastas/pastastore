@@ -6,7 +6,7 @@ import os
 import warnings
 from functools import partial
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -1739,6 +1739,8 @@ class PastaStore:
         parallel: bool = False,
         max_workers: Optional[int] = None,
         fancy_output: bool = True,
+        initializer: Callable = None,
+        initargs: Optional[tuple] = None,
     ) -> Union[dict, pd.Series, pd.DataFrame]:
         """Apply function to items in library.
 
@@ -1767,6 +1769,10 @@ class PastaStore:
         fancy_output : bool, optional
             if True, try returning result as pandas Series or DataFrame, by default
             False
+        initializer : Callable, optional
+            function to initialize each worker process, only used if parallel is True
+        initargs : tuple, optional
+            arguments to pass to initializer, only used if parallel is True
 
         Returns
         -------
@@ -1803,18 +1809,9 @@ class PastaStore:
                 max_workers=max_workers,
                 chunksize=None,
                 desc=f"Computing {func.__name__} (parallel)",
+                initializer=initializer,
+                initargs=initargs,
             )
-            # update links if models were stored using parallel_safe=True
-            if (
-                self.conn._oseries_links_need_update.value
-                or self.conn._stresses_links_need_update.value
-            ):
-                # reset values to False and do recompute
-                self.conn._oseries_links_need_update.value = False
-                self.conn._stresses_links_need_update.value = False
-                self.conn._update_time_series_model_links(
-                    recompute=True, progressbar=progressbar
-                )
         else:
             result = []
             for n in tqdm(
