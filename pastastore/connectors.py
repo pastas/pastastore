@@ -347,6 +347,8 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         max_workers: Optional[int] = None,
         chunksize: Optional[int] = None,
         desc: str = "",
+        initializer: Callable = None,
+        initargs: Optional[tuple] = None,
     ):
         """Parallel processing of function.
 
@@ -382,16 +384,24 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
             chunksize for parallel processing, by default None
         desc : str, optional
             description for progressbar, by default ""
+        initializer : Callable, optional
+            function to initialize each worker process, by default None
+        initargs : tuple, optional
+            arguments to pass to initializer function, by default None
         """
         max_workers, chunksize = self._get_max_workers_and_chunksize(
             max_workers, len(names), chunksize
         )
+        if initializer is None:
 
-        def initializer(*args):
-            # assign to module-level variable without using 'global' statement
-            globals()["conn"] = ArcticDBConnector(*args)
+            def initializer(*args):
+                # assign to module-level variable without using 'global' statement
+                globals()["conn"] = ArcticDBConnector(*args)
 
-        initargs = (self.name, self.uri, False)
+            initargs = (self.name, self.uri, False)
+
+        if initargs is None:
+            initargs = ()
 
         if kwargs is None:
             kwargs = {}
@@ -414,6 +424,10 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
                 result = executor.map(
                     partial(func, **kwargs), names, chunksize=chunksize
                 )
+
+        # update links if models were stored
+        self._trigger_links_update_if_needed(modelnames=names)
+
         return result
 
     def _list_symbols(self, libname: AllLibs) -> List[str]:
@@ -836,6 +850,8 @@ class PasConnector(BaseConnector, ParallelUtil):
         max_workers: Optional[int] = None,
         chunksize: Optional[int] = None,
         desc: str = "",
+        initializer: Callable = None,
+        initargs: Optional[tuple] = None,
     ):
         """Parallel processing of function.
 
@@ -855,6 +871,10 @@ class PasConnector(BaseConnector, ParallelUtil):
             chunksize for parallel processing, by default None
         desc : str, optional
             description for progressbar, by default ""
+        initializer : Callable, optional
+            function to initialize each worker process, by default None
+        initargs : tuple, optional
+            arguments to pass to initializer function, by default None
         """
         max_workers, chunksize = self._get_max_workers_and_chunksize(
             max_workers, len(names), chunksize
@@ -864,20 +884,38 @@ class PasConnector(BaseConnector, ParallelUtil):
             kwargs = {}
 
         if progressbar:
-            return process_map(
-                partial(func, **kwargs),
-                names,
-                max_workers=max_workers,
-                chunksize=chunksize,
-                desc=desc,
-                total=len(names),
-            )
+            if initializer is not None:
+                result = []
+                with tqdm(total=len(names), desc=desc) as pbar:
+                    with ProcessPoolExecutor(
+                        max_workers=max_workers,
+                        initializer=initializer,
+                        initargs=initargs,
+                    ) as executor:
+                        for item in executor.map(
+                            partial(func, **kwargs), names, chunksize=chunksize
+                        ):
+                            result.append(item)
+                            pbar.update()
+            else:
+                result = process_map(
+                    partial(func, **kwargs),
+                    names,
+                    max_workers=max_workers,
+                    chunksize=chunksize,
+                    desc=desc,
+                    total=len(names),
+                )
         else:
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
                 result = executor.map(
                     partial(func, **kwargs), names, chunksize=chunksize
                 )
-            return result
+
+        # update links if models were stored
+        self._trigger_links_update_if_needed(modelnames=names)
+
+        return result
 
     def _list_symbols(self, libname: AllLibs) -> List[str]:
         """List symbols in a library (internal method).
