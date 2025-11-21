@@ -277,8 +277,12 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         # only normalizable datatypes can be written with write, else use write_pickle
         # normalizable: Series, DataFrames, Numpy Arrays
         if isinstance(item, (dict, list)):
+            logger.debug(
+                "Writing pickled item '%s' to ArcticDB library '%s'.", name, libname
+            )
             lib.write_pickle(name, item, metadata=metadata)
         else:
+            logger.debug("Writing item '%s' to ArcticDB library '%s'.", name, libname)
             lib.write(name, item, metadata=metadata)
 
     def _get_item(self, libname: AllLibs, name: str) -> Union[FrameOrSeriesUnion, Dict]:
@@ -717,23 +721,29 @@ class PasConnector(BaseConnector, ParallelUtil):
                 )
             fname = lib / f"{name}.pas"
             with fname.open("w", encoding="utf-8") as f:
+                logger.debug("Writing time series '%s' to disk at '%s'.", name, fname)
                 f.write(sjson)
             if metadata is not None:
                 mjson = json.dumps(metadata, cls=PastasEncoder, indent=4)
                 fname_meta = lib / f"{name}_meta.pas"
                 with fname_meta.open("w", encoding="utf-8") as m:
+                    logger.debug(
+                        "Writing metadata '%s' to disk at '%s'.", name, fname_meta
+                    )
                     m.write(mjson)
         # pastas model dict
         elif isinstance(item, dict):
             jsondict = json.dumps(item, cls=PastasEncoder, indent=4)
             fmodel = lib / f"{name}.pas"
             with fmodel.open("w", encoding="utf-8") as fm:
+                logger.debug("Writing model '%s' to disk at '%s'.", name, fmodel)
                 fm.write(jsondict)
         # oseries_models or stresses_models list
         elif isinstance(item, list):
             jsondict = json.dumps(item)
             fname = lib / f"{name}.pas"
             with fname.open("w", encoding="utf-8") as fm:
+                logger.debug("Writing link list '%s' to disk at '%s'.", name, fname)
                 fm.write(jsondict)
 
     def _get_item(self, libname: AllLibs, name: str) -> Union[FrameOrSeriesUnion, Dict]:
