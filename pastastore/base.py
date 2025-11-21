@@ -1815,7 +1815,9 @@ class BaseConnector(ABC, ConnectorUtil):
         if "stresses" in libraries:
             self._clear_cache("stresses_models")
 
-    def _trigger_links_update_if_needed(self, progressbar: bool = False):
+    def _trigger_links_update_if_needed(
+        self, modelnames: Optional[list[str]] = None, progressbar: bool = False
+    ):
         # Check if time series-> model links need updating
         # Handle both Manager proxies (main) and booleans (worker after pickle)
         needs_update = (
@@ -1827,16 +1829,17 @@ class BaseConnector(ABC, ConnectorUtil):
             # Set BOTH flags to False BEFORE updating to prevent recursion
             # (update always recomputes both oseries and stresses links)
             if hasattr(self._oseries_links_need_update, "value"):
+                self._clear_cache("_modelnames_cache")
                 self._oseries_links_need_update.value = False
                 self._stresses_links_need_update.value = False
-                modelnames = None
             else:
+                self._clear_cache("_modelnames_cache")
                 self._oseries_links_need_update = False
                 self._stresses_links_need_update = False
                 modelnames = self._added_models
             if modelnames is None or len(modelnames) > 0:
                 self._update_time_series_model_links(
-                    modelnames=modelnames, progressbar=progressbar
+                    modelnames=modelnames, recompute=True, progressbar=progressbar
                 )
             self._added_models = []  # reset list of added models
         else:

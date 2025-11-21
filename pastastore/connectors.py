@@ -458,7 +458,7 @@ class DictConnector(BaseConnector, ParallelUtil):
         if (self.n_models > 0) and (
             len(self.oseries_models) == 0 or len(self.stresses_models) == 0
         ):
-            self._update_time_series_model_links()
+            self._update_time_series_model_links(recompute=False, progressbar=True)
 
     def _get_library(self, libname: AllLibs):
         """Get reference to dictionary holding data.
@@ -633,7 +633,7 @@ class PasConnector(BaseConnector, ParallelUtil):
         if (self.n_models > 0) and (
             len(self.oseries_models) == 0 or len(self.stresses_models) == 0
         ):
-            self._update_time_series_model_links()
+            self._update_time_series_model_links(recompute=False, progressbar=True)
         # write pstore file to store database info that can be used to load pstore
         self._write_pstore_config_file()
 
