@@ -344,7 +344,6 @@ def setup_parallel_pstore(conn_type, data1, data2):
 @pytest.mark.parametrize("conn_type", ["pas", "arcticdb"])
 def test_parallel_add_model(conn_type, data1, data2):
     """Test that accessing stresses_with_models triggers update of added models."""
-
     ppstore = setup_parallel_pstore(conn_type, data1, data2)
 
     if conn_type == "arcticdb":

@@ -45,6 +45,7 @@ def test_search(pstore):
     results = pstore.search("oser", libname=None, case_sensitive=True)
     assert len(results["oseries"]) == 3
 
+
 @pytest.mark.dependency
 def test_create_model(pstore):
     _ = pstore.create_model("oseries1")
