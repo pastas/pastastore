@@ -142,7 +142,9 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
 
     _conn_type = "arcticdb"
 
-    def __init__(self, name: str, uri: str, verbose: bool = True):
+    def __init__(
+        self, name: str, uri: str, verbose: bool = True, worker_process: bool = False
+    ):
         """Create an ArcticDBConnector object using ArcticDB to store data.
 
         Parameters
@@ -153,6 +155,9 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
             URI connection string (e.g. 'lmdb://<your path here>')
         verbose : bool, optional
             whether to log messages when database is initialized, by default True
+        worker_process : bool, optional
+            whether the connector is created in a worker process for parallel
+            processing, by default False
         """
         try:
             import arcticdb
@@ -177,15 +182,31 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         self.arc = arcticdb.Arctic(uri)
         self._initialize(verbose=verbose)
         self.models = ModelAccessor(self)
-        # for older versions of PastaStore, if oseries_models library is empty
-        # populate oseries - models database
-        if (self.n_models > 0) and (
-            len(self.oseries_models) == 0 or len(self.stresses_models) == 0
-        ):
-            self._update_time_series_model_links(recompute=False, progressbar=True)
-        # write pstore file to store database info that can be used to load pstore
-        if "lmdb" in self.uri:
-            self.write_pstore_config_file()
+
+        # set shared memory manager flags for parallel operations
+        # NOTE: there is no stored reference to manager object, meaning
+        # that it cannot be properly shutdown. We let the Python garbage collector
+        # do this, but the downside is there is a risk some background
+        # processes potentially continue to run.
+        mgr = Manager()
+        self._oseries_links_need_update = mgr.Value(
+            "_oseries_links_need_update",
+            False,
+        )
+        self._stresses_links_need_update = mgr.Value(
+            "_stresses_links_need_update",
+            False,
+        )
+        if not worker_process:
+            # for older versions of PastaStore, if oseries_models library is empty
+            # populate oseries - models database
+            if (self.n_models > 0) and (
+                len(self.oseries_models) == 0 or len(self.stresses_models) == 0
+            ):
+                self._update_time_series_model_links(recompute=False, progressbar=True)
+            # write pstore file to store database info that can be used to load pstore
+            if "lmdb" in self.uri:
+                self.write_pstore_config_file()
 
     def _initialize(self, verbose: bool = True) -> None:
         """Initialize the libraries (internal method)."""
