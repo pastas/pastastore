@@ -1757,8 +1757,9 @@ class BaseConnector(ABC, ConnectorUtil):
     def _update_time_series_model_links(
         self,
         libraries: list[str] = None,
-        recompute: bool = False,
-        progressbar: bool = True,
+        modelnames: Optional[List[str]] = None,
+        recompute: bool = True,
+        progressbar: bool = False,
     ):
         """Add all model names to reverse lookup time series dictionaries.
 
@@ -1772,14 +1773,22 @@ class BaseConnector(ABC, ConnectorUtil):
         libraries : list of str, optional
             list of time series libraries to update model links for,
             by default None which will update both 'oseries' and 'stresses'
+        modelnames : Optional[List[str]], optional
+            list of model names to update links for, by default None
+        recompute : bool, optional
+            Indicate operation is an update/recompute of existing links,
+            by default False
+        progressbar : bool, optional
+            show progressbar, by default True
         """
         # get oseries_models and stresses_models libraries,
         # if empty add all time series -> model links.
         if libraries is None:
             libraries = ["oseries", "stresses"]
         if self.n_models > 0:
+            logger.debug("Updating time series -> models links in store.")
             links = self._get_time_series_model_links(
-                recompute=recompute, progressbar=progressbar
+                modelnames=modelnames, recompute=recompute, progressbar=progressbar
             )
             for k in libraries:
                 if recompute:
