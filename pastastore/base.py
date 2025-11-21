@@ -1666,7 +1666,7 @@ class BaseConnector(ABC, ConnectorUtil):
             Set to False during bulk operations to improve performance.
         """
         # get stored list of model names
-        if str(oseries_name) in self.oseries_with_models:
+        if oseries_name in self.oseries_with_models:
             modellist = self._get_item("oseries_models", oseries_name)
         else:
             # else empty list
