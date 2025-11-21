@@ -64,7 +64,7 @@ def data3():
         "well1": w,
         "well1_meta": {"x": 164691, "y": 423579},
         "well2": w + 10,
-        "well2_meta": {"x": 164691 + 2000, "y": 423579 + 2000}, # far away
+        "well2_meta": {"x": 164691 + 2000, "y": 423579 + 2000},  # far away
     }
     return d
 

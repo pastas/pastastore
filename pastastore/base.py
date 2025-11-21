@@ -9,7 +9,6 @@ import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from itertools import chain
-
 from random import choice
 
 # import weakref
