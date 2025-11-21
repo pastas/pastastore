@@ -312,6 +312,7 @@ def delete_arcticdb_connector(
     elif name is None or uri is None:
         raise ValueError("Provide 'name' and 'uri' OR 'conn'!")
 
+    # connect to arcticdb
     arc = arcticdb.Arctic(uri)
 
     logger.info("Deleting ArcticDBConnector database: '%s' ... ", name)

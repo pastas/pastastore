@@ -7,6 +7,7 @@ import warnings
 from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
 from functools import partial
+from multiprocessing import Manager
 from pathlib import Path
 
 # import weakref
@@ -142,7 +143,9 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
 
     _conn_type = "arcticdb"
 
-    def __init__(self, name: str, uri: str, verbose: bool = True):
+    def __init__(
+        self, name: str, uri: str, verbose: bool = True, worker_process: bool = False
+    ):
         """Create an ArcticDBConnector object using ArcticDB to store data.
 
         Parameters
@@ -153,6 +156,9 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
             URI connection string (e.g. 'lmdb://<your path here>')
         verbose : bool, optional
             whether to log messages when database is initialized, by default True
+        worker_process : bool, optional
+            whether the connector is created in a worker process for parallel
+            processing, by default False
         """
         try:
             import arcticdb
@@ -160,7 +166,12 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         except ModuleNotFoundError as e:
             logger.error("Please install arcticdb with `pip install arcticdb`!")
             raise e
-        super().__init__()
+
+        # avoid warn on all metadata writes
+        from arcticdb_ext import set_config_string
+
+        set_config_string("PickledMetadata.LogLevel", "DEBUG")
+
         self.uri = uri
         self.name = name
 
@@ -172,12 +183,31 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         self.arc = arcticdb.Arctic(uri)
         self._initialize(verbose=verbose)
         self.models = ModelAccessor(self)
-        # for older versions of PastaStore, if oseries_models library is empty
-        # populate oseries - models database
-        self._update_time_series_model_links()
-        # write pstore file to store database info that can be used to load pstore
-        if "lmdb" in self.uri:
-            self.write_pstore_config_file()
+
+        # set shared memory manager flags for parallel operations
+        # NOTE: there is no stored reference to manager object, meaning
+        # that it cannot be properly shutdown. We let the Python garbage collector
+        # do this, but the downside is there is a risk some background
+        # processes potentially continue to run.
+        mgr = Manager()
+        self._oseries_links_need_update = mgr.Value(
+            "_oseries_links_need_update",
+            False,
+        )
+        self._stresses_links_need_update = mgr.Value(
+            "_stresses_links_need_update",
+            False,
+        )
+        if not worker_process:
+            # for older versions of PastaStore, if oseries_models library is empty
+            # populate oseries - models database
+            if (self.n_models > 0) and (
+                len(self.oseries_models) == 0 or len(self.stresses_models) == 0
+            ):
+                self._update_time_series_model_links(recompute=False, progressbar=True)
+            # write pstore file to store database info that can be used to load pstore
+            if "lmdb" in self.uri:
+                self.write_pstore_config_file()
 
     def _initialize(self, verbose: bool = True) -> None:
         """Initialize the libraries (internal method)."""
@@ -273,8 +303,12 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         # only normalizable datatypes can be written with write, else use write_pickle
         # normalizable: Series, DataFrames, Numpy Arrays
         if isinstance(item, (dict, list)):
+            logger.debug(
+                "Writing pickled item '%s' to ArcticDB library '%s'.", name, libname
+            )
             lib.write_pickle(name, item, metadata=metadata)
         else:
+            logger.debug("Writing item '%s' to ArcticDB library '%s'.", name, libname)
             lib.write(name, item, metadata=metadata)
 
     def _get_item(self, libname: AllLibs, name: str) -> Union[FrameOrSeriesUnion, Dict]:
@@ -339,6 +373,8 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         max_workers: Optional[int] = None,
         chunksize: Optional[int] = None,
         desc: str = "",
+        initializer: Callable = None,
+        initargs: Optional[tuple] = None,
     ):
         """Parallel processing of function.
 
@@ -374,16 +410,24 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
             chunksize for parallel processing, by default None
         desc : str, optional
             description for progressbar, by default ""
+        initializer : Callable, optional
+            function to initialize each worker process, by default None
+        initargs : tuple, optional
+            arguments to pass to initializer function, by default None
         """
         max_workers, chunksize = self._get_max_workers_and_chunksize(
             max_workers, len(names), chunksize
         )
+        if initializer is None:
 
-        def initializer(*args):
-            # assign to module-level variable without using 'global' statement
-            globals()["conn"] = ArcticDBConnector(*args)
+            def initializer(*args):
+                # assign to module-level variable without using 'global' statement
+                globals()["conn"] = ArcticDBConnector(*args, worker_process=True)
 
-        initargs = (self.name, self.uri, False)
+            initargs = (self.name, self.uri, False)
+
+        if initargs is None:
+            initargs = ()
 
         if kwargs is None:
             kwargs = {}
@@ -406,6 +450,10 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
                 result = executor.map(
                     partial(func, **kwargs), names, chunksize=chunksize
                 )
+
+        # update links if models were stored
+        self._trigger_links_update_if_needed(modelnames=names)
+
         return result
 
     def _list_symbols(self, libname: AllLibs) -> List[str]:
@@ -447,7 +495,14 @@ class DictConnector(BaseConnector, ParallelUtil):
         self.models = ModelAccessor(self)
         # for older versions of PastaStore, if oseries_models library is empty
         # populate oseries - models database
-        self._update_time_series_model_links()
+        if (self.n_models > 0) and (
+            len(self.oseries_models) == 0 or len(self.stresses_models) == 0
+        ):
+            self._update_time_series_model_links(recompute=False, progressbar=True)
+
+        # delayed update flags
+        self._oseries_links_need_update = False
+        self._stresses_links_need_update = False
 
     def _get_library(self, libname: AllLibs):
         """Get reference to dictionary holding data.
@@ -607,7 +662,8 @@ class PasConnector(BaseConnector, ParallelUtil):
         verbose : bool, optional
             whether to print message when database is initialized, by default True
         """
-        # super().__init__()
+        # set shared memory flags for parallel processing
+        super().__init__()
         self.name = name
         self.parentdir = Path(path)
         self.path = (self.parentdir / self.name).absolute()
@@ -615,9 +671,28 @@ class PasConnector(BaseConnector, ParallelUtil):
         self._validator = Validator(self)
         self._initialize(verbose=verbose)
         self.models = ModelAccessor(self)
+
+        # set shared memory manager flags for parallel operations
+        # NOTE: there is no stored reference to manager object, meaning
+        # that it cannot be properly shutdown. We let the Python garbage collector
+        # do this, but the downside is there is a risk some background
+        # processes potentially continue to run.
+        mgr = Manager()
+        self._oseries_links_need_update = mgr.Value(
+            "_oseries_links_need_update",
+            False,
+        )
+        self._stresses_links_need_update = mgr.Value(
+            "_stresses_links_need_update",
+            False,
+        )
+
         # for older versions of PastaStore, if oseries_models library is empty
         # populate oseries_models library
-        self._update_time_series_model_links()
+        if (self.n_models > 0) and (
+            len(self.oseries_models) == 0 or len(self.stresses_models) == 0
+        ):
+            self._update_time_series_model_links(recompute=False, progressbar=True)
         # write pstore file to store database info that can be used to load pstore
         self._write_pstore_config_file()
 
@@ -705,23 +780,29 @@ class PasConnector(BaseConnector, ParallelUtil):
                 )
             fname = lib / f"{name}.pas"
             with fname.open("w", encoding="utf-8") as f:
+                logger.debug("Writing time series '%s' to disk at '%s'.", name, fname)
                 f.write(sjson)
             if metadata is not None:
                 mjson = json.dumps(metadata, cls=PastasEncoder, indent=4)
                 fname_meta = lib / f"{name}_meta.pas"
                 with fname_meta.open("w", encoding="utf-8") as m:
+                    logger.debug(
+                        "Writing metadata '%s' to disk at '%s'.", name, fname_meta
+                    )
                     m.write(mjson)
         # pastas model dict
         elif isinstance(item, dict):
             jsondict = json.dumps(item, cls=PastasEncoder, indent=4)
             fmodel = lib / f"{name}.pas"
             with fmodel.open("w", encoding="utf-8") as fm:
+                logger.debug("Writing model '%s' to disk at '%s'.", name, fmodel)
                 fm.write(jsondict)
         # oseries_models or stresses_models list
         elif isinstance(item, list):
             jsondict = json.dumps(item)
             fname = lib / f"{name}.pas"
             with fname.open("w", encoding="utf-8") as fm:
+                logger.debug("Writing link list '%s' to disk at '%s'.", name, fname)
                 fm.write(jsondict)
 
     def _get_item(self, libname: AllLibs, name: str) -> Union[FrameOrSeriesUnion, Dict]:
@@ -814,6 +895,8 @@ class PasConnector(BaseConnector, ParallelUtil):
         max_workers: Optional[int] = None,
         chunksize: Optional[int] = None,
         desc: str = "",
+        initializer: Callable = None,
+        initargs: Optional[tuple] = None,
     ):
         """Parallel processing of function.
 
@@ -833,6 +916,10 @@ class PasConnector(BaseConnector, ParallelUtil):
             chunksize for parallel processing, by default None
         desc : str, optional
             description for progressbar, by default ""
+        initializer : Callable, optional
+            function to initialize each worker process, by default None
+        initargs : tuple, optional
+            arguments to pass to initializer function, by default None
         """
         max_workers, chunksize = self._get_max_workers_and_chunksize(
             max_workers, len(names), chunksize
@@ -842,20 +929,38 @@ class PasConnector(BaseConnector, ParallelUtil):
             kwargs = {}
 
         if progressbar:
-            return process_map(
-                partial(func, **kwargs),
-                names,
-                max_workers=max_workers,
-                chunksize=chunksize,
-                desc=desc,
-                total=len(names),
-            )
+            if initializer is not None:
+                result = []
+                with tqdm(total=len(names), desc=desc) as pbar:
+                    with ProcessPoolExecutor(
+                        max_workers=max_workers,
+                        initializer=initializer,
+                        initargs=initargs,
+                    ) as executor:
+                        for item in executor.map(
+                            partial(func, **kwargs), names, chunksize=chunksize
+                        ):
+                            result.append(item)
+                            pbar.update()
+            else:
+                result = process_map(
+                    partial(func, **kwargs),
+                    names,
+                    max_workers=max_workers,
+                    chunksize=chunksize,
+                    desc=desc,
+                    total=len(names),
+                )
         else:
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
                 result = executor.map(
                     partial(func, **kwargs), names, chunksize=chunksize
                 )
-            return result
+
+        # update links if models were stored
+        self._trigger_links_update_if_needed(modelnames=names)
+
+        return result
 
     def _list_symbols(self, libname: AllLibs) -> List[str]:
         """List symbols in a library (internal method).

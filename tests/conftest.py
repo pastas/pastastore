@@ -1,5 +1,6 @@
 # ruff: noqa: D100 D103
 import importlib
+import inspect
 from importlib import metadata
 
 import pandas as pd
@@ -8,50 +9,94 @@ import pytest
 
 import pastastore as pst
 
-params = ["dict", "pas", "arcticdb"]
+params = [
+    "dict",
+    "pas",
+    "arcticdb",
+]
 
 
-def initialize_project(conn):
+@pytest.fixture(scope="module")
+def data1():
+    d = {
+        "oseries1": pd.read_csv("./tests/data/obs.csv", index_col=0, parse_dates=True),
+        "oseries1_meta": {"x": 165000, "y": 424000},
+        "prec1": pd.read_csv("./tests/data/rain.csv", index_col=0, parse_dates=True),
+        "prec1_meta": {"x": 165050, "y": 424050},
+        "evap1": pd.read_csv("./tests/data/evap.csv", index_col=0, parse_dates=True),
+        "evap1_meta": {"x": 164500, "y": 424000},
+    }
+    return d
+
+
+@pytest.fixture(scope="module")
+def data2():
+    d = {
+        "oseries2": pd.read_csv(
+            "./tests/data/head_nb1.csv", index_col=0, parse_dates=True
+        ),
+        "oseries2_meta": {"x": 164000, "y": 423000},
+        "prec2": pd.read_csv(
+            "./tests/data/rain_nb1.csv", index_col=0, parse_dates=True
+        ),
+        "prec2_meta": {"x": 164010, "y": 423000},
+        "evap2": pd.read_csv(
+            "./tests/data/evap_nb1.csv", index_col=0, parse_dates=True
+        ),
+        "evap2_meta": {"x": 164000, "y": 423030},
+    }
+    return d
+
+
+@pytest.fixture(scope="module")
+def data3():
+    w = pd.read_csv("./tests/data/well_month_end.csv", index_col=0, parse_dates=True)
+    w = ps.ts.timestep_weighted_resample(
+        w,
+        pd.date_range(w.index[0] - pd.offsets.MonthBegin(), w.index[-1], freq="D"),
+    ).bfill()
+
+    d = {
+        "oseries3": pd.read_csv(
+            "./tests/data/gw_obs.csv", index_col=0, parse_dates=True
+        ),
+        "oseries3_meta": {"x": 165554, "y": 422685},
+        "well1": w,
+        "well1_meta": {"x": 164691, "y": 423579},
+        "well2": w + 10,
+        "well2_meta": {"x": 164691 + 2000, "y": 423579 + 2000},  # far away
+    }
+    return d
+
+
+def initialize_project(conn, data1, data2, data3):
     pstore = pst.PastaStore(conn, "test_project")
 
-    # oseries 1
-    o = pd.read_csv("./tests/data/obs.csv", index_col=0, parse_dates=True)
-    pstore.add_oseries(o, "oseries1", metadata={"x": 165000, "y": 424000})
-
-    # oseries 2
-    o = pd.read_csv("./tests/data/head_nb1.csv", index_col=0, parse_dates=True)
-    pstore.add_oseries(o, "oseries2", metadata={"x": 164000, "y": 423000})
-
-    # oseries 3
-    o = pd.read_csv("./tests/data/gw_obs.csv", index_col=0, parse_dates=True)
-    pstore.add_oseries(o, "oseries3", metadata={"x": 165554, "y": 422685})
-
-    # prec 1
-    s = pd.read_csv("./tests/data/rain.csv", index_col=0, parse_dates=True)
-    pstore.add_stress(s, "prec1", kind="prec", metadata={"x": 165050, "y": 424050})
-
-    # prec 2
-    s = pd.read_csv("./tests/data/rain_nb1.csv", index_col=0, parse_dates=True)
-    pstore.add_stress(s, "prec2", kind="prec", metadata={"x": 164010, "y": 423000})
-
-    # evap 1
-    s = pd.read_csv("./tests/data/evap.csv", index_col=0, parse_dates=True)
-    pstore.add_stress(s, "evap1", kind="evap", metadata={"x": 164500, "y": 424000})
-
-    # evap 2
-    s = pd.read_csv("./tests/data/evap_nb1.csv", index_col=0, parse_dates=True)
-    pstore.add_stress(s, "evap2", kind="evap", metadata={"x": 164000, "y": 423030})
-
-    # well 1
-    s = pd.read_csv("./tests/data/well_month_end.csv", index_col=0, parse_dates=True)
-    s = ps.ts.timestep_weighted_resample(
-        s,
-        pd.date_range(s.index[0] - pd.offsets.MonthBegin(), s.index[-1], freq="D"),
-    ).bfill()
-    pstore.add_stress(s, "well1", kind="well", metadata={"x": 164691, "y": 423579})
-    # add second well
+    # dataset 1
+    pstore.add_oseries(data1["oseries1"], "oseries1", metadata=data1["oseries1_meta"])
     pstore.add_stress(
-        s + 10, "well2", kind="well", metadata={"x": 164691 + 200, "y": 423579_200}
+        data1["prec1"], "prec1", kind="prec", metadata=data1["prec1_meta"]
+    )
+    pstore.add_stress(
+        data1["evap1"], "evap1", kind="evap", metadata=data1["evap1_meta"]
+    )
+
+    # dataset 2
+    pstore.add_oseries(data2["oseries2"], "oseries2", metadata=data2["oseries2_meta"])
+    pstore.add_stress(
+        data2["prec2"], "prec2", kind="prec", metadata=data2["prec2_meta"]
+    )
+    pstore.add_stress(
+        data2["evap2"], "evap2", kind="evap", metadata=data2["evap2_meta"]
+    )
+
+    # dataset 3
+    pstore.add_oseries(data3["oseries3"], "oseries3", metadata=data3["oseries3_meta"])
+    pstore.add_stress(
+        data3["well1"], "well1", kind="well", metadata=data3["well1_meta"]
+    )
+    pstore.add_stress(
+        data3["well2"], "well2", kind="well", metadata=data3["well2_meta"]
     )
 
     return pstore
@@ -63,7 +108,7 @@ def conn(request):
     name = f"test_{request.param}"
     # connect to dbase
     if request.param == "arcticdb":
-        uri = "lmdb://./arctic_db/"
+        uri = "lmdb://./tests/data/arcticdb/"
         conn = pst.ArcticDBConnector(name, uri)
     elif request.param == "dict":
         conn = pst.DictConnector(name)
@@ -76,30 +121,23 @@ def conn(request):
 
 
 @pytest.fixture(scope="module", params=params)
-def pstore(request):
+def pstore(request, data1, data2, data3):
     if request.param == "arcticdb":
-        name = "test_project"
-        uri = "lmdb://./arctic_db/"
+        name = "testdb"
+        uri = "lmdb://./tests/data/arcticdb/"
         connector = pst.ArcticDBConnector(name, uri)
     elif request.param == "dict":
-        name = "test_project"
+        name = "testdb"
         connector = pst.DictConnector(name)
     elif request.param == "pas":
-        name = "test_project"
+        name = "testdb"
         connector = pst.PasConnector(name, "./tests/data/pas")
     else:
         raise ValueError("Unrecognized parameter!")
-    pstore = initialize_project(connector)
+    pstore = initialize_project(connector, data1, data2, data3)
     pstore.type = request.param  # added here for defining test dependencies
     yield pstore
     pst.util.delete_pastastore(pstore)
-
-
-def delete_arcticdb_test_db():
-    connstr = "lmdb://./arctic_db/"
-    name = "test_project"
-    connector = pst.ArcticDBConnector(name, connstr)
-    pst.util.delete_arcticdb_connector(connector)
 
 
 _has_pkg_cache = {}
@@ -158,3 +196,67 @@ def requires_pkg(*pkgs):
         reason=f"missing package{'s' if len(missing) != 1 else ''}: "
         + ", ".join(missing),
     )
+
+
+def for_connectors(connectors=None):
+    """Decorate to run tests only for specified connector types.
+
+    Parameters
+    ----------
+    connectors : list of str, optional
+        List of connector types for which the test should run.
+        If None, defaults to all connector types: ["dict", "pas", "arcticdb"].
+
+    Returns
+    -------
+    function
+        Decorated test function that runs only for specified connectors.
+    """
+    if connectors is None:
+        connectors = ["dict", "pas", "arcticdb"]
+
+    def decorator(func):
+        def wrapper(self, *args, **kwargs):
+            # Get the connector type from fixtures passed
+            # Could be in args or kwargs depending on how pytest passes it
+            store = None
+
+            # Check kwargs first (fixture passed by name)
+            for fixture_name in ["pstore_with_models", "pstore", "conn"]:
+                if fixture_name in kwargs:
+                    store = kwargs[fixture_name]
+                    break
+
+            # If not in kwargs, check first positional arg
+            if store is None and len(args) > 0:
+                store = args[0]
+
+            if store is None:
+                # Call without checking (shouldn't happen)
+                return func(self, *args, **kwargs)
+
+            # Check if we should skip based on connector type
+            if hasattr(store, "conn"):
+                conn_type = store.conn.conn_type
+            elif hasattr(store, "conn_type"):
+                conn_type = store.conn_type
+            else:
+                # If we can't determine connector type, just run the test
+                return func(self, *args, **kwargs)
+
+            if conn_type not in connectors:
+                pytest.skip(
+                    f"Test skipped for {conn_type} connector "
+                    f"(only runs for: {connectors})"
+                )
+
+            return func(self, *args, **kwargs)
+
+        # Preserve the original function signature and metadata for pytest
+        wrapper.__signature__ = inspect.signature(func)
+        wrapper.__name__ = func.__name__
+        wrapper.__doc__ = func.__doc__
+
+        return wrapper
+
+    return decorator
