@@ -421,7 +421,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
 
             def initializer(*args):
                 # assign to module-level variable without using 'global' statement
-                globals()["conn"] = ArcticDBConnector(*args)
+                globals()["conn"] = ArcticDBConnector(*args, worker_process=True)
 
             initargs = (self.name, self.uri, False)
 
