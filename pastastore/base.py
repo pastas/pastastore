@@ -253,20 +253,25 @@ class BaseConnector(ABC, ConnectorUtil):
     name = None
 
     def __init__(self):
-        # set shared memory manager flags for parallel operations
-        # NOTE: there is no stored reference to manager object, meaning
-        # that it cannot be properly shutdown. We let the Python garbage collector
-        # do this, but the downside is there are potentially some background processes
-        # that continue to run.
-        mgr = Manager()
-        self._oseries_links_need_update = mgr.Value(
-            "_oseries_links_need_update",
-            False,
-        )
-        self._stresses_links_need_update = mgr.Value(
-            "_stresses_links_need_update",
-            False,
-        )
+        if self.conn_type in ["pas", "arcticdb"]:
+            # set shared memory manager flags for parallel operations
+            # NOTE: there is no stored reference to manager object, meaning
+            # that it cannot be properly shutdown. We let the Python garbage collector
+            # do this, but the downside is there is a risk some background
+            # processes potentially continue to run.
+            mgr = Manager()
+            self._oseries_links_need_update = mgr.Value(
+                "_oseries_links_need_update",
+                False,
+            )
+            self._stresses_links_need_update = mgr.Value(
+                "_stresses_links_need_update",
+                False,
+            )
+        else:
+            self._oseries_links_need_update = False
+            self._stresses_links_need_update = False
+        self._added_models = []  # internal list of added models used for updating links
 
     def __getstate__(self):
         """Replace Manager proxies with simple values for pickling.
