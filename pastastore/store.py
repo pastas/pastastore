@@ -76,7 +76,7 @@ class PastaStore:
         self.name = name if name is not None else self.conn.name
         self._register_connector_methods()
 
-        # register map, plot and yaml classes
+        # register map, plot, yaml and zip classes
         self.maps = Maps(self)
         self.plots = Plots(self)
         self.yaml = PastastoreYAML(self)
