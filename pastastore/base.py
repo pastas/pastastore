@@ -1132,8 +1132,12 @@ class BaseConnector(ABC, ConnectorUtil):
             mldict = self.get_models(n, return_dict=True)
             oname = mldict["oseries"]["name"]
             self._del_item("models", n)
-            self._del_oseries_model_link(oname, n)
-            self._del_stress_model_link(self._get_model_stress_names(mldict), n)
+            # delete reference to added model if present
+            if n in self._added_models:
+                self._added_models.remove(n)
+            else:
+                self._del_oseries_model_link(oname, n)
+                self._del_stress_model_link(self._get_model_stress_names(mldict), n)
         self._clear_cache("_modelnames_cache")
         if verbose:
             logger.info("Deleted %d model(s) from database.", len(names))
