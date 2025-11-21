@@ -1549,8 +1549,8 @@ class BaseConnector(ABC, ConnectorUtil):
                 return
 
         if libname == "models":
-            # also delete linked modelnames linked to oseries
-            libs = ["models", "oseries_models"]
+            # also delete linked modelnames linked to oseries and stresses
+            libs = ["models", "oseries_models", "stresses_models"]
         else:
             libs = [libname]
 
