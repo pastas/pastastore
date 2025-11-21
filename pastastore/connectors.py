@@ -178,7 +178,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         if (self.n_models > 0) and (
             len(self.oseries_models) == 0 or len(self.stresses_models) == 0
         ):
-            self._update_time_series_model_links()
+            self._update_time_series_model_links(recompute=False, progressbar=True)
         # write pstore file to store database info that can be used to load pstore
         if "lmdb" in self.uri:
             self.write_pstore_config_file()
