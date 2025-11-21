@@ -464,6 +464,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Property must be overridden by subclass.
         """
+        self._trigger_links_update_if_needed()
         return self._list_symbols("oseries_models")
 
     @property
@@ -472,6 +473,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Property must be overridden by subclass.
         """
+        self._trigger_links_update_if_needed()
         return self._list_symbols("stresses_models")
 
     @abstractmethod
@@ -596,23 +598,7 @@ class BaseConnector(ABC, ConnectorUtil):
             dictionary with oseries names as keys and list of model names as
             values
         """
-        # Check if links need updating (e.g., after parallel_safe add_model calls)
-        # Handle both Manager proxies (main) and booleans (worker after pickle)
-        needs_update = (
-            self._oseries_links_need_update.value
-            if hasattr(self._oseries_links_need_update, "value")
-            else self._oseries_links_need_update
-        )
-        if needs_update:
-            # Set BOTH flags to False BEFORE updating to prevent recursion
-            # (update always recomputes both oseries and stresses links)
-            if hasattr(self._oseries_links_need_update, "value"):
-                self._oseries_links_need_update.value = False
-                self._stresses_links_need_update.value = False
-            else:
-                self._oseries_links_need_update = False
-                self._stresses_links_need_update = False
-            self._update_time_series_model_links()
+        self._trigger_links_update_if_needed()
         d = {}
         for onam in self.oseries_with_models:
             d[onam] = self._get_item("oseries_models", onam)
@@ -629,23 +615,7 @@ class BaseConnector(ABC, ConnectorUtil):
             dictionary with stress names as keys and list of model names as
             values
         """
-        # Check if links need updating (e.g., after parallel_safe add_model calls)
-        # Handle both Manager proxies (main) and booleans (worker after pickle)
-        needs_update = (
-            self._stresses_links_need_update.value
-            if hasattr(self._stresses_links_need_update, "value")
-            else self._stresses_links_need_update
-        )
-        if needs_update:
-            # Set BOTH flags to False BEFORE updating to prevent recursion
-            # (update always recomputes both oseries and stresses links)
-            if hasattr(self._oseries_links_need_update, "value"):
-                self._oseries_links_need_update.value = False
-                self._stresses_links_need_update.value = False
-            else:
-                self._oseries_links_need_update = False
-                self._stresses_links_need_update = False
-            self._update_time_series_model_links()
+        self._trigger_links_update_if_needed()
         d = {}
         for stress_name in self.stresses_with_models:
             d[stress_name] = self._get_item("stresses_models", stress_name)
@@ -1838,6 +1808,33 @@ class BaseConnector(ABC, ConnectorUtil):
             self._clear_cache("oseries_models")
         if "stresses" in libraries:
             self._clear_cache("stresses_models")
+
+    def _trigger_links_update_if_needed(self, progressbar: bool = False):
+        # Check if time series-> model links need updating
+        # Handle both Manager proxies (main) and booleans (worker after pickle)
+        needs_update = (
+            self._oseries_links_need_update.value
+            if hasattr(self._oseries_links_need_update, "value")
+            else self._oseries_links_need_update
+        )
+        if needs_update:
+            # Set BOTH flags to False BEFORE updating to prevent recursion
+            # (update always recomputes both oseries and stresses links)
+            if hasattr(self._oseries_links_need_update, "value"):
+                self._oseries_links_need_update.value = False
+                self._stresses_links_need_update.value = False
+                modelnames = None
+            else:
+                self._oseries_links_need_update = False
+                self._stresses_links_need_update = False
+                modelnames = self._added_models
+            if modelnames is None or len(modelnames) > 0:
+                self._update_time_series_model_links(
+                    modelnames=modelnames, progressbar=progressbar
+                )
+            self._added_models = []  # reset list of added models
+        else:
+            self._added_models = []  # reset list of added models
 
     def _get_time_series_model_links(
         self, recompute: bool = False, progressbar: bool = True
