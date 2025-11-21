@@ -1,5 +1,6 @@
 # ruff: noqa: D100 D103
 import importlib
+import inspect
 from importlib import metadata
 
 import pandas as pd
@@ -8,7 +9,11 @@ import pytest
 
 import pastastore as pst
 
-params = ["dict", "pas", "arcticdb"]
+params = [
+    "dict",
+    "pas",
+    "arcticdb",
+]
 
 
 @pytest.fixture(scope="module")
@@ -191,3 +196,67 @@ def requires_pkg(*pkgs):
         reason=f"missing package{'s' if len(missing) != 1 else ''}: "
         + ", ".join(missing),
     )
+
+
+def for_connectors(connectors=None):
+    """Decorate to run tests only for specified connector types.
+
+    Parameters
+    ----------
+    connectors : list of str, optional
+        List of connector types for which the test should run.
+        If None, defaults to all connector types: ["dict", "pas", "arcticdb"].
+
+    Returns
+    -------
+    function
+        Decorated test function that runs only for specified connectors.
+    """
+    if connectors is None:
+        connectors = ["dict", "pas", "arcticdb"]
+
+    def decorator(func):
+        def wrapper(self, *args, **kwargs):
+            # Get the connector type from fixtures passed
+            # Could be in args or kwargs depending on how pytest passes it
+            store = None
+
+            # Check kwargs first (fixture passed by name)
+            for fixture_name in ["pstore_with_models", "pstore", "conn"]:
+                if fixture_name in kwargs:
+                    store = kwargs[fixture_name]
+                    break
+
+            # If not in kwargs, check first positional arg
+            if store is None and len(args) > 0:
+                store = args[0]
+
+            if store is None:
+                # Call without checking (shouldn't happen)
+                return func(self, *args, **kwargs)
+
+            # Check if we should skip based on connector type
+            if hasattr(store, "conn"):
+                conn_type = store.conn.conn_type
+            elif hasattr(store, "conn_type"):
+                conn_type = store.conn_type
+            else:
+                # If we can't determine connector type, just run the test
+                return func(self, *args, **kwargs)
+
+            if conn_type not in connectors:
+                pytest.skip(
+                    f"Test skipped for {conn_type} connector "
+                    f"(only runs for: {connectors})"
+                )
+
+            return func(self, *args, **kwargs)
+
+        # Preserve the original function signature and metadata for pytest
+        wrapper.__signature__ = inspect.signature(func)
+        wrapper.__name__ = func.__name__
+        wrapper.__doc__ = func.__doc__
+
+        return wrapper
+
+    return decorator
