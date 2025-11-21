@@ -160,8 +160,12 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         except ModuleNotFoundError as e:
             logger.error("Please install arcticdb with `pip install arcticdb`!")
             raise e
-        # set shared memory flags for parallel processing
-        super().__init__()
+
+        # avoid warn on all metadata writes
+        from arcticdb_ext import set_config_string
+
+        set_config_string("PickledMetadata.LogLevel", "DEBUG")
+
         self.uri = uri
         self.name = name
 
