@@ -9,7 +9,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from itertools import chain
-from multiprocessing import Manager
+
 from random import choice
 
 # import weakref
@@ -251,27 +251,7 @@ class BaseConnector(ABC, ConnectorUtil):
     _conn_type: Optional[str] = None
     _validator: Optional[Validator] = None
     name = None
-
-    def __init__(self):
-        if self.conn_type in ["pas", "arcticdb"]:
-            # set shared memory manager flags for parallel operations
-            # NOTE: there is no stored reference to manager object, meaning
-            # that it cannot be properly shutdown. We let the Python garbage collector
-            # do this, but the downside is there is a risk some background
-            # processes potentially continue to run.
-            mgr = Manager()
-            self._oseries_links_need_update = mgr.Value(
-                "_oseries_links_need_update",
-                False,
-            )
-            self._stresses_links_need_update = mgr.Value(
-                "_stresses_links_need_update",
-                False,
-            )
-        else:
-            self._oseries_links_need_update = False
-            self._stresses_links_need_update = False
-        self._added_models = []  # internal list of added models used for updating links
+    _added_models = []  # internal list of added models used for updating links
 
     def __getstate__(self):
         """Replace Manager proxies with simple values for pickling.
@@ -1826,14 +1806,13 @@ class BaseConnector(ABC, ConnectorUtil):
             else self._oseries_links_need_update
         )
         if needs_update:
+            self._clear_cache("_modelnames_cache")
             # Set BOTH flags to False BEFORE updating to prevent recursion
             # (update always recomputes both oseries and stresses links)
             if hasattr(self._oseries_links_need_update, "value"):
-                self._clear_cache("_modelnames_cache")
                 self._oseries_links_need_update.value = False
                 self._stresses_links_need_update.value = False
             else:
-                self._clear_cache("_modelnames_cache")
                 self._oseries_links_need_update = False
                 self._stresses_links_need_update = False
                 modelnames = self._added_models

@@ -7,6 +7,7 @@ import warnings
 from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
 from functools import partial
+from multiprocessing import Manager
 from pathlib import Path
 
 # import weakref
@@ -499,6 +500,10 @@ class DictConnector(BaseConnector, ParallelUtil):
         ):
             self._update_time_series_model_links(recompute=False, progressbar=True)
 
+        # delayed update flags
+        self._oseries_links_need_update = False
+        self._stresses_links_need_update = False
+
     def _get_library(self, libname: AllLibs):
         """Get reference to dictionary holding data.
 
@@ -666,6 +671,21 @@ class PasConnector(BaseConnector, ParallelUtil):
         self._validator = Validator(self)
         self._initialize(verbose=verbose)
         self.models = ModelAccessor(self)
+
+        # set shared memory manager flags for parallel operations
+        # NOTE: there is no stored reference to manager object, meaning
+        # that it cannot be properly shutdown. We let the Python garbage collector
+        # do this, but the downside is there is a risk some background
+        # processes potentially continue to run.
+        mgr = Manager()
+        self._oseries_links_need_update = mgr.Value(
+            "_oseries_links_need_update",
+            False,
+        )
+        self._stresses_links_need_update = mgr.Value(
+            "_stresses_links_need_update",
+            False,
+        )
 
         # for older versions of PastaStore, if oseries_models library is empty
         # populate oseries_models library
