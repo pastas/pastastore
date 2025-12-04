@@ -1808,18 +1808,22 @@ class PastaStore:
                 progressbar=progressbar,
                 max_workers=max_workers,
                 chunksize=None,
-                desc=f"Computing {func.__name__} (parallel)",
+                desc=f"Computing {getattr(func, '__name__', '')} (parallel)",
                 initializer=initializer,
                 initargs=initargs,
             )
         else:
             result = []
             for n in tqdm(
-                names, desc=f"Computing {func.__name__}", disable=not progressbar
+                names,
+                desc=f"Computing {getattr(func, '__name__', '')}",
+                disable=not progressbar,
             ):
                 result.append(func(n, **kwargs))
         if fancy_output:
-            return PastaStore._fancy_output(result, names, func.__name__)
+            return PastaStore._fancy_output(
+                result, names, getattr(func, "__name__", "")
+            )
         else:
             return result
 
