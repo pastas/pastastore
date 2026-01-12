@@ -772,7 +772,12 @@ class PasConnector(BaseConnector, ParallelUtil):
         if isinstance(item, pd.Series):
             item = item.to_frame()
         if isinstance(item, pd.DataFrame):
-            sjson = item.to_json(orient="columns")
+            if type(item) is pd.DataFrame:
+                sjson = item.to_json(orient="columns")
+            else:
+                # workaround for subclasses of DataFrame that override to_json,
+                # looking at you hydropandas...
+                sjson = pd.DataFrame(item).to_json(orient="columns")
             if name.endswith("_meta"):
                 raise ValueError(
                     "Time series name cannot end with '_meta'. "
