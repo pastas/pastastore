@@ -1168,7 +1168,7 @@ class BaseConnector(ABC, ConnectorUtil):
             )
             self.del_models(modelnames, verbose=verbose)
             if verbose:
-                logger.info("Deleted %d models(s) from database.", len(modelnames))
+                logger.info("Deleted %d model(s) from database.", len(modelnames))
 
     def del_stress(
         self,
@@ -1203,7 +1203,7 @@ class BaseConnector(ABC, ConnectorUtil):
             )
             self.del_models(modelnames, verbose=verbose)
             if verbose:
-                logger.info("Deleted %d models(s) from database.", len(modelnames))
+                logger.info("Deleted %d model(s) from database.", len(modelnames))
 
     def _get_series(
         self,
