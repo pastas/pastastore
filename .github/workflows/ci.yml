@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install uv with Python
         uses: astral-sh/setup-uv@v6
         with:
@@ -53,13 +53,13 @@ jobs:
           [
             "git+https://github.com/pastas/pastas.git@v1.4.0",
             "git+https://github.com/pastas/pastas.git@v1.5.0",
-            "git+https://github.com/pastas/pastas.git@v1.10.1",
             "git+https://github.com/pastas/pastas.git@v1.11.0",
+            "git+https://github.com/pastas/pastas.git@v1.12.0",
             "git+https://github.com/pastas/pastas.git@dev",
           ]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install uv with Python ${{ matrix.python-version }}
         uses: astral-sh/setup-uv@v6
         with:
