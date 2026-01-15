@@ -414,7 +414,7 @@ class BaseConnector(ABC, ConnectorUtil):
         """Return list of symbol names in library."""
 
     @abstractmethod
-    def _item_exists(self, libname: AllLibs, name: str)-> bool:
+    def _item_exists(self, libname: AllLibs, name: str) -> bool:
         """Return True if item present in library, else False."""
 
     @property
