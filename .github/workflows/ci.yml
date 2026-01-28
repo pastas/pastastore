@@ -60,8 +60,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+
       - name: Install uv with Python ${{ matrix.python-version }}
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           python-version: ${{ matrix.python-version }}
@@ -69,8 +70,10 @@ jobs:
 
       - name: Install the project
         run: |
-          uv sync --all-extras
+          uv sync --all-extras --dev
           uv pip install --reinstall --no-deps "${{ matrix.pastas-version }}"
+        env:
+          UV_SYSTEM_PYTHON: 1
 
       - name: Print versions
         run: |
