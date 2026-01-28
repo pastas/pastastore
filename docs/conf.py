@@ -53,7 +53,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "IPython.sphinxext.ipython_console_highlighting",  # lowercase didn't work
     "sphinx.ext.autosectionlabel",
-    "myst_nb"
+    "myst_nb",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
