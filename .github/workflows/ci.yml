@@ -70,7 +70,7 @@ jobs:
 
       - name: Install the project
         run: |
-          uv pip install .[dev]
+          uv pip install -e .[dev]
           uv pip install --reinstall --no-deps "${{ matrix.pastas-version }}"
 
       - name: Check numpy version

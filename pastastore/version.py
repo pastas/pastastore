@@ -31,7 +31,7 @@ def show_versions(optional=False) -> None:
         msg += "\nArcticDB version   : "
         try:
             import_module("arcticdb")
-            msg += f"{metadata.version('arctidb')}"
+            msg += f"{metadata.version('arcticdb')}"
         except ImportError:
             msg += "Not Installed"
 
