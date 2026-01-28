@@ -179,7 +179,7 @@ class Validator:
                     raise ValueError(
                         f"Metadata key '{key}' has value {val} which is "
                         f"not convertible to Timestamp: {e}"
-                    )
+                    ) from e
 
     def set_protect_series_in_models(self, b: bool):
         """Turn PROTECT_SERIES_IN_MODELS option on (True) or off (False).
