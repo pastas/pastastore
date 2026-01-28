@@ -164,7 +164,7 @@ class ConnectorUtil:
                     for stress in ts["stress"]:
                         if "series" not in stress:
                             name = str(stress["name"])
-                            if name in self.stresses.index:
+                            if self._item_exists("stresses", name):
                                 stress["series"] = self.get_stresses(name).squeeze()
                                 # update tmin/tmax from time series
                                 if update_ts_settings:
@@ -179,7 +179,7 @@ class ConnectorUtil:
                     for stress in ts["stress"] if PASFILE_LEQ_022 else [ts["stress"]]:
                         if "series" not in stress:
                             name = str(stress["name"])
-                            if name in self.stresses.index:
+                            if self._item_exists("stresses", name):
                                 stress["series"] = self.get_stresses(name).squeeze()
                                 # update tmin/tmax from time series
                                 if update_ts_settings:
@@ -195,7 +195,7 @@ class ConnectorUtil:
                 for stress in [ts["prec"], ts["evap"]]:
                     if "series" not in stress:
                         name = str(stress["name"])
-                        if name in self.stresses.index:
+                        if self._item_exists("stresses", name):
                             stress["series"] = self.get_stresses(name).squeeze()
                             # update tmin/tmax from time series
                             if update_ts_settings:
@@ -412,6 +412,10 @@ class BaseConnector(ABC, ConnectorUtil):
     @abstractmethod
     def _list_symbols(self, libname: AllLibs) -> List[str]:
         """Return list of symbol names in library."""
+
+    @abstractmethod
+    def _item_exists(self, libname: AllLibs, name: str) -> bool:
+        """Return True if item present in library, else False."""
 
     @property
     def oseries_names(self):
@@ -658,8 +662,8 @@ class BaseConnector(ABC, ConnectorUtil):
         if name not in in_store or overwrite:
             self._add_item(libname, series, name, metadata=metadata)
             self._clear_cache(libname)
-        elif (libname == "oseries" and name in self.oseries_models) or (
-            libname == "stresses" and name in self.stresses_models
+        elif (libname == "oseries" and self._item_exists("oseries_models", name)) or (
+            libname == "stresses" and self._item_exists("stresses_model", name)
         ):
             raise SeriesUsedByModel(
                 f"Time series with name '{name}' is used by a model! "
@@ -908,7 +912,7 @@ class BaseConnector(ABC, ConnectorUtil):
             raise TypeError("Expected pastas.Model or dict!")
         if not isinstance(name, str):
             name = str(name)
-        if name not in self.model_names or overwrite:
+        if not self._item_exists("models", name) or overwrite:
             # check if stressmodels supported
             self.validator.check_stressmodels_supported(ml)
             # check oseries and stresses names and if they exist in store
@@ -1645,7 +1649,7 @@ class BaseConnector(ABC, ConnectorUtil):
             Set to False during bulk operations to improve performance.
         """
         # get stored list of model names
-        if oseries_name in self.oseries_with_models:
+        if self._item_exists("oseries_models", oseries_name):
             modellist = self._get_item("oseries_models", oseries_name)
         else:
             # else empty list
@@ -1682,7 +1686,7 @@ class BaseConnector(ABC, ConnectorUtil):
             model_names = [model_names]
         for snam in stress_names:
             # get stored list of model names
-            if str(snam) in self.stresses_with_models:
+            if self._item_exists("stresses_models", str(snam)):
                 modellist = self._get_item("stresses_models", snam)
             else:
                 # else empty list

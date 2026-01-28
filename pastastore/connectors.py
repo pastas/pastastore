@@ -471,6 +471,11 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         """
         return self._get_library(libname).list_symbols()
 
+    def _item_exists(self, libname: str, name: str) -> bool:
+        """Check if item exists without scanning directory."""
+        lib = self._get_library(libname)
+        return lib.has_symbol(name)
+
 
 class DictConnector(BaseConnector, ParallelUtil):
     """DictConnector object that stores timeseries and models in dictionaries."""
@@ -640,6 +645,11 @@ class DictConnector(BaseConnector, ParallelUtil):
         """
         lib = self._get_library(libname)
         return list(lib.keys())
+
+    def _item_exists(self, libname: str, name: str) -> bool:
+        """Check if item exists without scanning directory."""
+        lib = self._get_library(libname)
+        return name in lib
 
 
 class PasConnector(BaseConnector, ParallelUtil):
@@ -982,3 +992,9 @@ class PasConnector(BaseConnector, ParallelUtil):
         """
         lib = self._get_library(libname)
         return [i.stem for i in lib.glob("*.pas") if not i.stem.endswith("_meta")]
+
+    def _item_exists(self, libname: str, name: str) -> bool:
+        """Check if item exists without scanning directory."""
+        lib = self._get_library(libname)
+        path = lib / f"{name}.pas"
+        return path.exists()

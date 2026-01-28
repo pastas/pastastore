@@ -461,13 +461,15 @@ class Validator:
             "delete model(s) first, or use force=True."
         )
         if libname == "oseries":
-            if name in self.connector.oseries_models:
+            self.connector._trigger_links_update_if_needed()  # trigger update if needed
+            if self.connector._item_exists("oseries_models", name):
                 n_models = len(self.connector.oseries_models[name])
                 raise SeriesUsedByModel(
                     msg.format(libname=libname, name=name, n_models=n_models)
                 )
         elif libname == "stresses":
-            if name in self.connector.stresses_models:
+            self.connector._trigger_links_update_if_needed()  # trigger update if needed
+            if self.connector._item_exists("stresses_models", name):
                 n_models = len(self.connector.stresses_models[name])
                 raise SeriesUsedByModel(
                     msg.format(libname=libname, name=name, n_models=n_models)
