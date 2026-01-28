@@ -639,6 +639,8 @@ class BaseConnector(ABC, ConnectorUtil):
         """
         if not isinstance(name, str):
             name = str(name)
+        if metadata:
+            self.validator.validate_metadata(metadata)
         self.validator.validate_input_series(series)
         series = self.validator.set_series_name(series, name)
         if self.validator.pastas_validation_status(validate):

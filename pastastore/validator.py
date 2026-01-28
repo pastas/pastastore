@@ -56,6 +56,9 @@ class Validator:
     # whether to validate time series according to pastas rules
     USE_PASTAS_VALIDATE_SERIES = True
 
+    # whether to validate metadata keys
+    VALIDATE_METADATA = True
+
     # protect series in models from being deleted or modified
     PROTECT_SERIES_IN_MODELS = True
 
@@ -79,6 +82,7 @@ class Validator:
         return {
             "CHECK_MODEL_SERIES_VALUES": self.CHECK_MODEL_SERIES_VALUES,
             "USE_PASTAS_VALIDATE_SERIES": self.USE_PASTAS_VALIDATE_SERIES,
+            "VALIDATE_METADATA": self.VALIDATE_METADATA,
             "PROTECT_SERIES_IN_MODELS": self.PROTECT_SERIES_IN_MODELS,
             "SERIES_EQUALITY_ABSOLUTE_TOLERANCE": (
                 self.SERIES_EQUALITY_ABSOLUTE_TOLERANCE
@@ -131,6 +135,51 @@ class Validator:
         """
         self.USE_PASTAS_VALIDATE_SERIES = b
         logger.info("Pastas time series validation set to: %s.", b)
+
+    def set_validate_metadata(self, b: bool):
+        """Turn VALIDATE_METADATA option on (True) or off (False).
+
+        Parameters
+        ----------
+        b : bool
+            boolean indicating whether option should be turned on (True) or
+            off (False). Option is on by default.
+        """
+        self.VALIDATE_METADATA = b
+        logger.info("Metadata validation set to: %s.", b)
+
+    def validate_metadata(self, metadata: dict):
+        """Validate metadata.
+
+        Checks if metadata keys 'tmin', 'tmax', 'date_modified', and
+        'date_created' are valid Pandas Timestamps (or convertible to them)
+        or None.
+
+        Parameters
+        ----------
+        metadata : dict
+             metadata dictionary
+        """
+        if not self.VALIDATE_METADATA or metadata is None:
+            return
+
+        for key in ["tmin", "tmax", "date_modified", "date_created"]:
+            if key in metadata:
+                val = metadata[key]
+                if val is None:
+                    continue
+                if isinstance(val, bool):
+                    raise ValueError(
+                        f"Metadata key '{key}' has boolean value {val}, "
+                        "expected Timestamp, None, or convertible string."
+                    )
+                try:
+                    pd.Timestamp(val)
+                except (ValueError, TypeError) as e:
+                    raise ValueError(
+                        f"Metadata key '{key}' has value {val} which is "
+                        f"not convertible to Timestamp: {e}"
+                    )
 
     def set_protect_series_in_models(self, b: bool):
         """Turn PROTECT_SERIES_IN_MODELS option on (True) or off (False).
@@ -246,7 +295,6 @@ class Validator:
         """Check if all stressmodels in the model are supported."""
         supported_stressmodels = [
             "StressModel",
-            "StressModel2",
             "RechargeModel",
             "WellModel",
             "TarsoModel",
