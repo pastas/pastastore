@@ -63,8 +63,7 @@ docs = [
     "sphinx_rtd_theme",
     "Ipython",
     "ipykernel",
-    "nbsphinx",
-    "nbsphinx_link",
+    "myst_nb"
 ]
 test = ["pastastore[arcticdb,optional,pytest]", "hydropandas[full]"]
 dev = ["pastastore[test,lint,docs]"]
