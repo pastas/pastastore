@@ -70,10 +70,8 @@ jobs:
 
       - name: Install the project
         run: |
-          uv sync --all-extras --dev
+          uv pip install .[dev]
           uv pip install --reinstall --no-deps "${{ matrix.pastas-version }}"
-        env:
-          UV_SYSTEM_PYTHON: 1
 
       - name: Print versions
         run: |
