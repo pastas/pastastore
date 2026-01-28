@@ -15,8 +15,8 @@ maintainers = [
     { name = "R. Calje", email = "r.calje@artesia-water.nl" },
     { name = "M.A. Vonk", email = "m.vonk@artesia-water.nl" },
 ]
-requires-python = ">= 3.10"
-dependencies = ["pastas>=0.13", "tqdm>=4.36", "pyyaml", "colorama"]
+requires-python = ">= 3.11"
+dependencies = ["pastas>=0.13", "tqdm>=4.36", "pyyaml", "colorama", "pandas<3.0"]
 
 keywords = ["hydrology", "groundwater", "time series", "analysis", "database"]
 classifiers = [
