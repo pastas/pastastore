@@ -68,7 +68,7 @@ jobs:
 
       - name: Install the project
         run: |
-          uv sync --all-extras
+          uv pip install .[dev]
           uv pip install "${{ matrix.pastas-version }}"
 
       - name: Print versions
