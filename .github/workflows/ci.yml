@@ -71,6 +71,10 @@ jobs:
           uv sync --all-extras
           uv pip install "${{ matrix.pastas-version }}"
 
+      - name: Print versions
+        run: |
+          uv run python -c "import pastastore as pst; pst.show_versions(optional=True)"
+
       - name: Check numpy version
         if: ${{ matrix.pastas-version == 'git+https://github.com/pastas/pastas.git@v1.4.0' || matrix.pastas-version == 'git+https://github.com/pastas/pastas.git@v1.5.0' }}
         run: |
