@@ -6,7 +6,7 @@ import os
 import warnings
 from functools import partial
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -76,7 +76,7 @@ class PastaStore:
         self.name = name if name is not None else self.conn.name
         self._register_connector_methods()
 
-        # register map, plot and yaml classes
+        # register map, plot, yaml and zip classes
         self.maps = Maps(self)
         self.plots = Plots(self)
         self.yaml = PastastoreYAML(self)
@@ -1739,6 +1739,8 @@ class PastaStore:
         parallel: bool = False,
         max_workers: Optional[int] = None,
         fancy_output: bool = True,
+        initializer: Callable = None,
+        initargs: Optional[tuple] = None,
     ) -> Union[dict, pd.Series, pd.DataFrame]:
         """Apply function to items in library.
 
@@ -1767,6 +1769,10 @@ class PastaStore:
         fancy_output : bool, optional
             if True, try returning result as pandas Series or DataFrame, by default
             False
+        initializer : Callable, optional
+            function to initialize each worker process, only used if parallel is True
+        initargs : tuple, optional
+            arguments to pass to initializer, only used if parallel is True
 
         Returns
         -------
@@ -1802,16 +1808,22 @@ class PastaStore:
                 progressbar=progressbar,
                 max_workers=max_workers,
                 chunksize=None,
-                desc=f"Computing {func.__name__} (parallel)",
+                desc=f"Computing {getattr(func, '__name__', '')} (parallel)",
+                initializer=initializer,
+                initargs=initargs,
             )
         else:
             result = []
             for n in tqdm(
-                names, desc=f"Computing {func.__name__}", disable=not progressbar
+                names,
+                desc=f"Computing {getattr(func, '__name__', '')}",
+                disable=not progressbar,
             ):
                 result.append(func(n, **kwargs))
         if fancy_output:
-            return PastaStore._fancy_output(result, names, func.__name__)
+            return PastaStore._fancy_output(
+                result, names, getattr(func, "__name__", "")
+            )
         else:
             return result
 

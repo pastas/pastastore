@@ -104,11 +104,7 @@ def example_pastastore(conn="DictConnector"):
         kind="riv",
         metadata={"x": 200_000, "y": 450_000.0},
     )
-    # TODO: temporary fix for older version of hydropandas that does not
-    # read Menyanthes time series names correctly.
-    # multiwell notebook data
     fname = datadir / "MenyanthesTest.men"
-    # meny = ps.read.MenyData(fname)
     meny = ObsCollection.from_menyanthes(fname, Obs)
 
     oseries = meny.loc["Obsevation well", "obs"]

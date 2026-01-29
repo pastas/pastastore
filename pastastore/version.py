@@ -8,7 +8,7 @@ from packaging.version import parse as parse_version
 PASTAS_VERSION = parse_version(ps.__version__)
 PASTAS_GEQ_150 = PASTAS_VERSION >= parse_version("1.5.0")
 
-__version__ = "1.11.0"
+__version__ = "1.12.0"
 
 
 def show_versions(optional=False) -> None:
@@ -31,7 +31,7 @@ def show_versions(optional=False) -> None:
         msg += "\nArcticDB version   : "
         try:
             import_module("arcticdb")
-            msg += f"{metadata.version('arctidb')}"
+            msg += f"{metadata.version('arcticdb')}"
         except ImportError:
             msg += "Not Installed"
 

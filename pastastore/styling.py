@@ -55,16 +55,18 @@ def boolean_styler(b):
 
     >>> df.style.map(boolean_styler, subset=["some column"])
     """
-    if b:
+    if b is True or b is np.True_:
         return (
             f"background-color: {rgb2hex((231 / 255, 255 / 255, 239 / 255))}; "
             "color: darkgreen"
         )
-    else:
+    elif b is False or b is np.False_:
         return (
             f"background-color: {rgb2hex((255 / 255, 238 / 255, 238 / 255))}; "
             "color: darkred"
         )
+    else:
+        return "background-color: White; color: Black"
 
 
 def boolean_row_styler(row, column):
