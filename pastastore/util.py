@@ -567,6 +567,8 @@ def compare_models(
                 counter += 1
 
         for p in ml.parameters.index:
+            df.loc[f"param: {p} (pmin)", f"model {i}"] = ml.parameters.loc[p, "pmin"]
+            df.loc[f"param: {p} (pmax)", f"model {i}"] = ml.parameters.loc[p, "pmax"]
             df.loc[f"param: {p} (init)", f"model {i}"] = ml.parameters.loc[p, "initial"]
             df.loc[f"param: {p} (opt)", f"model {i}"] = ml.parameters.loc[p, "optimal"]
 
