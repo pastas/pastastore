@@ -665,7 +665,7 @@ class BaseConnector(ABC, ConnectorUtil):
             self._add_item(libname, series, name, metadata=metadata)
             self._clear_cache(libname)
         elif (libname == "oseries" and self._item_exists("oseries_models", name)) or (
-            libname == "stresses" and self._item_exists("stresses_model", name)
+            libname == "stresses" and self._item_exists("stresses_models", name)
         ):
             raise SeriesUsedByModel(
                 f"Time series with name '{name}' is used by a model! "
