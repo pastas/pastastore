@@ -459,8 +459,10 @@ class Validator:
                     stresses = [sm["prec"], sm["evap"]]
                 elif sm[classkey] in ["WellModel"]:
                     stresses = sm["stress"]
-                else:
+                elif "stress" in sm:
                     stresses = [sm["stress"]]
+                else:
+                    stresses = []  # for StepModel, LinearTrend
                 for s in stresses:
                     if str(s["name"]) not in self.connector.stresses.index:
                         msg = (
