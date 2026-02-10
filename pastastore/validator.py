@@ -336,7 +336,10 @@ class Validator:
             series_names = [
                 sm["stress"]["name"]
                 for sm in ml["stressmodels"].values()
-                if sm[classkey] not in (prec_evap_model + ["WellModel"])
+                if (
+                    sm[classkey] not in (prec_evap_model + ["WellModel"])
+                    and ("stress" in sm)  # some stressmodels have no stress
+                )
             ]
 
             # WellModel
