@@ -8,3 +8,4 @@ with warnings.catch_warnings():
         category=TqdmWarning,
         module="tqdm",
     )
+    from tqdm.auto import tqdm  # noqa: F401
