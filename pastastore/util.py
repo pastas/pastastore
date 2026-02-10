@@ -65,10 +65,15 @@ class ZipUtils:
         files = []
         for n in tqdm(names, desc=libname) if progressbar else names:
             s = self.pstore.conn._get_series(libname, n, progressbar=False)
-            if isinstance(s, pd.Series):
-                s = s.to_frame()
             try:
-                sjson = s.to_json(orient="columns")
+                if type(s) is pd.Series:
+                    s = s.to_frame()
+                if type(s) is pd.DataFrame:
+                    sjson = s.to_json(orient="columns")
+                else:
+                    # workaround for subclasses of DataFrame that override to_json,
+                    # looking at you hydropandas...
+                    sjson = pd.DataFrame(s).to_json(orient="columns")
             except ValueError as e:
                 msg = (
                     f"DatetimeIndex of '{n}' probably contains NaT "

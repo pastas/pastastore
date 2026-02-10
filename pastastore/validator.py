@@ -336,7 +336,10 @@ class Validator:
             series_names = [
                 sm["stress"]["name"]
                 for sm in ml["stressmodels"].values()
-                if sm[classkey] not in (prec_evap_model + ["WellModel"])
+                if (
+                    sm[classkey] not in (prec_evap_model + ["WellModel"])
+                    and ("stress" in sm)  # some stressmodels have no stress
+                )
             ]
 
             # WellModel
@@ -356,12 +359,12 @@ class Validator:
                 prec_evap_model,
                 [i[classkey] for i in ml["stressmodels"].values()],
             ).any():
-                series_names += [
-                    istress["name"]
-                    for sm in ml["stressmodels"].values()
-                    if sm[classkey] in prec_evap_model
-                    for istress in [sm["prec"], sm["evap"]]
-                ]
+                for sm in ml["stressmodels"].values():
+                    if sm[classkey] in prec_evap_model:
+                        for istress in [sm["prec"], sm["evap"]]:
+                            series_names.append(istress["name"])
+                        if "temp" in sm and sm["temp"]:
+                            series_names.append(sm["temp"]["name"])
 
         else:
             raise TypeError("Expected pastas.Model or dict!")
@@ -454,10 +457,14 @@ class Validator:
                 classkey = "class"
                 if sm[classkey] in prec_evap_model:
                     stresses = [sm["prec"], sm["evap"]]
+                    if "temp" in sm and sm["temp"]:
+                        stresses.append(sm["temp"])
                 elif sm[classkey] in ["WellModel"]:
                     stresses = sm["stress"]
-                else:
+                elif "stress" in sm:
                     stresses = [sm["stress"]]
+                else:
+                    stresses = []  # for StepModel, LinearTrend
                 for s in stresses:
                     if str(s["name"]) not in self.connector.stresses.index:
                         msg = (
