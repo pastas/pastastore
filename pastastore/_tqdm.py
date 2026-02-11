@@ -9,3 +9,4 @@ with warnings.catch_warnings():
         module="tqdm",
     )
     from tqdm.auto import tqdm  # noqa: F401
+    from tqdm.contrib.concurrent import process_map
