@@ -15,8 +15,8 @@ import numpy as np
 from hydropandas.io.knmi import _get_default_settings, download_knmi_data, get_stations
 from pandas import DataFrame, Series, Timedelta, Timestamp
 from pastas.timeseries_utils import timestep_weighted_resample
-from tqdm.auto import tqdm
 
+from pastastore._tqdm import tqdm
 from pastastore.extensions.accessor import register_pastastore_accessor
 from pastastore.typing import TimeSeriesLibs
 

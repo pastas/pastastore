@@ -17,8 +17,8 @@ from typing import Callable, Dict, List, Optional, Union
 import pandas as pd
 import pastas as ps
 from packaging.version import parse as parse_version
-from tqdm.auto import tqdm
 
+from pastastore._tqdm import tqdm
 from pastastore.typing import AllLibs, FrameOrSeriesUnion, TimeSeriesLibs
 from pastastore.util import (
     ItemInLibraryException,
