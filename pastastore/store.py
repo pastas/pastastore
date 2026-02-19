@@ -492,10 +492,10 @@ class PastaStore:
 
         for series_name in distances.index:
             nearest = distances.loc[series_name].dropna().sort_values().index[:n]
-            series = pd.DataFrame(
+            row_data = pd.DataFrame(
                 index=[series_name], columns=data.columns, data=[nearest]
             )
-            data = pd.concat([data, series], axis=0)
+            data = pd.concat([data, row_data], axis=0)
         return data
 
     def get_signatures(
