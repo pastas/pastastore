@@ -490,9 +490,10 @@ class PastaStore:
 
         data = pd.DataFrame(columns=np.arange(n))
 
-        for series in distances.index:
+        for series_name in distances.index:
+            nearest = distances.loc[series_name].dropna().sort_values().index[:n]
             series = pd.DataFrame(
-                [distances.loc[series].dropna().sort_values().index[:n]]
+                index=[series_name], columns=data.columns, data=[nearest]
             )
             data = pd.concat([data, series], axis=0)
         return data
