@@ -16,7 +16,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 import pandas as pd
 from pastas.io.pas import PastasEncoder, pastas_hook
 
-from pastastore._tqdm import tqdm, process_map
+from pastastore._tqdm import process_map, tqdm
 from pastastore.base import BaseConnector, ModelAccessor
 from pastastore.typing import AllLibs, FrameOrSeriesUnion, TimeSeriesLibs
 from pastastore.util import _custom_warning, metadata_from_json, series_from_json
