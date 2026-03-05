@@ -12,7 +12,7 @@ from itertools import chain
 from random import choice
 
 # import weakref
-from typing import Callable, Dict, List, Optional, Union
+from typing import Callable
 
 import pandas as pd
 import pastas as ps
@@ -57,7 +57,7 @@ class ConnectorUtil:
 
         Parameters
         ----------
-        names : Union[list, str], optional
+        names : list | str, optional
             str or list of str or None or 'all' (last two options
             retrieves all names)
         libname : str, optional
@@ -247,8 +247,8 @@ class BaseConnector(ABC, ConnectorUtil):
         "stresses_models",
     ]
 
-    _conn_type: Optional[str] = None
-    _validator: Optional[Validator] = None
+    _conn_type: str | None = None
+    _validator: Validator | None = None
     name = None
     _added_models = []  # internal list of added models used for updating links
 
@@ -330,9 +330,9 @@ class BaseConnector(ABC, ConnectorUtil):
     def _add_item(
         self,
         libname: AllLibs,
-        item: Union[FrameOrSeriesUnion, Dict],
+        item: FrameOrSeriesUnion | dict,
         name: str,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ) -> None:
         """Add item for both time series and pastas.Models (internal method).
 
@@ -358,7 +358,7 @@ class BaseConnector(ABC, ConnectorUtil):
         """
 
     @abstractmethod
-    def _get_item(self, libname: AllLibs, name: str) -> Union[FrameOrSeriesUnion, Dict]:
+    def _get_item(self, libname: AllLibs, name: str) -> FrameOrSeriesUnion | dict:
         """Get item (series or pastas.Models) (internal method).
 
         Must be overridden by subclass.
@@ -391,7 +391,7 @@ class BaseConnector(ABC, ConnectorUtil):
         """
 
     @abstractmethod
-    def _get_metadata(self, libname: TimeSeriesLibs, name: str) -> Dict:
+    def _get_metadata(self, libname: TimeSeriesLibs, name: str) -> dict:
         """Get metadata (internal method).
 
         Must be overridden by subclass.
@@ -410,7 +410,7 @@ class BaseConnector(ABC, ConnectorUtil):
         """
 
     @abstractmethod
-    def _list_symbols(self, libname: AllLibs) -> List[str]:
+    def _list_symbols(self, libname: AllLibs) -> list[str]:
         """Return list of symbol names in library."""
 
     @abstractmethod
@@ -463,11 +463,11 @@ class BaseConnector(ABC, ConnectorUtil):
     def _parallel(
         self,
         func: Callable,
-        names: List[str],
-        kwargs: Optional[Dict] = None,
-        progressbar: Optional[bool] = True,
-        max_workers: Optional[int] = None,
-        chunksize: Optional[int] = None,
+        names: list[str],
+        kwargs: dict | None = None,
+        progressbar: bool | None = True,
+        max_workers: int | None = None,
+        chunksize: int | None = None,
         desc: str = "",
     ) -> None:
         """Parallel processing of function.
@@ -503,7 +503,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        names : Union[list, str], optional
+        names : list | str, optional
             str or list of str or None or 'all' (last two options
             retrieves all names)
         libname : str, optional
@@ -609,8 +609,8 @@ class BaseConnector(ABC, ConnectorUtil):
         libname: TimeSeriesLibs,
         series: FrameOrSeriesUnion,
         name: str,
-        metadata: Optional[dict] = None,
-        validate: Optional[bool] = None,
+        metadata: dict | None = None,
+        validate: bool | None = None,
         overwrite: bool = False,
     ) -> None:
         """Add series to database (internal method).
@@ -683,8 +683,8 @@ class BaseConnector(ABC, ConnectorUtil):
         libname: TimeSeriesLibs,
         series: FrameOrSeriesUnion,
         name: str,
-        metadata: Optional[dict] = None,
-        validate: Optional[bool] = None,
+        metadata: dict | None = None,
+        validate: bool | None = None,
         force: bool = False,
     ) -> None:
         """Update time series (internal method).
@@ -697,7 +697,7 @@ class BaseConnector(ABC, ConnectorUtil):
             time series containing update values
         name : str
             name of the time series to update
-        metadata : Optional[dict], optional
+        metadata : dict | None, optional
             optionally provide metadata dictionary which will also update
             the current stored metadata dictionary, by default None
         validate: bool, optional
@@ -740,8 +740,8 @@ class BaseConnector(ABC, ConnectorUtil):
         libname: TimeSeriesLibs,
         series: FrameOrSeriesUnion,
         name: str,
-        metadata: Optional[dict] = None,
-        validate: Optional[bool] = None,
+        metadata: dict | None = None,
+        validate: bool | None = None,
         force: bool = False,
     ) -> None:
         """Update or insert series depending on whether it exists in store.
@@ -754,7 +754,7 @@ class BaseConnector(ABC, ConnectorUtil):
             time series to update/insert
         name : str
             name of the time series
-        metadata : Optional[dict], optional
+        metadata : dict | None, optional
             metadata dictionary, by default None
         validate : bool, optional
             use pastas to validate series, default is None, which will use the
@@ -804,8 +804,8 @@ class BaseConnector(ABC, ConnectorUtil):
         self,
         series: FrameOrSeriesUnion,
         name: str,
-        metadata: Optional[dict] = None,
-        validate: Optional[bool] = None,
+        metadata: dict | None = None,
+        validate: bool | None = None,
         overwrite: bool = False,
     ) -> None:
         """Add oseries to the database.
@@ -839,8 +839,8 @@ class BaseConnector(ABC, ConnectorUtil):
         series: FrameOrSeriesUnion,
         name: str,
         kind: str,
-        metadata: Optional[dict] = None,
-        validate: Optional[bool] = None,
+        metadata: dict | None = None,
+        validate: bool | None = None,
         overwrite: bool = False,
     ) -> None:
         """Add stress to the database.
@@ -877,7 +877,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def add_model(
         self,
-        ml: Union[ps.Model, dict],
+        ml: ps.Model | dict,
         overwrite: bool = False,
         validate_metadata: bool = False,
     ) -> None:
@@ -949,8 +949,8 @@ class BaseConnector(ABC, ConnectorUtil):
         libname: str,
         series: FrameOrSeriesUnion,
         name: str,
-        metadata: Optional[dict] = None,
-        validate: Optional[bool] = None,
+        metadata: dict | None = None,
+        validate: bool | None = None,
         force: bool = False,
     ) -> None:
         """Update time series (internal method).
@@ -963,7 +963,7 @@ class BaseConnector(ABC, ConnectorUtil):
             time series containing update values
         name : str
             name of the time series to update
-        metadata : Optional[dict], optional
+        metadata : dict | None, optional
             optionally provide metadata dictionary which will also update
             the current stored metadata dictionary, by default None
         validate: bool, optional
@@ -1004,7 +1004,7 @@ class BaseConnector(ABC, ConnectorUtil):
         self,
         series: FrameOrSeriesUnion,
         name: str,
-        metadata: Optional[dict] = None,
+        metadata: dict | None = None,
         force: bool = False,
     ) -> None:
         """Update oseries values.
@@ -1015,7 +1015,7 @@ class BaseConnector(ABC, ConnectorUtil):
             time series to update stored oseries with
         name : str
             name of the oseries to update
-        metadata : Optional[dict], optional
+        metadata : dict | None, optional
             optionally provide metadata, which will update
             the stored metadata dictionary, by default None
         force : bool, optional
@@ -1027,7 +1027,7 @@ class BaseConnector(ABC, ConnectorUtil):
         self,
         series: FrameOrSeriesUnion,
         name: str,
-        metadata: Optional[dict] = None,
+        metadata: dict | None = None,
         force: bool = False,
     ) -> None:
         """Update stresses values.
@@ -1041,7 +1041,7 @@ class BaseConnector(ABC, ConnectorUtil):
             time series to update stored stress with
         name : str
             name of the stress to update
-        metadata : Optional[dict], optional
+        metadata : dict | None, optional
             optionally provide metadata, which will update
             the stored metadata dictionary, by default None
         force : bool, optional
@@ -1053,7 +1053,7 @@ class BaseConnector(ABC, ConnectorUtil):
         self,
         series: FrameOrSeriesUnion,
         name: str,
-        metadata: Optional[dict] = None,
+        metadata: dict | None = None,
         force: bool = False,
     ) -> None:
         """Update or insert oseries values depending on whether it exists.
@@ -1064,7 +1064,7 @@ class BaseConnector(ABC, ConnectorUtil):
             time series to update/insert
         name : str
             name of the oseries
-        metadata : Optional[dict], optional
+        metadata : dict | None, optional
             optionally provide metadata, which will update
             the stored metadata dictionary if it exists, by default None
         force : bool, optional
@@ -1077,7 +1077,7 @@ class BaseConnector(ABC, ConnectorUtil):
         series: FrameOrSeriesUnion,
         name: str,
         kind: str,
-        metadata: Optional[dict] = None,
+        metadata: dict | None = None,
         force: bool = False,
     ) -> None:
         """Update or insert stress values depending on whether it exists.
@@ -1088,7 +1088,7 @@ class BaseConnector(ABC, ConnectorUtil):
             time series to update/insert
         name : str
             name of the stress
-        metadata : Optional[dict], optional
+        metadata : dict | None, optional
             optionally provide metadata, which will update
             the stored metadata dictionary if it exists, by default None
         kind : str
@@ -1102,7 +1102,7 @@ class BaseConnector(ABC, ConnectorUtil):
         metadata["kind"] = kind
         self._upsert_series("stresses", series, name, metadata=metadata, force=force)
 
-    def del_models(self, names: Union[list, str], verbose: bool = True) -> None:
+    def del_models(self, names: list | str, verbose: bool = True) -> None:
         """Delete model(s) from the database.
 
         Parameters
@@ -1127,7 +1127,7 @@ class BaseConnector(ABC, ConnectorUtil):
         if verbose:
             logger.info("Deleted %d model(s) from database.", len(names))
 
-    def del_model(self, names: Union[list, str], verbose: bool = True) -> None:
+    def del_model(self, names: list | str, verbose: bool = True) -> None:
         """Delete model(s) from the database.
 
         Alias for del_models().
@@ -1143,7 +1143,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def del_oseries(
         self,
-        names: Union[list, str],
+        names: list | str,
         remove_models: bool = False,
         force: bool = False,
         verbose: bool = True,
@@ -1178,7 +1178,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def del_stress(
         self,
-        names: Union[list, str],
+        names: list | str,
         remove_models: bool = False,
         force: bool = False,
         verbose: bool = True,
@@ -1214,7 +1214,7 @@ class BaseConnector(ABC, ConnectorUtil):
     def _get_series(
         self,
         libname: str,
-        names: Union[list, str],
+        names: list | str,
         progressbar: bool = True,
         squeeze: bool = True,
     ) -> FrameOrSeriesUnion:
@@ -1253,11 +1253,11 @@ class BaseConnector(ABC, ConnectorUtil):
     def get_metadata(
         self,
         libname: str,
-        names: Union[list, str],
+        names: list | str,
         progressbar: bool = False,
         as_frame: bool = True,
         squeeze: bool = True,
-    ) -> Union[dict, pd.DataFrame]:
+    ) -> dict | pd.DataFrame:
         """Read metadata from database.
 
         Parameters
@@ -1294,11 +1294,11 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def get_oseries(
         self,
-        names: Union[list, str],
+        names: list | str,
         return_metadata: bool = False,
         progressbar: bool = False,
         squeeze: bool = True,
-    ) -> Union[Union[FrameOrSeriesUnion, Dict], Optional[Union[Dict, List]]]:
+    ) -> FrameOrSeriesUnion | dict | (dict | list) | None:
         """Get oseries from database.
 
         Parameters
@@ -1339,11 +1339,11 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def get_stresses(
         self,
-        names: Union[list, str],
+        names: list | str,
         return_metadata: bool = False,
         progressbar: bool = False,
         squeeze: bool = True,
-    ) -> Union[Union[FrameOrSeriesUnion, Dict], Optional[Union[Dict, List]]]:
+    ) -> FrameOrSeriesUnion | dict | (dict | list) | None:
         """Get stresses from database.
 
         Parameters
@@ -1384,11 +1384,11 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def get_stress(
         self,
-        names: Union[list, str],
+        names: list | str,
         return_metadata: bool = False,
         progressbar: bool = False,
         squeeze: bool = True,
-    ) -> Union[Union[FrameOrSeriesUnion, Dict], Optional[Union[Dict, List]]]:
+    ) -> FrameOrSeriesUnion | dict | (dict | list) | None:
         """Get stresses from database.
 
         Alias for `get_stresses()`
@@ -1423,12 +1423,12 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def get_models(
         self,
-        names: Union[list, str],
+        names: list | str,
         return_dict: bool = False,
         progressbar: bool = False,
         squeeze: bool = True,
         update_ts_settings: bool = False,
-    ) -> Union[ps.Model, list]:
+    ) -> ps.Model | list:
         """Load models from database.
 
         Parameters
@@ -1470,12 +1470,12 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def get_model(
         self,
-        names: Union[list, str],
+        names: list | str,
         return_dict: bool = False,
         progressbar: bool = False,
         squeeze: bool = True,
         update_ts_settings: bool = False,
-    ) -> Union[ps.Model, list]:
+    ) -> ps.Model | list:
         """Load models from database.
 
         Alias for get_models().
@@ -1553,14 +1553,14 @@ class BaseConnector(ABC, ConnectorUtil):
                 "Emptied library %s in %s: %s", libname, self.name, self.__class__
             )
 
-    def _iter_series(self, libname: TimeSeriesLibs, names: Optional[List[str]] = None):
+    def _iter_series(self, libname: TimeSeriesLibs, names: list[str] | None = None):
         """Iterate over time series in library (internal method).
 
         Parameters
         ----------
         libname : str
             name of library (e.g. 'oseries' or 'stresses')
-        names : Optional[List[str]], optional
+        names : list[str] | None, optional
             list of names, by default None, which defaults to
             all stored series
 
@@ -1574,12 +1574,12 @@ class BaseConnector(ABC, ConnectorUtil):
         for name in names:
             yield self._get_series(libname, name, progressbar=False)
 
-    def iter_oseries(self, names: Optional[List[str]] = None):
+    def iter_oseries(self, names: list[str] | None = None):
         """Iterate over oseries in library.
 
         Parameters
         ----------
-        names : Optional[List[str]], optional
+        names : list[str] | None, optional
             list of oseries names, by default None, which defaults to
             all stored series
 
@@ -1591,12 +1591,12 @@ class BaseConnector(ABC, ConnectorUtil):
         """
         yield from self._iter_series("oseries", names=names)
 
-    def iter_stresses(self, names: Optional[List[str]] = None):
+    def iter_stresses(self, names: list[str] | None = None):
         """Iterate over stresses in library.
 
         Parameters
         ----------
-        names : Optional[List[str]], optional
+        names : list[str] | None, optional
             list of stresses names, by default None, which defaults to
             all stored series
 
@@ -1609,13 +1609,13 @@ class BaseConnector(ABC, ConnectorUtil):
         yield from self._iter_series("stresses", names=names)
 
     def iter_models(
-        self, modelnames: Optional[List[str]] = None, return_dict: bool = False
+        self, modelnames: list[str] | None = None, return_dict: bool = False
     ):
         """Iterate over models in library.
 
         Parameters
         ----------
-        modelnames : Optional[List[str]], optional
+        modelnames : list[str] | None, optional
             list of models to iterate over, by default None which uses
             all models
         return_dict : bool, optional
@@ -1634,7 +1634,7 @@ class BaseConnector(ABC, ConnectorUtil):
     def _add_oseries_model_links(
         self,
         oseries_name: str,
-        model_names: Union[str, List[str]],
+        model_names: str | list[str],
         _clear_cache: bool = True,
     ):
         """Add model name to stored list of models per oseries.
@@ -1643,12 +1643,12 @@ class BaseConnector(ABC, ConnectorUtil):
         ----------
         oseries_name : str
             name of oseries
-        model_names : Union[str, List[str]]
+        model_names : str | list[str]
             model name or list of model names for an oseries with name
             oseries_name.
         _clear_cache : bool, optional
             whether to clear the cache after adding, by default True.
-            Set to False during bulk operations to improve performance.
+            set to False during bulk operations to improve performance.
         """
         # get stored list of model names
         if self._item_exists("oseries_models", oseries_name):
@@ -1677,11 +1677,11 @@ class BaseConnector(ABC, ConnectorUtil):
         ----------
         stress_names : list of str
             names of stresses
-        model_names : Union[str, List[str]]
+        model_names : str | list[str]
             model name or list of model names for a stress with name
         _clear_cache : bool, optional
             whether to clear the cache after adding, by default True.
-            Set to False during bulk operations to improve performance.
+            set to False during bulk operations to improve performance.
         """
         # if one model name, make list for loop
         if isinstance(model_names, str):
@@ -1726,7 +1726,7 @@ class BaseConnector(ABC, ConnectorUtil):
         Parameters
         ----------
         stress_names : list of str
-            List of stress names for which to remove the model link.
+            list of stress names for which to remove the model link.
         model_name : str
             Name of the model to remove from the stress links.
         """
@@ -1742,7 +1742,7 @@ class BaseConnector(ABC, ConnectorUtil):
     def _update_time_series_model_links(
         self,
         libraries: list[str] = None,
-        modelnames: Optional[List[str]] = None,
+        modelnames: list[str] | None = None,
         recompute: bool = True,
         progressbar: bool = False,
     ):
@@ -1758,7 +1758,7 @@ class BaseConnector(ABC, ConnectorUtil):
         libraries : list of str, optional
             list of time series libraries to update model links for,
             by default None which will update both 'oseries' and 'stresses'
-        modelnames : Optional[List[str]], optional
+        modelnames : list[str] | None, optional
             list of model names to update links for, by default None
         recompute : bool, optional
             Indicate operation is an update/recompute of existing links,
@@ -1801,7 +1801,7 @@ class BaseConnector(ABC, ConnectorUtil):
             self._clear_cache("stresses_models")
 
     def _trigger_links_update_if_needed(
-        self, modelnames: Optional[list[str]] = None, progressbar: bool = False
+        self, modelnames: list[str] | None = None, progressbar: bool = False
     ):
         # Check if time series-> model links need updating
         # Handle both Manager proxies (main) and booleans (worker after pickle)
@@ -1831,7 +1831,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def _get_time_series_model_links(
         self,
-        modelnames: Optional[list[str]] = None,
+        modelnames: list[str] | None = None,
         recompute: bool = False,
         progressbar: bool = True,
     ) -> dict:
@@ -1868,7 +1868,7 @@ class BaseConnector(ABC, ConnectorUtil):
                     stresses_links[snam] = [mlnam]
         return {"oseries": oseries_links, "stresses": stresses_links}
 
-    def _get_model_stress_names(self, ml: ps.Model | dict) -> List[str]:
+    def _get_model_stress_names(self, ml: ps.Model | dict) -> list[str]:
         """Get list of stress names used in model.
 
         Parameters
@@ -1914,7 +1914,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def get_model_time_series_names(
         self,
-        modelnames: Optional[Union[list, str]] = None,
+        modelnames: (list | str) | None = None,
         dropna: bool = True,
         progressbar: bool = True,
     ) -> FrameOrSeriesUnion:
@@ -1922,7 +1922,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        modelnames : Optional[Union[list, str]], optional
+        modelnames : (list | str) | None, optional
             list or name of models to get time series names for,
             by default None which will use all modelnames
         dropna : bool, optional

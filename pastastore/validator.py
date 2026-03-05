@@ -7,7 +7,7 @@ import shutil
 import warnings
 
 # import weakref
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import pastas as ps
@@ -20,7 +20,7 @@ from pastastore.util import SeriesUsedByModel, _custom_warning, validate_names
 if TYPE_CHECKING:
     from pastastore.base import BaseConnector
 
-FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
+FrameorSeriesUnion = pd.DataFrame | pd.Series
 warnings.showwarning = _custom_warning
 
 logger = logging.getLogger(__name__)
@@ -372,12 +372,12 @@ class Validator:
             )
             raise ValueError(msg)
 
-    def check_oseries_in_store(self, ml: Union[ps.Model, dict]):
+    def check_oseries_in_store(self, ml: ps.Model | dict):
         """Check if Model oseries are contained in PastaStore (internal method).
 
         Parameters
         ----------
-        ml : Union[ps.Model, dict]
+        ml : ps.Model | dict
             pastas Model
         """
         if isinstance(ml, ps.Model):
@@ -409,12 +409,12 @@ class Validator:
                     " is different from stored oseries! See stacktrace for differences."
                 ) from e
 
-    def check_stresses_in_store(self, ml: Union[ps.Model, dict]):
+    def check_stresses_in_store(self, ml: ps.Model | dict):
         """Check if stresses time series are contained in PastaStore (internal method).
 
         Parameters
         ----------
-        ml : Union[ps.Model, dict]
+        ml : ps.Model | dict
             pastas Model
         """
         prec_evap_model = ["RechargeModel", "TarsoModel"]

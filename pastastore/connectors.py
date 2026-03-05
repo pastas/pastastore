@@ -11,7 +11,7 @@ from multiprocessing import Manager
 from pathlib import Path
 
 # import weakref
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable
 
 import pandas as pd
 from pastas.io.pas import PastasEncoder, pastas_hook
@@ -42,7 +42,7 @@ class ParallelUtil:
     @staticmethod
     def _solve_model(
         ml_name: str,
-        connector: Optional[BaseConnector] = None,
+        connector: BaseConnector | None = None,
         report: bool = False,
         ignore_solve_errors: bool = False,
         **kwargs,
@@ -95,8 +95,8 @@ class ParallelUtil:
     @staticmethod
     def _get_statistics(
         name: str,
-        statistics: List[str],
-        connector: Union[None, BaseConnector] = None,
+        statistics: list[str],
+        connector: None | BaseConnector = None,
         **kwargs,
     ) -> pd.Series:
         """Get statistics for a model in the store (internal method).
@@ -121,7 +121,7 @@ class ParallelUtil:
     @staticmethod
     def _get_max_workers_and_chunksize(
         max_workers: int, njobs: int, chunksize: int = None
-    ) -> Tuple[int, int]:
+    ) -> tuple[int, int]:
         """Get the maximum workers and chunksize for parallel processing.
 
         From: https://stackoverflow.com/a/42096963/10596229
@@ -277,9 +277,9 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
     def _add_item(
         self,
         libname: AllLibs,
-        item: Union[FrameOrSeriesUnion, Dict],
+        item: FrameOrSeriesUnion | dict,
         name: str,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
         **_,
     ) -> None:
         """Add item to library (time series or model) (internal method).
@@ -288,11 +288,11 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         ----------
         libname : str
             name of the library
-        item : Union[FrameorSeriesUnion, Dict]
+        item : FrameorSeriesUnion | dict
             item to add, either time series or pastas.Model as dictionary
         name : str
             name of the item
-        metadata : Optional[Dict], optional
+        metadata : dict | None, optional
             dictionary containing metadata, by default None
         """
         lib = self._get_library(libname)
@@ -311,7 +311,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
             logger.debug("Writing item '%s' to ArcticDB library '%s'.", name, libname)
             lib.write(name, item, metadata=metadata)
 
-    def _get_item(self, libname: AllLibs, name: str) -> Union[FrameOrSeriesUnion, Dict]:
+    def _get_item(self, libname: AllLibs, name: str) -> FrameOrSeriesUnion | dict:
         """Retrieve item from library (internal method).
 
         Parameters
@@ -323,7 +323,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
 
         Returns
         -------
-        item : Union[FrameorSeriesUnion, Dict]
+        item : FrameorSeriesUnion | dict
             time series or model dictionary
         """
         lib = self._get_library(libname)
@@ -367,14 +367,14 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
     def _parallel(
         self,
         func: Callable,
-        names: List[str],
-        kwargs: Optional[Dict] = None,
-        progressbar: Optional[bool] = True,
-        max_workers: Optional[int] = None,
-        chunksize: Optional[int] = None,
+        names: list[str],
+        kwargs: dict | None = None,
+        progressbar: bool | None = True,
+        max_workers: int | None = None,
+        chunksize: int | None = None,
         desc: str = "",
         initializer: Callable = None,
-        initargs: Optional[tuple] = None,
+        initargs: tuple | None = None,
     ):
         """Parallel processing of function.
 
@@ -456,7 +456,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
 
         return result
 
-    def _list_symbols(self, libname: AllLibs) -> List[str]:
+    def _list_symbols(self, libname: AllLibs) -> list[str]:
         """List symbols in a library (internal method).
 
         Parameters
@@ -527,9 +527,9 @@ class DictConnector(BaseConnector, ParallelUtil):
     def _add_item(
         self,
         libname: str,
-        item: Union[FrameOrSeriesUnion, Dict],
+        item: FrameOrSeriesUnion | dict,
         name: str,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
         **_,
     ) -> None:
         """Add item (time series or models) (internal method).
@@ -555,7 +555,7 @@ class DictConnector(BaseConnector, ParallelUtil):
         else:
             lib[name] = (metadata, item)
 
-    def _get_item(self, libname: AllLibs, name: str) -> Union[FrameOrSeriesUnion, Dict]:
+    def _get_item(self, libname: AllLibs, name: str) -> FrameOrSeriesUnion | dict:
         """Retrieve item from database (internal method).
 
         Parameters
@@ -567,7 +567,7 @@ class DictConnector(BaseConnector, ParallelUtil):
 
         Returns
         -------
-        item : Union[FrameorSeriesUnion, Dict]
+        item : FrameorSeriesUnion | dict
             time series or model dictionary, modifying the returned object will not
             affect the stored data, like in a real database
         """
@@ -630,7 +630,7 @@ class DictConnector(BaseConnector, ParallelUtil):
             " use PasConnector or ArcticDBConnector."
         )
 
-    def _list_symbols(self, libname: AllLibs) -> List[str]:
+    def _list_symbols(self, libname: AllLibs) -> list[str]:
         """List symbols in a library (internal method).
 
         Parameters
@@ -755,9 +755,9 @@ class PasConnector(BaseConnector, ParallelUtil):
     def _add_item(
         self,
         libname: str,
-        item: Union[FrameOrSeriesUnion, Dict],
+        item: FrameOrSeriesUnion | dict,
         name: str,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
         **_,
     ) -> None:
         """Add item (time series or models) (internal method).
@@ -820,7 +820,7 @@ class PasConnector(BaseConnector, ParallelUtil):
                 logger.debug("Writing link list '%s' to disk at '%s'.", name, fname)
                 fm.write(jsondict)
 
-    def _get_item(self, libname: AllLibs, name: str) -> Union[FrameOrSeriesUnion, Dict]:
+    def _get_item(self, libname: AllLibs, name: str) -> FrameOrSeriesUnion | dict:
         """Retrieve item (internal method).
 
         Parameters
@@ -832,7 +832,7 @@ class PasConnector(BaseConnector, ParallelUtil):
 
         Returns
         -------
-        item : Union[FrameorSeriesUnion, Dict]
+        item : FrameorSeriesUnion | dict
             time series or model dictionary
         """
         lib = self._get_library(libname)
@@ -904,14 +904,14 @@ class PasConnector(BaseConnector, ParallelUtil):
     def _parallel(
         self,
         func: Callable,
-        names: List[str],
-        kwargs: Optional[dict] = None,
-        progressbar: Optional[bool] = True,
-        max_workers: Optional[int] = None,
-        chunksize: Optional[int] = None,
+        names: list[str],
+        kwargs: dict | None = None,
+        progressbar: bool | None = True,
+        max_workers: int | None = None,
+        chunksize: int | None = None,
         desc: str = "",
         initializer: Callable = None,
-        initargs: Optional[tuple] = None,
+        initargs: tuple | None = None,
     ):
         """Parallel processing of function.
 
@@ -977,7 +977,7 @@ class PasConnector(BaseConnector, ParallelUtil):
 
         return result
 
-    def _list_symbols(self, libname: AllLibs) -> List[str]:
+    def _list_symbols(self, libname: AllLibs) -> list[str]:
         """List symbols in a library (internal method).
 
         Parameters

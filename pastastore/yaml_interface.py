@@ -7,7 +7,7 @@ import tempfile
 from contextlib import contextmanager
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -17,7 +17,7 @@ import yaml
 logger = logging.getLogger(__name__)
 
 
-def _convert_dict_dtypes_for_yaml(d: Dict[str, Any]):
+def _convert_dict_dtypes_for_yaml(d: dict[str, Any]):
     """Convert dictionary values for storing in YAML format (internal function).
 
     Parameters
@@ -191,7 +191,7 @@ class PastastoreYAML:
         """
         self.pstore = pstore
 
-    def _parse_rechargemodel_dict(self, d: Dict, onam: Optional[str] = None) -> Dict:
+    def _parse_rechargemodel_dict(self, d: dict, onam: str | None = None) -> dict:
         """Parse RechargeModel dictionary (internal method).
 
         Note: supports 'nearest' as input to 'prec' and 'evap',
@@ -326,7 +326,7 @@ class PastastoreYAML:
 
         return d
 
-    def _parse_stressmodel_dict(self, d: Dict, onam: Optional[str] = None) -> Dict:
+    def _parse_stressmodel_dict(self, d: dict, onam: str | None = None) -> dict:
         """Parse StressModel dictionary (internal method).
 
         Note: supports 'nearest' or 'nearest <kind>' as input to 'stress',
@@ -390,7 +390,7 @@ class PastastoreYAML:
 
         return d
 
-    def _parse_wellmodel_dict(self, d: Dict, onam: Optional[str] = None) -> Dict:
+    def _parse_wellmodel_dict(self, d: dict, onam: str | None = None) -> dict:
         """Parse WellModel dictionary (internal method).
 
         Note: supports 'nearest' or 'nearest <number> <kind>' as input to
@@ -611,7 +611,7 @@ class PastastoreYAML:
             )
         return mldict
 
-    def load(self, fyaml: str) -> List[ps.Model]:
+    def load(self, fyaml: str) -> list[ps.Model]:
         """Load Pastas YAML file.
 
         Note: currently supports RechargeModel, StressModel and WellModel.
@@ -661,10 +661,10 @@ class PastastoreYAML:
 
     def export_stored_models_per_oseries(
         self,
-        oseries: Optional[Union[List[str], str]] = None,
-        outdir: Optional[Path | str] = ".",
-        minimal_yaml: Optional[bool] = False,
-        use_nearest: Optional[bool] = False,
+        oseries: (list[str] | str) | None = None,
+        outdir: (Path | str) | None = ".",
+        minimal_yaml: bool | None = False,
+        use_nearest: bool | None = False,
     ):
         """Export store models grouped per oseries (location) to YAML file(s).
 
@@ -719,13 +719,13 @@ class PastastoreYAML:
 
     def export_models(
         self,
-        models: Optional[Union[List[ps.Model], List[Dict]]] = None,
-        modelnames: Optional[Union[List[str], str]] = None,
-        outdir: Optional[str] = ".",
-        minimal_yaml: Optional[bool] = False,
-        use_nearest: Optional[bool] = False,
-        split: Optional[bool] = True,
-        filename: Optional[str] = "pastas_models.yaml",
+        models: (list[ps.Model] | list[dict]) | None = None,
+        modelnames: (list[str] | str) | None = None,
+        outdir: str | None = ".",
+        minimal_yaml: bool | None = False,
+        use_nearest: bool | None = False,
+        split: bool | None = True,
+        filename: str | None = "pastas_models.yaml",
     ):
         """Export (stored) models to yaml file(s).
 
@@ -786,10 +786,10 @@ class PastastoreYAML:
 
     @staticmethod
     def export_model(
-        ml: Union[ps.Model, dict],
-        outdir: Optional[Path | str] = ".",
-        minimal_yaml: Optional[bool] = False,
-        use_nearest: Optional[bool] = False,
+        ml: ps.Model | dict,
+        outdir: (Path | str) | None = ".",
+        minimal_yaml: bool | None = False,
+        use_nearest: bool | None = False,
     ):
         """Write single pastas model to YAML file.
 

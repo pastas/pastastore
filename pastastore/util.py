@@ -6,7 +6,6 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -37,7 +36,7 @@ class ZipUtils:
     def _stored_series_to_json(
         self,
         libname: TimeSeriesLibs,
-        names: Optional[Union[list, str]] = None,
+        names: (list | str) | None = None,
         squeeze: bool = True,
         progressbar: bool = False,
     ):
@@ -47,7 +46,7 @@ class ZipUtils:
         ----------
         libname : str
             library name
-        names : Optional[Union[list, str]], optional
+        names : (list | str) | None, optional
             names of series, by default None
         squeeze : bool, optional
             return single entry as json string instead
@@ -84,7 +83,7 @@ class ZipUtils:
     def _stored_metadata_to_json(
         self,
         libname: TimeSeriesLibs,
-        names: Optional[Union[list, str]] = None,
+        names: (list | str) | None = None,
         squeeze: bool = True,
         progressbar: bool = False,
     ):
@@ -94,7 +93,7 @@ class ZipUtils:
         ----------
         libname : str
             library containing series
-        names : Optional[Union[list, str]], optional
+        names : (list | str) | None, optional
             names to parse, by default None
         squeeze : bool, optional
             return single entry as json string instead of list, by default True
@@ -121,7 +120,7 @@ class ZipUtils:
         self,
         archive,
         libname: TimeSeriesLibs,
-        names: Optional[Union[list, str]] = None,
+        names: (list | str) | None = None,
         progressbar: bool = True,
     ):
         """Write DataFrame or Series to zipfile (internal method).
@@ -177,7 +176,7 @@ class ColoredFormatter(logging.Formatter):
     """
 
     def __init__(
-        self, *args, colors: Optional[Dict[str, str]] = None, **kwargs
+        self, *args, colors: dict[str, str] | None = None, **kwargs
     ) -> None:
         """Initialize the formatter with specified format strings."""
         super().__init__(*args, **kwargs)
@@ -286,9 +285,9 @@ def metadata_from_json(fjson: str):
 
 def delete_arcticdb_connector(
     conn=None,
-    uri: Optional[str] = None,
-    name: Optional[str] = None,
-    libraries: Optional[List[str]] = None,
+    uri: str | None = None,
+    name: str | None = None,
+    libraries: list[str] | None = None,
 ) -> None:
     """Delete libraries from arcticDB database.
 
@@ -300,7 +299,7 @@ def delete_arcticdb_connector(
         uri connection string to the database
     name : str, optional
         name of the database
-    libraries : Optional[List[str]], optional
+    libraries : list[str] | None, optional
         list of library names to delete, by default None which deletes
         all libraries
     """
@@ -348,7 +347,7 @@ def delete_arcticdb_connector(
     logger.info("Done!")
 
 
-def delete_dict_connector(conn, libraries: Optional[List[str]] = None) -> None:
+def delete_dict_connector(conn, libraries: list[str] | None = None) -> None:
     """Delete DictConnector object."""
     logger.info("Deleting DictConnector: '%s' ... ", conn.name)
     if libraries is None:
@@ -361,7 +360,7 @@ def delete_dict_connector(conn, libraries: Optional[List[str]] = None) -> None:
     logger.info("Done!")
 
 
-def delete_pas_connector(conn, libraries: Optional[List[str]] = None) -> None:
+def delete_pas_connector(conn, libraries: list[str] | None = None) -> None:
     """Delete PasConnector object."""
     logger.info("Deleting PasConnector database: '%s' ... ", conn.name)
     if libraries is None:
@@ -374,7 +373,7 @@ def delete_pas_connector(conn, libraries: Optional[List[str]] = None) -> None:
         logger.info("Done!")
 
 
-def delete_pastastore(pstore, libraries: Optional[List[str]] = None) -> None:
+def delete_pastastore(pstore, libraries: list[str] | None = None) -> None:
     """Delete libraries from PastaStore.
 
     Note
@@ -388,7 +387,7 @@ def delete_pastastore(pstore, libraries: Optional[List[str]] = None) -> None:
     ----------
     pstore : pastastore.PastaStore
         PastaStore object to delete (from)
-    libraries : Optional[List[str]], optional
+    libraries : list[str] | None, optional
         list of library names to delete, by default None which deletes
         all libraries
 
@@ -410,12 +409,12 @@ def delete_pastastore(pstore, libraries: Optional[List[str]] = None) -> None:
 
 
 def validate_names(
-    s: Optional[str] = None,
-    d: Optional[dict] = None,
-    replace_space: Optional[str] = "_",
-    deletechars: Optional[str] = None,
+    s: str | None = None,
+    d: dict | None = None,
+    replace_space: str | None = "_",
+    deletechars: str | None = None,
     **kwargs,
-) -> Union[str, Dict]:
+) -> str | dict:
     """Remove invalid characters from string or dictionary keys.
 
     Parameters
@@ -455,7 +454,7 @@ def validate_names(
 def compare_models(
     ml1: Model,
     ml2: Model,
-    stats: List[str] = None,
+    stats: list[str] = None,
     detailed_comparison: bool = False,
     style_output: bool = False,
 ) -> pd.DataFrame:
@@ -622,7 +621,7 @@ def compare_models(
 def copy_database(
     conn1,
     conn2,
-    libraries: Optional[List[str]] = None,
+    libraries: list[str] | None = None,
     overwrite: bool = False,
     progressbar: bool = True,
 ) -> None:
@@ -634,7 +633,7 @@ def copy_database(
         source Connector containing link to current database containing data
     conn2 : pastastore.*Connector
         destination Connector with link to database to which you want to copy
-    libraries : Optional[List[str]], optional
+    libraries : list[str] | None, optional
         list of str containing names of libraries to copy, by default None,
         which copies all libraries: ['oseries', 'stresses', 'models']
     overwrite : bool, optional
@@ -687,8 +686,8 @@ def copy_database(
 
 def frontiers_checks(
     pstore,
-    modelnames: Optional[List[str]] = None,
-    oseries: Optional[List[str]] = None,
+    modelnames: list[str] | None = None,
+    oseries: list[str] | None = None,
     check1_rsq: bool = True,
     check1_threshold: float = 0.7,
     check2_autocor: bool = True,
@@ -698,7 +697,7 @@ def frontiers_checks(
     check3_cutoff: float = 0.95,
     check4_gain: bool = True,
     check5_parambounds: bool = False,
-    csv_dir: Optional[str] = None,
+    csv_dir: str | None = None,
     progressbar: bool = False,
 ) -> pd.DataFrame:  # pragma: no cover
     """Check models in a PastaStore to see if they pass reliability criteria.
@@ -951,8 +950,8 @@ def frontiers_checks(
 
 def frontiers_aic_select(
     pstore,
-    modelnames: Optional[List[str]] = None,
-    oseries: Optional[List[str]] = None,
+    modelnames: list[str] | None = None,
+    oseries: list[str] | None = None,
     full_output: bool = False,
 ) -> pd.DataFrame:  # pragma: no cover
     """Select the best model structure based on the minimum AIC.

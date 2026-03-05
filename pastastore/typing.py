@@ -1,10 +1,10 @@
 """Typing definitions for PastasStore."""
 
-from typing import Literal, Union
+from typing import Literal
 
 import pandas as pd
 
-FrameOrSeriesUnion = Union[pd.DataFrame, pd.Series]
+FrameOrSeriesUnion = pd.DataFrame | pd.Series
 
 # Literal types for library names
 TimeSeriesLibs = Literal["oseries", "stresses"]
