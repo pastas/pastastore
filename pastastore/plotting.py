@@ -857,9 +857,12 @@ class Maps:
     def series(
         self,
         series,
+        name=None,
         labels=True,
         adjust=False,
         cmap="viridis",
+        colorbar=True,
+        legend=False,
         norm=None,
         vmin=None,
         vmax=None,
@@ -876,12 +879,20 @@ class Maps:
             Pandas.Series with index that (partly) matches the pstore.oseries_names and
             values to plot on the map. The locations of the oseries are used to plot
             the values on the map.
+        name: str, optional
+            name of the series to use for labeling, by default None, which uses the
+            name of the series itself or "value" if the series has no name.
         labels: bool, optional
             label models, by default True
         adjust: bool, optional
             automated smart label placement using adjustText, by default False
         cmap: str or colormap, optional
             (name of) the colormap, by default "viridis"
+        colorbar : bool, optional
+            show colorbar, by default True.
+        legend : bool, optional
+            show legend, only possible if the Series data type is int/int64, by default
+            False.
         norm: norm, optional
             normalization for colorbar, by default None
         vmin: float, optional
@@ -914,6 +925,7 @@ class Maps:
         Only the oseries with names matching the index of the `series` will be plotted.
 
         """
+        # A few quick checks on the input series
         if not isinstance(series, pd.Series):
             raise ValueError("series should be a pandas Series.")
         if not series.index.isin(self.pstore.oseries_names).any():
@@ -921,14 +933,26 @@ class Maps:
                 "The index of the series should match the names of the oseries in the "
                 "store."
             )
-        df = self.pstore.oseries.join(series.rename("value"), how="left")
+
+        # Ensure series has a name for labeling and colorbar, if not use "value"
+        if name is not None:
+            if not isinstance(name, str):
+                raise ValueError("name should be a string.")
+            series.rename(name, inplace=True)
+        elif not series.name and name is None:
+            name = "value"
+            series.rename("value", inplace=True)
+
+        df = self.pstore.oseries.join(series, how="left")
 
         return self.dataframe(
             df,
-            column="value",
+            column=series.name,
             labels=labels,
             adjust=adjust,
             cmap=cmap,
+            colorbar=colorbar,
+            legend=legend,
             norm=norm,
             vmin=vmin,
             vmax=vmax,
@@ -946,6 +970,8 @@ class Maps:
         labels=True,
         adjust=False,
         cmap="viridis",
+        colorbar=True,
+        legend=False,
         norm=None,
         vmin=None,
         vmax=None,
@@ -971,6 +997,11 @@ class Maps:
             automated smart label placement using adjustText, by default False
         cmap: str or colormap, optional
             (name of) the colormap, by default "viridis"
+        colorbar : bool, optional
+            show colorbar, only if column is provided, by default True.
+        legend : bool, optional
+            show legend, only possible if the column data type is int/int64, by default
+            False.
         norm: norm, optional
             normalization for colorbar, by default None
         vmin: float, optional
@@ -1026,6 +1057,8 @@ class Maps:
             column=column,
             figsize=figsize,
             ax=ax,
+            colorbar=colorbar,
+            legend=legend,
             **scatter_kwargs,
         )
 
@@ -1298,6 +1331,7 @@ class Maps:
         label=True,
         column=None,
         colorbar=True,
+        legend=False,
         ax=None,
         figsize=(10, 8),
         **kwargs,
@@ -1322,6 +1356,9 @@ class Maps:
             automated smart label placement using adjustText, by default False
         colorbar : bool, optional
             show colorbar, only if column is provided, by default True.
+        legend : bool, optional
+            show legend, only possible if the column data type is int/int64, by default
+            False.
         progressbar: bool, optional
             show progressbar, default is True.
         ax : matplotlib Axes
@@ -1359,13 +1396,13 @@ class Maps:
 
         # if column is passed for coloring pts
         if column:
-            c = df[column]
+            c = df.loc[:, column]
             if "cmap" not in kwargs:
                 kwargs["cmap"] = "viridis"
         else:
             c = kwargs.pop("c", None)
 
-        sc = ax.scatter(df[x], df[y], marker=marker, s=s, c=c, **kwargs)
+        sc = ax.scatter(df.loc[:, x], df.loc[:, y], marker=marker, s=s, c=c, **kwargs)
         # add colorbar
         if column and colorbar:
             divider = make_axes_locatable(ax)
@@ -1373,9 +1410,16 @@ class Maps:
             cbar = fig.colorbar(sc, ax=ax, cax=cax)
             cbar.set_label(column)
 
+        # add legend if column is categorical (int) and legend is True
+        if legend and column and pd.api.types.is_integer_dtype(df[column]):
+            uniques = df[column].dropna().unique()
+            for u in uniques:
+                ax.scatter([], [], c=sc.cmap(sc.norm(u)), label=str(u), **kwargs)
+            ax.legend(title=column, loc="best")
+
         # set axes properties
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
+        ax.set_xlabel(x)
+        ax.set_ylabel(y)
 
         for label in ax.get_yticklabels():
             label.set_rotation(90)
