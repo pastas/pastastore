@@ -175,9 +175,7 @@ class ColoredFormatter(logging.Formatter):
     https://gist.github.com/joshbode/58fac7ababc700f51e2a9ecdebe563ad
     """
 
-    def __init__(
-        self, *args, colors: dict[str, str] | None = None, **kwargs
-    ) -> None:
+    def __init__(self, *args, colors: dict[str, str] | None = None, **kwargs) -> None:
         """Initialize the formatter with specified format strings."""
         super().__init__(*args, **kwargs)
 
