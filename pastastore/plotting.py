@@ -854,16 +854,102 @@ class Maps:
 
         return ax
 
-    def dataframe(
+    def series(
         self,
-        df,
-        column,
-        label=True,
+        series,
+        labels=True,
         adjust=False,
         cmap="viridis",
         norm=None,
         vmin=None,
         vmax=None,
+        ax=None,
+        figsize=(10, 8),
+        backgroundmap=False,
+        **kwargs,
+    ):
+        """Plot the values of a series on a map.
+
+        Parameters
+        ----------
+        series: str
+            Pandas.Series with index that (partly) matches the pstore.oseries_names and
+            values to plot on the map. The locations of the oseries are used to plot
+            the values on the map.
+        labels: bool, optional
+            label models, by default True
+        adjust: bool, optional
+            automated smart label placement using adjustText, by default False
+        cmap: str or colormap, optional
+            (name of) the colormap, by default "viridis"
+        norm: norm, optional
+            normalization for colorbar, by default None
+        vmin: float, optional
+            vmin for colorbar, by default None
+        vmax: float, optional
+            vmax for colorbar, by default None
+        ax : matplotlib.Axes, optional
+            axes handle, if not provided a new figure is created.
+        figsize: tuple, optional
+            figure size, by default(10, 8)
+        backgroundmap: bool, optional
+            if True, add background map (default CRS is EPSG:28992) with default tiles
+            by OpenStreetMap.Mapnik. Default option is False.
+        **kwargs: dict, optional
+            additional keyword arguments to pass to dataframe_scatter method.
+
+        Returns
+        -------
+        ax: matplotlib.Axes
+            axes object
+
+        See Also
+        --------
+        self.add_background_map
+        self.dataframe_scatter
+
+        Notes
+        -----
+        The index of the `series` should match the names of the oseries in the store.
+        Only the oseries with names matching the index of the `series` will be plotted.
+
+        """
+        if not isinstance(series, pd.Series):
+            raise ValueError("series should be a pandas Series.")
+        if not series.index.isin(self.pstore.oseries_names).any():
+            raise ValueError(
+                "The index of the series should match the names of the oseries in the "
+                "store."
+            )
+        df = self.pstore.oseries.join(series.rename("value"), how="left")
+
+        return self.dataframe(
+            df,
+            column="value",
+            labels=labels,
+            adjust=adjust,
+            cmap=cmap,
+            norm=norm,
+            vmin=vmin,
+            vmax=vmax,
+            figsize=figsize,
+            ax=ax,
+            backgroundmap=backgroundmap,
+            **kwargs,
+        )
+
+    def dataframe(
+        self,
+        df,
+        column,
+        label=None,
+        labels=True,
+        adjust=False,
+        cmap="viridis",
+        norm=None,
+        vmin=None,
+        vmax=None,
+        ax=None,
         figsize=(10, 8),
         backgroundmap=False,
         **kwargs,
@@ -877,7 +963,10 @@ class Maps:
         column: str
             column with values to plot
         label: bool, optional
-            label points, by default True
+            label points, by default True, Deprecated since Pastastore 1.13.0, use
+            labels instead.
+        labels: bool, optional
+            label the points, by default True
         adjust: bool, optional
             automated smart label placement using adjustText, by default False
         cmap: str or colormap, optional
@@ -906,6 +995,14 @@ class Maps:
         See Also
         --------
         self.add_background_map
+        self.dataframe_scatter
+
+        Notes
+        -----
+        The DataFrame `df` should contain columns "x" and "y" for the coordinates, and
+        a column specified by `column` for the values to plot. The index of the
+        DataFrame is used for labeling if `label` is True.
+
         """
         scatter_kwargs = {
             "cmap": cmap,
@@ -917,10 +1014,22 @@ class Maps:
         }
         scatter_kwargs.update(kwargs)
 
-        ax = self.dataframe_scatter(
-            df, column=column, figsize=figsize, **scatter_kwargs
+        if label is not None:
+            DeprecationWarning(
+                "label argument is deprecated since Pastastore 1.13.0. "
+                "Please use labels instead."
+            )
+            labels = label
+
+        _ = self.dataframe_scatter(
+            df,
+            column=column,
+            figsize=figsize,
+            ax=ax,
+            **scatter_kwargs,
         )
-        if label:
+
+        if labels:
             if "index" in df:
                 df.set_index("index", inplace=True)
             self.add_labels(df, ax, adjust=adjust)
@@ -1186,6 +1295,7 @@ class Maps:
         df,
         x="x",
         y="y",
+        label=True,
         column=None,
         colorbar=True,
         ax=None,
@@ -1197,25 +1307,30 @@ class Maps:
         Parameters
         ----------
         df : pandas.DataFrame
-            DataFrame containing coordinates and data to plot, with
-            index providing names for each location
+            DataFrame containing coordinates and data to plot, with index providing
+            names for each location.
         x : str, optional
-            name of the column with x - coordinate data, by default "x"
+            name of the column with x - coordinate data, by default "x".
         y : str, optional
-            name of the column with y - coordinate data, by default "y"
+            name of the column with y - coordinate data, by default "y".
         column : str, optional
-            name of the column containing data used for determining the
-            color of each point, by default None (all one color)
+            name of the column containing data used for determining the color of each
+            point, by default None (all one color).
+                label: bool, optional
+            label points, by default True
+        adjust: bool, optional
+            automated smart label placement using adjustText, by default False
         colorbar : bool, optional
-            show colorbar, only if column is provided, by default True
+            show colorbar, only if column is provided, by default True.
+        progressbar: bool, optional
+            show progressbar, default is True.
         ax : matplotlib Axes
-            axes handle to plot dataframe, optional, default is None
-            which creates a new figure
+            axes handle to plot dataframe, optional, default is None which creates a
+            new figure.
         figsize : tuple, optional
             figure size, by default(10, 8)
         **kwargs :
-            dictionary containing keyword arguments for ax.scatter,
-            by default None
+            dictionary containing keyword arguments for ax.scatter, by default None.
 
         Returns
         -------
@@ -1223,6 +1338,7 @@ class Maps:
             axes object, returned if ax is None
         sc : scatter handle
             scatter plot handle, returned if ax is not None
+
         """
         if ax is None:
             return_scatter = False
