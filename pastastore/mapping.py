@@ -50,9 +50,9 @@ class Maps:
 
     def __repr__(self):
         """Return string representation of Maps submodule."""
-        methods = "".join([
-            f"\n - {meth}" for meth in dir(self) if not meth.startswith("_")
-        ])
+        methods = "".join(
+            [f"\n - {meth}" for meth in dir(self) if not meth.startswith("_")]
+        )
         return "Mapping submodule, available methods:" + methods
 
     def stresses(
@@ -1114,10 +1114,12 @@ class Maps:
                         color = f"C{c[0] + 1}"
                     else:
                         color = "k"
-                    segments.append([
-                        [os["x"], os["y"]],
-                        [st.loc[s, "x"], st.loc[s, "y"]],
-                    ])
+                    segments.append(
+                        [
+                            [os["x"], os["y"]],
+                            [st.loc[s, "x"], st.loc[s, "y"]],
+                        ]
+                    )
                     segment_colors.append(color)
                     scatter_colors.append(f"C{c[0] + 1}")
 
@@ -1293,4 +1295,3 @@ class Maps:
                     **{"path_effects": stroke},
                     **kwargs,
                 )
-

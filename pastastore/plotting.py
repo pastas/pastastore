@@ -607,6 +607,7 @@ class Plots:
         cm.plot(**kwargs)
         return cm
 
+
 class Maps(_Maps):
     """Deprecated: Use pastastore.mapping.Maps instead.
 
