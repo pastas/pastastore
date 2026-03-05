@@ -1,32 +1,24 @@
 """Module containing all the plotting methods for PastaStore.
 
 Pastastore comes with a number helpful plotting methods to quickly
-visualize time series or the locations of the time series contained in the
-store. Plotting time series or data availability is available through the
-`plots` attribute of the PastaStore object. Plotting locations of time series
-or model statistics on maps is available through the `maps` attribute.
-For example, if we have a :class:`pastastore.PastaStore` called `pstore`
-linking to an existing database, the plot and map methods are available as
-follows::
+visualize time series contained in the store. Plotting time series or data availability
+is available through the `plots` attribute of the PastaStore object. For example, if we
+have a :class:`pastastore.PastaStore` called `pstore` linking to an existing database,
+the plot methods are available as follows::
 
     pstore.plots.oseries()
 
-    ax = pstore.maps.oseries()
-    pstore.maps.add_background_map(ax)  # for adding a background map
 """
 
 import logging
-import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pastas as ps
-from matplotlib import patheffects
-from matplotlib.collections import LineCollection
 from matplotlib.colors import BoundaryNorm, LogNorm
-from matplotlib.lines import Line2D
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+from pastastore.mapping import Maps as _Maps
 
 logger = logging.getLogger(__name__)
 
@@ -614,3 +606,16 @@ class Plots:
             kwargs.setdefault("ax", ax)
         cm.plot(**kwargs)
         return cm
+
+class Maps(_Maps):
+    """Deprecated: Use pastastore.mapping.Maps instead.
+
+    This class is kept for backward compatibility.
+    """
+
+    def __init__(self, *args, **kwargs):
+        logger.warning(
+            "Maps class in plotting module is deprecated. "
+            "Use pastastore.mapping.Maps instead."
+        )
+        super().__init__(*args, **kwargs)

@@ -1,15 +1,10 @@
-"""Module containing all the plotting methods for PastaStore.
+"""Module containing all the mapping methods for PastaStore.
 
-Pastastore comes with a number helpful plotting methods to quickly
-visualize time series or the locations of the time series contained in the
-store. Plotting time series or data availability is available through the
-`plots` attribute of the PastaStore object. Plotting locations of time series
-or model statistics on maps is available through the `maps` attribute.
-For example, if we have a :class:`pastastore.PastaStore` called `pstore`
-linking to an existing database, the plot and map methods are available as
-follows::
-
-    pstore.plots.oseries()
+Pastastore comes with a number helpful mapping methods to quickly visualize the
+locations of the time series and models contained in the store. Plotting locations of
+time series or model statistics on maps is available through the `maps` attribute. For
+example, if we have a :class:`pastastore.PastaStore` called `pstore` linking to an
+existing database, the map methods are available as follows::
 
     ax = pstore.maps.oseries()
     pstore.maps.add_background_map(ax)  # for adding a background map
@@ -24,7 +19,6 @@ import pandas as pd
 import pastas as ps
 from matplotlib import patheffects
 from matplotlib.collections import LineCollection
-from matplotlib.colors import BoundaryNorm, LogNorm
 from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
@@ -338,6 +332,17 @@ class Maps:
         -----
         The index of the `series` should match the names of the oseries in the store.
         Only the oseries with names matching the index of the `series` will be plotted.
+
+        Example
+        -------
+
+        If we have a series with some values for some of the oseries in the store, we
+        can plot these values on the map as follows::
+
+            import pandas as pd
+            series = pd.Series(data=[1, 2, 3], index=["obs1", "obs2", "obs3"],
+            )
+            pstore.maps.series(series)
 
         """
         # A few quick checks on the input series
