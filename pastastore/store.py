@@ -332,7 +332,7 @@ class PastaStore:
 
         Parameters
         ----------
-        names: str or list of str
+        names: str | list[str]
             names of the oseries to calculate distances between
 
         Returns
@@ -371,7 +371,7 @@ class PastaStore:
 
         Parameters
         ----------
-        names: str or list of str
+        names: str | list[str]
             string or list of strings with the name(s) of the oseries
         n: int
             number of oseries to obtain
@@ -409,11 +409,11 @@ class PastaStore:
 
         Parameters
         ----------
-        oseries: str or list of str
+        oseries: str | list[str]
             name(s) of the oseries
-        stresses: str or list of str
+        stresses: str | list[str]
             name(s) of the stresses
-        kind: str, list of str
+        kind: str | list[str]
             string or list of strings representing which kind(s) of
             stresses to consider
 
@@ -470,9 +470,9 @@ class PastaStore:
         ----------
         oseries: str
             string with the name of the oseries
-        stresses: str or list of str
+        stresses: str | list[str]
             string with the name of the stresses
-        kind: str, list of str, optional
+        kind: str | list[str], optional
             string or list of str with the name of the kind(s)
             of stresses to consider
         n: int
@@ -512,10 +512,10 @@ class PastaStore:
 
         Parameters
         ----------
-        names : str, list of str, or None, optional
+        names : str | list[str], optional
             names of the time series, by default None which
             uses all the time series in the library
-        signatures : list of str, optional
+        signatures : list[str], optional
             list of groundwater signatures to compute, if None all groundwater
             signatures in ps.stats.signatures.__all__ are used, by default None
         libname : str
@@ -598,7 +598,7 @@ class PastaStore:
             name of the library containing the time series ('oseries', 'stresses',
             'models', or None), by default None which returns tmin/tmax for all
             libraries
-        names : str, list of str, or None, optional
+        names : str | list[str], optional
             names of the time series, by default None which
             uses all the time series in the library
         progressbar : bool, optional
@@ -653,7 +653,7 @@ class PastaStore:
         libname : str
             name of the library containing the time series
             ('oseries', 'stresses', 'models')
-        names : str, list of str, or None, optional
+        names : str | list[str], optional
             list of names to include for computing the extent
         buffer : float, optional
             add this distance to the extent, by default 0.0
@@ -694,10 +694,10 @@ class PastaStore:
 
         Parameters
         ----------
-        parameters : list of str, optional
+        parameters : list[str], optional
             names of the parameters, by default None which uses all
             parameters from each model
-        modelnames : str or list of str, optional
+        modelnames : str | list[str], optional
             name(s) of model(s), by default None in which case all models
             are used
         param_value : str, optional
@@ -757,10 +757,10 @@ class PastaStore:
 
         Parameters
         ----------
-        statistics : str or list of str
+        statistics : str | list[str]
             statistic or list of statistics to calculate, e.g. ["evp", "rsq", "rmse"],
             for a full list see `pastas.modelstats.Statistics.ops`.
-        modelnames : list of str, optional
+        modelnames : list[str], optional
             modelnames to calculates statistics for, by default None, which
             uses all models in the store
         progressbar : bool, optional
@@ -889,7 +889,7 @@ class PastaStore:
 
         Parameters
         ----------
-        oseries : list of str, optional
+        oseries : list[str], optional
             names of oseries to create models for, by default None,
             which creates models for all oseries
         add_recharge : bool, optional
@@ -1151,7 +1151,7 @@ class PastaStore:
 
         Parameters
         ----------
-        stresses : str, list of str, or dict
+        stresses : str | list[str] | dict
             name(s) of the time series to use for the stressmodel, or dictionary
             with key(s) and value(s) as time series name(s). Options include:
                - name of stress: `"prec_stn"`
@@ -1170,7 +1170,7 @@ class PastaStore:
             response function class to use, by default ps.Exponential
         rfunc_kwargs : dict, optional
             keyword arguments to pass to the response function, by default None
-        kind : str or list of str, optional
+        kind : str | list[str], optional
             specify kind of stress(es) to use, by default None, useful in combination
             with 'nearest' option for defining stresses
         oseries : str, optional
@@ -1294,7 +1294,7 @@ class PastaStore:
             pastas.Model object to add StressModel to, if passed as string,
             model is loaded from store, the stressmodel is added and then written
             back to the store.
-        stresses : str, list of str, or dict
+        stresses : str | list[str] | dict
             name(s) of the time series to use for the stressmodel, or dictionary
             with key(s) and value(s) as time series name(s). Options include:
                - name of stress: `"prec_stn"`
@@ -1313,7 +1313,7 @@ class PastaStore:
             response function class to use, by default ps.Exponential
         rfunc_kwargs : dict, optional
             keyword arguments to pass to the response function, by default None
-        kind : str or list of str, optional
+        kind : str | list[str], optional
             specify kind of stress(es) to use, by default None, useful in combination
             with 'nearest' option for defining stresses
         **kwargs
@@ -1355,7 +1355,7 @@ class PastaStore:
 
         Parameters
         ----------
-        modelnames : list of str, optional
+        modelnames : list[str], optional
             list of model names, if None all models in the pastastore
             are solved.
         report : boolean, optional
@@ -1460,7 +1460,7 @@ class PastaStore:
                - t95 response < half length calibration period
                - |model parameters| < 1.96 * σ (std deviation)
                - model parameters are not on bounds
-        modelnames : list of str, optional
+        modelnames : list[str], optional
             list of modelnames to perform checks on, by default None
         style_output : bool, optional
             if True, return styled dataframe with pass/fail colors,
@@ -1756,7 +1756,7 @@ class PastaStore:
             the library as its first argument. Additional keyword arguments can be
             specified. The function can return any result, or update an item in the
             database without returning anything.
-        names : str, list of str, optional
+        names : str | list[str], optional
             apply function to these names, by default None which loops over all stored
             items in library
         kwargs : dict, optional
@@ -1882,7 +1882,7 @@ class PastaStore:
         ----------
         extent : list
             list with [xmin, xmax, ymin, ymax]
-        names : str, list of str, optional
+        names : str | list[str], optional
             list of names to include, by default None
         libname : str, optional
             name of library, must be one of ('oseries', 'stresses', 'models'), by

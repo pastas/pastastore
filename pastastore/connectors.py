@@ -49,7 +49,7 @@ class ParallelUtil:
     ) -> None:
         """Solve a model in the store (internal method).
 
-        ml_name : list of str, optional
+        ml_name : list[str], optional
             name of a model in the pastastore
         connector : PasConnector, optional
             Connector to use, by default None which gets the global ArcticDB
@@ -288,7 +288,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         ----------
         libname : str
             name of the library
-        item : FrameorSeriesUnion | dict
+        item : FrameOrSeriesUnion | dict
             item to add, either time series or pastas.Model as dictionary
         name : str
             name of the item
@@ -323,7 +323,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
 
         Returns
         -------
-        item : FrameorSeriesUnion | dict
+        item : FrameOrSeriesUnion | dict
             time series or model dictionary
         """
         lib = self._get_library(libname)
@@ -538,7 +538,7 @@ class DictConnector(BaseConnector, ParallelUtil):
         ----------
         libname : str
             name of library
-        item : FrameorSeriesUnion
+        item : FrameOrSeriesUnion
             pandas.Series or pandas.DataFrame containing data
         name : str
             name of the item
@@ -567,7 +567,7 @@ class DictConnector(BaseConnector, ParallelUtil):
 
         Returns
         -------
-        item : FrameorSeriesUnion | dict
+        item : FrameOrSeriesUnion | dict
             time series or model dictionary, modifying the returned object will not
             affect the stored data, like in a real database
         """
@@ -766,7 +766,7 @@ class PasConnector(BaseConnector, ParallelUtil):
         ----------
         libname : str
             name of library
-        item : FrameorSeriesUnion
+        item : FrameOrSeriesUnion
             pandas.Series or pandas.DataFrame containing data
         name : str
             name of the item
@@ -832,7 +832,7 @@ class PasConnector(BaseConnector, ParallelUtil):
 
         Returns
         -------
-        item : FrameorSeriesUnion | dict
+        item : FrameOrSeriesUnion | dict
             time series or model dictionary
         """
         lib = self._get_library(libname)

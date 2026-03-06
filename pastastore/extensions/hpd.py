@@ -8,7 +8,6 @@ Features:
 """
 
 import logging
-from typing import List, Optional, Union
 
 import hydropandas as hpd
 import numpy as np
@@ -23,7 +22,7 @@ from pastastore.typing import TimeSeriesLibs
 logger = logging.getLogger("hydropandas_extension")
 
 
-TimeType = Optional[Union[str, Timestamp]]
+TimeType = str | Timestamp | None
 
 
 def _check_latest_measurement_date_de_bilt(meteo_var: str, **kwargs):
@@ -71,8 +70,8 @@ class HydroPandasExtension:
         self,
         libname: TimeSeriesLibs,
         oc: hpd.ObsCollection,
-        kind: Optional[str] = None,
-        data_column: Optional[str] = None,
+        kind: str | None = None,
+        data_column: str | None = None,
         unit_multiplier: float = 1.0,
         update: bool = False,
         normalize_datetime_index: bool = False,
@@ -116,9 +115,9 @@ class HydroPandasExtension:
         self,
         libname: TimeSeriesLibs,
         obs: hpd.Obs,
-        name: Optional[str] = None,
-        kind: Optional[str] = None,
-        data_column: Optional[str] = None,
+        name: str | None = None,
+        kind: str | None = None,
+        data_column: str | None = None,
         unit_multiplier: float = 1.0,
         update: bool = False,
         normalize_datetime_index: bool = False,
@@ -284,7 +283,7 @@ class HydroPandasExtension:
 
     def download_knmi_precipitation(
         self,
-        stns: Optional[list[int]] = None,
+        stns: list[int] | None = None,
         meteo_var: str = "RD",
         tmin: TimeType = None,
         tmax: TimeType = None,
@@ -297,7 +296,7 @@ class HydroPandasExtension:
 
         Parameters
         ----------
-        stns : list of int/str, optional
+        stns : list[int | str], optional
             list of station numbers to download data for, by default None
         meteo_var : str, optional
             variable to download, by default "RD", valid options are ["RD", "RH"].
@@ -323,7 +322,7 @@ class HydroPandasExtension:
 
     def download_knmi_evaporation(
         self,
-        stns: Optional[list[int]] = None,
+        stns: list[int] | None = None,
         meteo_var: str = "EV24",
         tmin: TimeType = None,
         tmax: TimeType = None,
@@ -336,7 +335,7 @@ class HydroPandasExtension:
 
         Parameters
         ----------
-        stns : list of int/str, optional
+        stns : list[int | str], optional
             list of station numbers to download data for, by default None
         meteo_var : str, optional
             variable to download, by default "EV24"
@@ -370,7 +369,7 @@ class HydroPandasExtension:
         self,
         meteo_var: str,
         kind: str,
-        stns: Optional[list[int]] = None,
+        stns: list[int] | None = None,
         tmin: TimeType = None,
         tmax: TimeType = None,
         unit_multiplier: float = 1.0,
@@ -387,7 +386,7 @@ class HydroPandasExtension:
             e.g. ["RD", "RH", "EV24", "T", "Q"].
         kind : str
             kind identifier for observations in pastastore, usually "prec" or "evap".
-        stns : list of int/str, optional
+        stns : list[int | str], optional
             list of station numbers to download data for, by default None
         tmin : TimeType, optional
             start time, by default None
@@ -436,8 +435,8 @@ class HydroPandasExtension:
         self,
         oseries: str,
         meteo_var: str = "RD",
-        tmin: Optional[TimeType] = None,
-        tmax: Optional[TimeType] = None,
+        tmin: TimeType = None,
+        tmax: TimeType = None,
         unit_multiplier: float = 1e3,
         normalize_datetime_index: bool = True,
         fill_missing_obs: bool = True,
@@ -481,8 +480,8 @@ class HydroPandasExtension:
         self,
         oseries: str,
         meteo_var: str = "EV24",
-        tmin: Optional[TimeType] = None,
-        tmax: Optional[TimeType] = None,
+        tmin: TimeType = None,
+        tmax: TimeType = None,
         unit_multiplier: float = 1e3,
         normalize_datetime_index: bool = True,
         fill_missing_obs: bool = True,
@@ -528,8 +527,8 @@ class HydroPandasExtension:
         oseries: str,
         meteo_var: str,
         kind: str,
-        tmin: Optional[TimeType] = None,
-        tmax: Optional[TimeType] = None,
+        tmin: TimeType = None,
+        tmax: TimeType = None,
         unit_multiplier: float = 1.0,
         normalize_datetime_index: bool = True,
         fill_missing_obs: bool = True,
@@ -583,7 +582,7 @@ class HydroPandasExtension:
 
     def update_knmi_meteo(
         self,
-        names: Optional[List[str]] = None,
+        names: list[str] | None = None,
         tmin: TimeType = None,
         tmax: TimeType = None,
         fill_missing_obs: bool = True,
@@ -606,7 +605,7 @@ class HydroPandasExtension:
 
         Parameters
         ----------
-        names : list of str, optional
+        names : list[str], optional
             list of names of observations to update, by default None
         tmin : TimeType, optional
             start time, by default None, which uses current last observation timestamp
@@ -759,7 +758,7 @@ class HydroPandasExtension:
 
     def download_bro_gmw(
         self,
-        extent: Optional[List[float]] = None,
+        extent: list[float] | None = None,
         tmin: TimeType = None,
         tmax: TimeType = None,
         update: bool = False,
@@ -788,7 +787,7 @@ class HydroPandasExtension:
 
     def update_bro_gmw(
         self,
-        names: Optional[List[str]] = None,
+        names: list[str] | None = None,
         tmin: TimeType = None,
         tmax: TimeType = None,
         **kwargs,
@@ -797,7 +796,7 @@ class HydroPandasExtension:
 
         Parameters
         ----------
-        names : list of str, optional
+        names : list[str], optional
             list of names of observations to update, by default None which updates all
             stored oseries.
         tmin : TimeType, optional

@@ -342,7 +342,7 @@ class BaseConnector(ABC, ConnectorUtil):
         ----------
         libname : str
             name of library to add item to
-        item : FrameorSeriesUnion or dict
+        item : FrameOrSeriesUnion | dict
             item to add
         name : str
             name of the item
@@ -372,7 +372,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Returns
         -------
-        item : FrameorSeriesUnion or dict
+        item : FrameOrSeriesUnion | dict
             item (time series or pastas.Model)
         """
 
@@ -693,7 +693,7 @@ class BaseConnector(ABC, ConnectorUtil):
         ----------
         libname : str
             name of library
-        series : FrameorSeriesUnion
+        series : FrameOrSeriesUnion
             time series containing update values
         name : str
             name of the time series to update
@@ -750,7 +750,7 @@ class BaseConnector(ABC, ConnectorUtil):
         ----------
         libname : str
             name of library
-        series : FrameorSeriesUnion
+        series : FrameOrSeriesUnion
             time series to update/insert
         name : str
             name of the time series
@@ -959,7 +959,7 @@ class BaseConnector(ABC, ConnectorUtil):
         ----------
         libname : str
             name of library
-        series : FrameorSeriesUnion
+        series : FrameOrSeriesUnion
             time series containing update values
         name : str
             name of the time series to update
@@ -1011,7 +1011,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        series : FrameorSeriesUnion
+        series : FrameOrSeriesUnion
             time series to update stored oseries with
         name : str
             name of the oseries to update
@@ -1037,7 +1037,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        series : FrameorSeriesUnion
+        series : FrameOrSeriesUnion
             time series to update stored stress with
         name : str
             name of the stress to update
@@ -1060,7 +1060,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        series : FrameorSeriesUnion
+        series : FrameOrSeriesUnion
             time series to update/insert
         name : str
             name of the oseries
@@ -1084,7 +1084,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        series : FrameorSeriesUnion
+        series : FrameOrSeriesUnion
             time series to update/insert
         name : str
             name of the stress
@@ -1107,7 +1107,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        names : str or list of str
+        names : str | list[str]
             name(s) of the model to delete
         verbose : bool, optional
             print information about deleted models, by default True
@@ -1134,7 +1134,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        names : str or list of str
+        names : str | list[str]
             name(s) of the model to delete
         verbose : bool, optional
             print information about deleted models, by default True
@@ -1152,7 +1152,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        names : str or list of str
+        names : str | list[str]
             name(s) of the oseries to delete
         remove_models : bool, optional
             also delete models for deleted oseries, default is False
@@ -1187,7 +1187,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        names : str or list of str
+        names : str | list[str]
             name(s) of the stress to delete
         remove_models : bool, optional
             also delete models for deleted stresses, default is False
@@ -1224,7 +1224,7 @@ class BaseConnector(ABC, ConnectorUtil):
         ----------
         libname : str
             name of the library
-        names : str or list of str
+        names : str | list[str]
             names of the time series to load
         progressbar : bool, optional
             show progressbar, by default True
@@ -1264,7 +1264,7 @@ class BaseConnector(ABC, ConnectorUtil):
         ----------
         libname : str
             name of the library containing the dataset
-        names : str or list of str
+        names : str | list[str]
             names of the datasets for which to read the metadata
         squeeze : bool, optional
             if True return dict instead of list of dict
@@ -1272,7 +1272,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Returns
         -------
-        dict or pandas.DataFrame
+        dict | pandas.DataFrame
             returns metadata dictionary or DataFrame of metadata
         """
         metalist = []
@@ -1303,7 +1303,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        names : str or list of str
+        names : str | list[str]
             names of the oseries to load
         return_metadata : bool, optional
             return metadata as dictionary or list of dictionaries,
@@ -1319,7 +1319,7 @@ class BaseConnector(ABC, ConnectorUtil):
         oseries : pandas.DataFrame or dict of DataFrames
             returns time series as DataFrame or dictionary of DataFrames if
             multiple names were passed
-        metadata : dict or list of dict
+        metadata : dict | list[dict]
             metadata for each oseries, only returned if return_metadata=True
         """
         oseries = self._get_series(
@@ -1348,7 +1348,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        names : str or list of str
+        names : str | list[str]
             names of the stresses to load
         return_metadata : bool, optional
             return metadata as dictionary or list of dictionaries,
@@ -1364,7 +1364,7 @@ class BaseConnector(ABC, ConnectorUtil):
         stresses : pandas.DataFrame or dict of DataFrames
             returns time series as DataFrame or dictionary of DataFrames if
             multiple names were passed
-        metadata : dict or list of dict
+        metadata : dict | list[dict]
             metadata for each stress, only returned if return_metadata=True
         """
         stresses = self._get_series(
@@ -1395,7 +1395,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        names : str or list of str
+        names : str | list[str]
             names of the stresses to load
         return_metadata : bool, optional
             return metadata as dictionary or list of dictionaries,
@@ -1411,7 +1411,7 @@ class BaseConnector(ABC, ConnectorUtil):
         stresses : pandas.DataFrame or dict of DataFrames
             returns time series as DataFrame or dictionary of DataFrames if
             multiple names were passed
-        metadata : dict or list of dict
+        metadata : dict | list[dict]
             metadata for each stress, only returned if return_metadata=True
         """
         return self.get_stresses(
@@ -1433,7 +1433,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        names : str or list of str
+        names : str | list[str]
             names of the models to load
         return_dict : bool, optional
             return model dictionary instead of pastas.Model (much
@@ -1482,7 +1482,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        names : str or list of str
+        names : str | list[str]
             names of the models to load
         return_dict : bool, optional
             return model dictionary instead of pastas.Model (much
@@ -1675,7 +1675,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        stress_names : list of str
+        stress_names : list[str]
             names of stresses
         model_names : str | list[str]
             model name or list of model names for a stress with name
@@ -1725,7 +1725,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        stress_names : list of str
+        stress_names : list[str]
             list of stress names for which to remove the model link.
         model_name : str
             Name of the model to remove from the stress links.
@@ -1755,7 +1755,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        libraries : list of str, optional
+        libraries : list[str], optional
             list of time series libraries to update model links for,
             by default None which will update both 'oseries' and 'stresses'
         modelnames : list[str] | None, optional
@@ -1878,7 +1878,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Returns
         -------
-        list of str
+        list[str]
             list of stress names used in model
         """
         stresses = []

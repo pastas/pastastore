@@ -672,7 +672,7 @@ class PastastoreYAML:
 
         Parameters
         ----------
-        oseries : list of str, optional
+        oseries : list[str], optional
             list of oseries (location) names, by default None, which uses
             all stored oseries for which there are models.
         outdir : str, optional
@@ -734,7 +734,7 @@ class PastastoreYAML:
         models : list of ps.Model or dict, optional
             pastas Models to write to yaml file(s), if not provided,
             uses modelnames to collect stored models to export.
-        modelnames : list of str, optional
+        modelnames : list[str], optional
             list of model names to export, by default None, which uses
             all stored models.
         outdir : str, optional

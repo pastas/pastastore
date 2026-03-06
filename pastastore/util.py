@@ -56,7 +56,7 @@ class ZipUtils:
 
         Returns
         -------
-        files : list or str
+        files : list | str
             list of series converted to JSON string or single string
             if single entry is returned and squeeze is True
         """
@@ -102,7 +102,7 @@ class ZipUtils:
 
         Returns
         -------
-        files : list or str
+        files : list | str
             list of json string
         """
         names = self.pstore.parse_names(names, libname=libname)
@@ -131,7 +131,7 @@ class ZipUtils:
             reference to an archive to write data to
         libname : str
             name of the library to write to zipfile
-        names : str or list of str, optional
+        names : str | list[str], optional
             names of the time series to write to archive, by default None,
             which writes all time series to archive
         progressbar : bool, optional
@@ -155,7 +155,7 @@ class ZipUtils:
         ----------
         archive : zipfile.ZipFile
             reference to an archive to write data to
-        names : str or list of str, optional
+        names : str | list[str], optional
             names of the models to write to archive, by default None,
             which writes all models to archive
         progressbar : bool, optional
@@ -464,7 +464,7 @@ def compare_models(
         first model to compare
     ml2 : pastas.Model
         second model to compare
-    stats : list of str, optional
+    stats : list[str], optional
         if provided compare these model statistics
     detailed_comparison : bool, optional
         if True return DataFrame containing comparison details,
@@ -710,10 +710,10 @@ def frontiers_checks(
     ----------
     pstore : pastastore.PastaStore
         reference to a PastaStore
-    modelnames : list of str, optional
+    modelnames : list[str], optional
         list of model names to consider, if None checks 'oseries', if both are
         None, all stored models will be checked
-    oseries :  list of str, optional
+    oseries :  list[str], optional
         list of oseries to consider, corresponding models will be picked up
         from pastastore. If None, uses all stored models are checked.
     check1 : bool, optional
@@ -960,7 +960,7 @@ def frontiers_aic_select(
     ----------
     pstore : pastastore.PastaStore
         reference to a PastaStore
-    modelnames : list of str
+    modelnames : list[str]
         list of model names (that pass reliability criteria)
     oseries : list of oseries
         list of locations for which to select models, note that this uses all
