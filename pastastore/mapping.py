@@ -395,8 +395,7 @@ class Maps:
         can plot these values on the map as follows::
 
             import pandas as pd
-            series = pd.Series(data=[1, 2, 3], index=["obs1", "obs2", "obs3"],
-            )
+            series = pd.Series(data=[1, 2, 3], index=["obs1", "obs2", "obs3"])
             pstore.maps.series(series)
 
         """
@@ -527,7 +526,7 @@ class Maps:
             )
             labels = label
 
-        _ = self.dataframe_scatter(
+        _ax = self.dataframe_scatter(
             df,
             column=column,
             figsize=figsize,
@@ -536,6 +535,8 @@ class Maps:
             legend=legend,
             **scatter_kwargs,
         )
+        if ax is None:
+            ax = _ax
 
         if labels:
             if "index" in df:
@@ -850,7 +851,6 @@ class Maps:
             axes object, returned if ax is None
         sc : scatter handle
             scatter plot handle, returned if ax is not None
-
         """
         if ax is None:
             return_scatter = False

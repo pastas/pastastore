@@ -108,4 +108,3 @@ def test_standalone_add_background_map(pstore):
         ax = pstore.maps.oseries()
         add_background_map(ax)
         plt.close(ax.figure)
-
