@@ -19,7 +19,7 @@ from tqdm.auto import tqdm
 from tqdm.contrib.concurrent import process_map
 
 from pastastore.base import BaseConnector, ModelAccessor
-from pastastore.typing import AllLibs, FrameOrSeriesUnion, TimeSeriesLibs
+from pastastore.typing import AllLibs, DataFrameOrSeries, TimeSeriesLibs
 from pastastore.util import _custom_warning, metadata_from_json, series_from_json
 from pastastore.validator import Validator
 
@@ -277,7 +277,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
     def _add_item(
         self,
         libname: AllLibs,
-        item: FrameOrSeriesUnion | dict,
+        item: DataFrameOrSeries | dict,
         name: str,
         metadata: dict | None = None,
         **_,
@@ -288,7 +288,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         ----------
         libname : str
             name of the library
-        item : FrameOrSeriesUnion | dict
+        item : DataFrameOrSeries | dict
             item to add, either time series or pastas.Model as dictionary
         name : str
             name of the item
@@ -311,7 +311,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
             logger.debug("Writing item '%s' to ArcticDB library '%s'.", name, libname)
             lib.write(name, item, metadata=metadata)
 
-    def _get_item(self, libname: AllLibs, name: str) -> FrameOrSeriesUnion | dict:
+    def _get_item(self, libname: AllLibs, name: str) -> DataFrameOrSeries | dict:
         """Retrieve item from library (internal method).
 
         Parameters
@@ -323,7 +323,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
 
         Returns
         -------
-        item : FrameOrSeriesUnion | dict
+        item : DataFrameOrSeries | dict
             time series or model dictionary
         """
         lib = self._get_library(libname)
@@ -527,7 +527,7 @@ class DictConnector(BaseConnector, ParallelUtil):
     def _add_item(
         self,
         libname: str,
-        item: FrameOrSeriesUnion | dict,
+        item: DataFrameOrSeries | dict,
         name: str,
         metadata: dict | None = None,
         **_,
@@ -538,7 +538,7 @@ class DictConnector(BaseConnector, ParallelUtil):
         ----------
         libname : str
             name of library
-        item : FrameOrSeriesUnion
+        item : DataFrameOrSeries
             pandas.Series or pandas.DataFrame containing data
         name : str
             name of the item
@@ -555,7 +555,7 @@ class DictConnector(BaseConnector, ParallelUtil):
         else:
             lib[name] = (metadata, item)
 
-    def _get_item(self, libname: AllLibs, name: str) -> FrameOrSeriesUnion | dict:
+    def _get_item(self, libname: AllLibs, name: str) -> DataFrameOrSeries | dict:
         """Retrieve item from database (internal method).
 
         Parameters
@@ -567,7 +567,7 @@ class DictConnector(BaseConnector, ParallelUtil):
 
         Returns
         -------
-        item : FrameOrSeriesUnion | dict
+        item : DataFrameOrSeries | dict
             time series or model dictionary, modifying the returned object will not
             affect the stored data, like in a real database
         """
@@ -755,7 +755,7 @@ class PasConnector(BaseConnector, ParallelUtil):
     def _add_item(
         self,
         libname: str,
-        item: FrameOrSeriesUnion | dict,
+        item: DataFrameOrSeries | dict,
         name: str,
         metadata: dict | None = None,
         **_,
@@ -766,7 +766,7 @@ class PasConnector(BaseConnector, ParallelUtil):
         ----------
         libname : str
             name of library
-        item : FrameOrSeriesUnion
+        item : DataFrameOrSeries
             pandas.Series or pandas.DataFrame containing data
         name : str
             name of the item
@@ -820,7 +820,7 @@ class PasConnector(BaseConnector, ParallelUtil):
                 logger.debug("Writing link list '%s' to disk at '%s'.", name, fname)
                 fm.write(jsondict)
 
-    def _get_item(self, libname: AllLibs, name: str) -> FrameOrSeriesUnion | dict:
+    def _get_item(self, libname: AllLibs, name: str) -> DataFrameOrSeries | dict:
         """Retrieve item (internal method).
 
         Parameters
@@ -832,7 +832,7 @@ class PasConnector(BaseConnector, ParallelUtil):
 
         Returns
         -------
-        item : FrameOrSeriesUnion | dict
+        item : DataFrameOrSeries | dict
             time series or model dictionary
         """
         lib = self._get_library(libname)

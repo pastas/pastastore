@@ -19,7 +19,7 @@ from pastastore.base import BaseConnector
 from pastastore.connectors import ArcticDBConnector, DictConnector, PasConnector
 from pastastore.plotting import Maps, Plots
 from pastastore.styling import boolean_styler
-from pastastore.typing import FrameOrSeriesUnion, PastasLibs, TimeSeriesLibs
+from pastastore.typing import DataFrameOrSeries, PastasLibs, TimeSeriesLibs
 from pastastore.util import ZipUtils, _custom_warning
 from pastastore.version import PASTAS_GEQ_150
 from pastastore.yaml_interface import PastastoreYAML
@@ -327,7 +327,7 @@ class PastaStore:
 
     def get_oseries_distances(
         self, names: (list | str) | None = None
-    ) -> FrameOrSeriesUnion:
+    ) -> DataFrameOrSeries:
         """Get the distances in meters between the oseries.
 
         Parameters
@@ -366,7 +366,7 @@ class PastaStore:
         names: (list | str) | None = None,
         n: int = 1,
         maxdist: float | None = None,
-    ) -> FrameOrSeriesUnion:
+    ) -> DataFrameOrSeries:
         """Get the nearest (n) oseries.
 
         Parameters
@@ -404,7 +404,7 @@ class PastaStore:
         oseries: (list | str) | None = None,
         stresses: (list | str) | None = None,
         kind: (str | list[str]) | None = None,
-    ) -> FrameOrSeriesUnion:
+    ) -> DataFrameOrSeries:
         """Get the distances in meters between the oseries and stresses.
 
         Parameters
@@ -463,7 +463,7 @@ class PastaStore:
         kind: (list | str) | None = None,
         n: int = 1,
         maxdist: float | None = None,
-    ) -> FrameOrSeriesUnion:
+    ) -> DataFrameOrSeries:
         """Get the nearest (n) stresses of a specific kind.
 
         Parameters
@@ -686,7 +686,7 @@ class PastaStore:
         param_value: str | None = "optimal",
         progressbar: bool | None = False,
         ignore_errors: bool | None = True,
-    ) -> FrameOrSeriesUnion:
+    ) -> DataFrameOrSeries:
         """Get model parameters.
 
         NaN-values are returned when the parameters are not present in the model or the
@@ -752,7 +752,7 @@ class PastaStore:
         ignore_errors: bool | None = False,
         fancy_output: bool = True,
         **kwargs,
-    ) -> FrameOrSeriesUnion:
+    ) -> DataFrameOrSeries:
         """Get model statistics.
 
         Parameters

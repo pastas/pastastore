@@ -20,7 +20,6 @@ from pastastore.util import SeriesUsedByModel, _custom_warning, validate_names
 if TYPE_CHECKING:
     from pastastore.base import BaseConnector
 
-FrameOrSeriesUnion = pd.DataFrame | pd.Series
 warnings.showwarning = _custom_warning
 
 logger = logging.getLogger(__name__)

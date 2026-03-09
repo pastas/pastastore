@@ -19,7 +19,7 @@ import pastas as ps
 from packaging.version import parse as parse_version
 from tqdm.auto import tqdm
 
-from pastastore.typing import AllLibs, FrameOrSeriesUnion, TimeSeriesLibs
+from pastastore.typing import AllLibs, DataFrameOrSeries, TimeSeriesLibs
 from pastastore.util import (
     ItemInLibraryException,
     SeriesUsedByModel,
@@ -330,7 +330,7 @@ class BaseConnector(ABC, ConnectorUtil):
     def _add_item(
         self,
         libname: AllLibs,
-        item: FrameOrSeriesUnion | dict,
+        item: DataFrameOrSeries | dict,
         name: str,
         metadata: dict | None = None,
     ) -> None:
@@ -342,7 +342,7 @@ class BaseConnector(ABC, ConnectorUtil):
         ----------
         libname : str
             name of library to add item to
-        item : FrameOrSeriesUnion | dict
+        item : DataFrameOrSeries | dict
             item to add
         name : str
             name of the item
@@ -358,7 +358,7 @@ class BaseConnector(ABC, ConnectorUtil):
         """
 
     @abstractmethod
-    def _get_item(self, libname: AllLibs, name: str) -> FrameOrSeriesUnion | dict:
+    def _get_item(self, libname: AllLibs, name: str) -> DataFrameOrSeries | dict:
         """Get item (series or pastas.Models) (internal method).
 
         Must be overridden by subclass.
@@ -372,7 +372,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Returns
         -------
-        item : FrameOrSeriesUnion | dict
+        item : DataFrameOrSeries | dict
             item (time series or pastas.Model)
         """
 
@@ -607,7 +607,7 @@ class BaseConnector(ABC, ConnectorUtil):
     def _add_series(
         self,
         libname: TimeSeriesLibs,
-        series: FrameOrSeriesUnion,
+        series: DataFrameOrSeries,
         name: str,
         metadata: dict | None = None,
         validate: bool | None = None,
@@ -681,7 +681,7 @@ class BaseConnector(ABC, ConnectorUtil):
     def _update_series(
         self,
         libname: TimeSeriesLibs,
-        series: FrameOrSeriesUnion,
+        series: DataFrameOrSeries,
         name: str,
         metadata: dict | None = None,
         validate: bool | None = None,
@@ -693,7 +693,7 @@ class BaseConnector(ABC, ConnectorUtil):
         ----------
         libname : str
             name of library
-        series : FrameOrSeriesUnion
+        series : DataFrameOrSeries
             time series containing update values
         name : str
             name of the time series to update
@@ -738,7 +738,7 @@ class BaseConnector(ABC, ConnectorUtil):
     def _upsert_series(
         self,
         libname: TimeSeriesLibs,
-        series: FrameOrSeriesUnion,
+        series: DataFrameOrSeries,
         name: str,
         metadata: dict | None = None,
         validate: bool | None = None,
@@ -750,7 +750,7 @@ class BaseConnector(ABC, ConnectorUtil):
         ----------
         libname : str
             name of library
-        series : FrameOrSeriesUnion
+        series : DataFrameOrSeries
             time series to update/insert
         name : str
             name of the time series
@@ -802,7 +802,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def add_oseries(
         self,
-        series: FrameOrSeriesUnion,
+        series: DataFrameOrSeries,
         name: str,
         metadata: dict | None = None,
         validate: bool | None = None,
@@ -836,7 +836,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def add_stress(
         self,
-        series: FrameOrSeriesUnion,
+        series: DataFrameOrSeries,
         name: str,
         kind: str,
         metadata: dict | None = None,
@@ -947,7 +947,7 @@ class BaseConnector(ABC, ConnectorUtil):
     def _update_series(
         self,
         libname: str,
-        series: FrameOrSeriesUnion,
+        series: DataFrameOrSeries,
         name: str,
         metadata: dict | None = None,
         validate: bool | None = None,
@@ -959,7 +959,7 @@ class BaseConnector(ABC, ConnectorUtil):
         ----------
         libname : str
             name of library
-        series : FrameOrSeriesUnion
+        series : DataFrameOrSeries
             time series containing update values
         name : str
             name of the time series to update
@@ -1002,7 +1002,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def update_oseries(
         self,
-        series: FrameOrSeriesUnion,
+        series: DataFrameOrSeries,
         name: str,
         metadata: dict | None = None,
         force: bool = False,
@@ -1011,7 +1011,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        series : FrameOrSeriesUnion
+        series : DataFrameOrSeries
             time series to update stored oseries with
         name : str
             name of the oseries to update
@@ -1025,7 +1025,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def update_stress(
         self,
-        series: FrameOrSeriesUnion,
+        series: DataFrameOrSeries,
         name: str,
         metadata: dict | None = None,
         force: bool = False,
@@ -1037,7 +1037,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        series : FrameOrSeriesUnion
+        series : DataFrameOrSeries
             time series to update stored stress with
         name : str
             name of the stress to update
@@ -1051,7 +1051,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def upsert_oseries(
         self,
-        series: FrameOrSeriesUnion,
+        series: DataFrameOrSeries,
         name: str,
         metadata: dict | None = None,
         force: bool = False,
@@ -1060,7 +1060,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        series : FrameOrSeriesUnion
+        series : DataFrameOrSeries
             time series to update/insert
         name : str
             name of the oseries
@@ -1074,7 +1074,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def upsert_stress(
         self,
-        series: FrameOrSeriesUnion,
+        series: DataFrameOrSeries,
         name: str,
         kind: str,
         metadata: dict | None = None,
@@ -1084,7 +1084,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        series : FrameOrSeriesUnion
+        series : DataFrameOrSeries
             time series to update/insert
         name : str
             name of the stress
@@ -1217,7 +1217,7 @@ class BaseConnector(ABC, ConnectorUtil):
         names: list | str,
         progressbar: bool = True,
         squeeze: bool = True,
-    ) -> FrameOrSeriesUnion:
+    ) -> DataFrameOrSeries:
         """Get time series (internal method).
 
         Parameters
@@ -1298,7 +1298,7 @@ class BaseConnector(ABC, ConnectorUtil):
         return_metadata: bool = False,
         progressbar: bool = False,
         squeeze: bool = True,
-    ) -> FrameOrSeriesUnion | dict | (dict | list) | None:
+    ) -> DataFrameOrSeries | dict | (dict | list) | None:
         """Get oseries from database.
 
         Parameters
@@ -1343,7 +1343,7 @@ class BaseConnector(ABC, ConnectorUtil):
         return_metadata: bool = False,
         progressbar: bool = False,
         squeeze: bool = True,
-    ) -> FrameOrSeriesUnion | dict | (dict | list) | None:
+    ) -> DataFrameOrSeries | dict | (dict | list) | None:
         """Get stresses from database.
 
         Parameters
@@ -1388,7 +1388,7 @@ class BaseConnector(ABC, ConnectorUtil):
         return_metadata: bool = False,
         progressbar: bool = False,
         squeeze: bool = True,
-    ) -> FrameOrSeriesUnion | dict | (dict | list) | None:
+    ) -> DataFrameOrSeries | dict | (dict | list) | None:
         """Get stresses from database.
 
         Alias for `get_stresses()`
@@ -1917,7 +1917,7 @@ class BaseConnector(ABC, ConnectorUtil):
         modelnames: (list | str) | None = None,
         dropna: bool = True,
         progressbar: bool = True,
-    ) -> FrameOrSeriesUnion:
+    ) -> DataFrameOrSeries:
         """Get time series names contained in model.
 
         Parameters

@@ -2,9 +2,9 @@
 
 from typing import Literal
 
-import pandas as pd
+from pandas import DataFrame, Series
 
-FrameOrSeriesUnion = pd.DataFrame | pd.Series
+DataFrameOrSeries = DataFrame | Series
 
 # Literal types for library names
 TimeSeriesLibs = Literal["oseries", "stresses"]
