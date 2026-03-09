@@ -5,6 +5,7 @@ import logging
 import os
 import shutil
 import warnings
+from pathlib import Path
 
 # import weakref
 from typing import TYPE_CHECKING
@@ -467,12 +468,12 @@ class Validator:
         else:
             raise TypeError("Expected pastas.Model or dict!")
 
-    def check_config_connector_type(self, path: str) -> None:
+    def check_config_connector_type(self, path: Path) -> None:
         """Check if config file connector type matches connector instance.
 
         Parameters
         ----------
-        path : str
+        path : Path
             path to directory containing the pastastore config file
         """
         if path.exists() and path.is_dir():

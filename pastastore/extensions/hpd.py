@@ -103,7 +103,7 @@ class HydroPandasExtension:
             self.add_observation(
                 libname,
                 obs,
-                name=name,
+                name=str(name),
                 kind=kind,
                 data_column=data_column,
                 unit_multiplier=unit_multiplier,
@@ -226,7 +226,9 @@ class HydroPandasExtension:
         else:
             raise ValueError("libname must be 'oseries' or 'stresses'.")
 
-    def _get_tmin_tmax(self, tmin, tmax, oseries=None):
+    def _get_tmin_tmax(
+        self, tmin: TimeType, tmax: TimeType, oseries: str | None = None
+    ):
         """Get tmin and tmax from store if not specified.
 
         Parameters
@@ -255,7 +257,7 @@ class HydroPandasExtension:
         return tmin, tmax
 
     @staticmethod
-    def _normalize_datetime_index(obs):
+    def _normalize_datetime_index(obs: hpd.Obs) -> hpd.Obs:
         """Normalize observation datetime index (i.e. set observation time to midnight).
 
         Parameters
@@ -291,7 +293,7 @@ class HydroPandasExtension:
         fill_missing_obs: bool = True,
         normalize_datetime_index: bool = True,
         **kwargs,
-    ):
+    ) -> None:
         """Download precipitation data from KNMI and store in PastaStore.
 
         Parameters
@@ -330,7 +332,7 @@ class HydroPandasExtension:
         fill_missing_obs: bool = True,
         normalize_datetime_index: bool = True,
         **kwargs,
-    ):
+    ) -> None:
         """Download evaporation data from KNMI and store in PastaStore.
 
         Parameters
@@ -376,7 +378,7 @@ class HydroPandasExtension:
         normalize_datetime_index: bool = True,
         fill_missing_obs: bool = True,
         **kwargs,
-    ):
+    ) -> None:
         """Download meteorological data from KNMI and store in PastaStore.
 
         Parameters
@@ -441,7 +443,7 @@ class HydroPandasExtension:
         normalize_datetime_index: bool = True,
         fill_missing_obs: bool = True,
         **kwargs,
-    ):
+    ) -> None:
         """Download precipitation time series data from nearest KNMI station.
 
         Parameters
@@ -486,7 +488,7 @@ class HydroPandasExtension:
         normalize_datetime_index: bool = True,
         fill_missing_obs: bool = True,
         **kwargs,
-    ):
+    ) -> None:
         """Download evaporation time series data from nearest KNMI station.
 
         Parameters
@@ -533,7 +535,7 @@ class HydroPandasExtension:
         normalize_datetime_index: bool = True,
         fill_missing_obs: bool = True,
         **kwargs,
-    ):
+    ) -> None:
         """Download meteorological data from nearest KNMI station.
 
         Parameters
@@ -589,7 +591,7 @@ class HydroPandasExtension:
         normalize_datetime_index: bool = True,
         raise_on_error: bool = False,
         **kwargs,
-    ):
+    ) -> None:
         """Update meteorological data from KNMI in PastaStore.
 
         Warning
@@ -674,7 +676,7 @@ class HydroPandasExtension:
             if tmin is None:
                 itmin = tmintmax.loc[name, "tmax"] - Timedelta(days=1)
             else:
-                itmin = tmin - Timedelta(days=1)
+                itmin = Timestamp(tmin) - Timedelta(days=1)
 
             # ensure 2 observations at least
             if itmin >= (maxtmax - Timedelta(days=1)):
@@ -791,7 +793,7 @@ class HydroPandasExtension:
         tmin: TimeType = None,
         tmax: TimeType = None,
         **kwargs,
-    ):
+    ) -> None:
         """Update groundwater monitoring well observations from BRO.
 
         Parameters

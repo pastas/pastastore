@@ -17,6 +17,7 @@ follows::
 
 import logging
 import warnings
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -1317,7 +1318,7 @@ class Maps:
         elif not isinstance(ml, ps.Model):
             raise TypeError("Pass model name as string or pastas.Model!")
 
-        stresses = pd.DataFrame(columns=["x", "y", "stressmodel", "color"])
+        stresses = pd.DataFrame(columns=pd.Index(["x", "y", "stressmodel", "color"]))
         count = 0
         for name, sm in ml.stressmodels.items():
             for istress in sm.stress:
@@ -1642,8 +1643,13 @@ class Maps:
 
     @staticmethod
     def add_labels(
-        df, ax, adjust=False, objects=None, adjust_text_kwargs=None, **kwargs
-    ):
+        df: pd.DataFrame,
+        ax: plt.Axes,
+        adjust: bool = False,
+        objects: Any | None = None,
+        adjust_text_kwargs: dict[str, Any] | None = None,
+        **kwargs,
+    ) -> None:
         """Add labels to points on plot.
 
         Uses dataframe index to label points.
@@ -1682,18 +1688,24 @@ class Maps:
                     )
                 )
             if adjust_text_kwargs is None:
-                adjust_text_kwargs = {}
-            adjust_text(
-                texts,
-                objects=objects,
-                force_text=(0.05, 0.10),
-                **{
+                adjust_text_kwargs = {
                     "arrowprops": {
                         "arrowstyle": "-",
                         "color": "k",
                         "alpha": 0.5,
                     }
-                },
+                }
+            else:
+                if "arrowprops" not in adjust_text_kwargs:
+                    adjust_text_kwargs["arrowprops"] = {
+                        "arrowstyle": "-",
+                        "color": "k",
+                        "alpha": 0.5,
+                    }
+            adjust_text(
+                texts,
+                objects=objects,
+                force_text=(0.05, 0.10),
                 **adjust_text_kwargs,
             )
 

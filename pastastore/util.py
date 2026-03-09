@@ -36,7 +36,7 @@ class ZipUtils:
     def _stored_series_to_json(
         self,
         libname: TimeSeriesLibs,
-        names: (list | str) | None = None,
+        names: list[str] | str | None = None,
         squeeze: bool = True,
         progressbar: bool = False,
     ):
@@ -46,7 +46,7 @@ class ZipUtils:
         ----------
         libname : str
             library name
-        names : (list | str) | None, optional
+        names : list[str] | str | None, optional
             names of series, by default None
         squeeze : bool, optional
             return single entry as json string instead
@@ -83,7 +83,7 @@ class ZipUtils:
     def _stored_metadata_to_json(
         self,
         libname: TimeSeriesLibs,
-        names: (list | str) | None = None,
+        names: list[str] | str | None = None,
         squeeze: bool = True,
         progressbar: bool = False,
     ):
@@ -93,7 +93,7 @@ class ZipUtils:
         ----------
         libname : str
             library containing series
-        names : (list | str) | None, optional
+        names : list[str] | str | None, optional
             names to parse, by default None
         squeeze : bool, optional
             return single entry as json string instead of list, by default True
@@ -120,7 +120,7 @@ class ZipUtils:
         self,
         archive,
         libname: TimeSeriesLibs,
-        names: (list | str) | None = None,
+        names: list[str] | str | None = None,
         progressbar: bool = True,
     ):
         """Write DataFrame or Series to zipfile (internal method).
@@ -452,10 +452,10 @@ def validate_names(
 def compare_models(
     ml1: Model,
     ml2: Model,
-    stats: list[str] = None,
+    stats: list[str] | None = None,
     detailed_comparison: bool = False,
     style_output: bool = False,
-) -> pd.DataFrame:
+) -> pd.DataFrame | pd.io.formats.style.Styler:
     """Compare two Pastas models.
 
     Parameters
@@ -476,11 +476,11 @@ def compare_models(
 
     Returns
     -------
-    bool or pd.DataFrame
+    bool or pd.DataFrame or pd.Styler
         returns True if models are equivalent when detailed_comparison=True
         else returns DataFrame containing comparison details.
     """
-    df = pd.DataFrame(columns=["model 0", "model 1"])
+    df = pd.DataFrame(columns=pd.Index(["model 0", "model 1"]))
     so1 = []  # for storing series_original
     ss1 = []  # for storing series
 
@@ -759,7 +759,7 @@ def frontiers_checks(
     Application of Time Series Analysis to Estimate Drawdown From Multiple Well
     Fields. Front. Earth Sci., 14 June 2022 doi:10.3389/feart.2022.907609
     """
-    df = pd.DataFrame(columns=["all_checks_passed"])
+    df = pd.DataFrame(columns=pd.Index(["all_checks_passed"]))
 
     if modelnames is not None:
         models = modelnames
@@ -786,7 +786,9 @@ def frontiers_checks(
             )
             continue
 
-        checks = pd.DataFrame(columns=["stat", "threshold", "units", "check_passed"])
+        checks = pd.DataFrame(
+            columns=pd.Index(["stat", "threshold", "units", "check_passed"])
+        )
 
         # Check 1 - Fit Statistic
         if check1_rsq:

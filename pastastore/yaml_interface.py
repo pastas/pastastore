@@ -78,7 +78,7 @@ def replace_ts_with_name(d, nearest=False):
             replace_ts_with_name(v, nearest=nearest)
 
 
-def reduce_to_minimal_dict(d, keys=None):
+def reduce_to_minimal_dict(d: dict, keys: list[str] | None = None) -> None:
     """Reduce pastas model dictionary to a minimal form.
 
     This minimal form strives to keep the minimal information that still
@@ -126,7 +126,7 @@ def reduce_to_minimal_dict(d, keys=None):
 
 
 @contextmanager
-def temporary_yaml_from_str(yaml):
+def temporary_yaml_from_str(yaml: str):
     """Temporary yaml file that is deleted after usage."""
     temp = tempfile.NamedTemporaryFile(delete=False)
     temp.write(yaml.encode("utf-8"))
@@ -635,7 +635,7 @@ class PastastoreYAML:
         """
         if "\n" in fyaml or "\r" in fyaml:
             with temporary_yaml_from_str(fyaml) as fyaml:
-                with fyaml.open("r", encoding="utf-8") as f:
+                with Path(fyaml).open("r", encoding="utf-8") as f:
                     yml = yaml.load(f, Loader=yaml.CFullLoader)
         elif Path(fyaml).exists():
             with Path(fyaml).open("r", encoding="utf-8") as f:
@@ -661,8 +661,8 @@ class PastastoreYAML:
 
     def export_stored_models_per_oseries(
         self,
-        oseries: (list[str] | str) | None = None,
-        outdir: (Path | str) | None = ".",
+        oseries: list[str] | str | None = None,
+        outdir: Path | str = ".",
         minimal_yaml: bool | None = False,
         use_nearest: bool | None = False,
     ):
@@ -719,13 +719,13 @@ class PastastoreYAML:
 
     def export_models(
         self,
-        models: (list[ps.Model] | list[dict]) | None = None,
-        modelnames: (list[str] | str) | None = None,
-        outdir: str | None = ".",
+        models: list[ps.Model] | list[dict] | None = None,
+        modelnames: list[str] | str | None = None,
+        outdir: str | Path = ".",
         minimal_yaml: bool | None = False,
         use_nearest: bool | None = False,
         split: bool | None = True,
-        filename: str | None = "pastas_models.yaml",
+        filename: str = "pastas_models.yaml",
     ):
         """Export (stored) models to yaml file(s).
 
@@ -787,7 +787,7 @@ class PastastoreYAML:
     @staticmethod
     def export_model(
         ml: ps.Model | dict,
-        outdir: (Path | str) | None = ".",
+        outdir: Path | str = ".",
         minimal_yaml: bool | None = False,
         use_nearest: bool | None = False,
     ):

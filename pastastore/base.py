@@ -4,15 +4,11 @@
 import functools
 import logging
 import warnings
-
-# import weakref
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from itertools import chain
 from random import choice
-
-# import weakref
-from typing import Callable
+from typing import Any, Callable
 
 import pandas as pd
 import pastas as ps
@@ -89,7 +85,7 @@ class ConnectorUtil:
             raise NotImplementedError(f"Cannot parse 'names': {names}")
 
     @staticmethod
-    def _meta_list_to_frame(metalist: list, names: list):
+    def _meta_list_to_frame(metalist: list[dict], names: list[str]) -> pd.DataFrame:
         """Convert list of metadata dictionaries to DataFrame.
 
         Parameters
@@ -105,21 +101,21 @@ class ConnectorUtil:
             DataFrame containing overview of metadata
         """
         # convert to dataframe
+        meta_index = pd.Index(names, name="name")
         if len(metalist) > 1:
-            meta = pd.DataFrame(metalist)
+            meta = pd.DataFrame(metalist, index=meta_index)
             if len({"x", "y"}.difference(meta.columns)) == 0:
                 meta["x"] = meta["x"].astype(float)
                 meta["y"] = meta["y"].astype(float)
         elif len(metalist) == 1:
-            meta = pd.DataFrame(metalist)
+            meta = pd.DataFrame(metalist, index=meta_index)
         elif len(metalist) == 0:
-            meta = pd.DataFrame()
-
-        meta.index = names
-        meta.index.name = "name"
+            meta = pd.DataFrame(index=meta_index)
         return meta
 
-    def _parse_model_dict(self, mdict: dict, update_ts_settings: bool = False):
+    def _parse_model_dict(
+        self, mdict: dict, update_ts_settings: bool = False
+    ) -> ps.Model:
         """Parse dictionary describing pastas models (internal method).
 
         Parameters
@@ -142,7 +138,7 @@ class ConnectorUtil:
         # oseries
         if "series" not in mdict["oseries"]:
             name = str(mdict["oseries"]["name"])
-            if name not in self.oseries.index:
+            if name not in self.oseries_names:
                 msg = f"oseries '{name}' not present in library"
                 raise LookupError(msg)
             mdict["oseries"]["series"] = self.get_oseries(name).squeeze()
@@ -249,7 +245,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
     _conn_type: str | None = None
     _validator: Validator | None = None
-    name = None
+    name: str | None = None
     _added_models = []  # internal list of added models used for updating links
 
     def __getstate__(self):
@@ -284,12 +280,12 @@ class BaseConnector(ABC, ConnectorUtil):
         )
 
     @property
-    def validation_settings(self):
+    def validation_settings(self) -> dict:
         """Return current connector settings as dictionary."""
         return self.validator.settings
 
     @property
-    def empty(self):
+    def empty(self) -> bool:
         """Check if the database is empty."""
         return not any([self.n_oseries > 0, self.n_stresses > 0, self.n_models > 0])
 
@@ -496,7 +492,7 @@ class BaseConnector(ABC, ConnectorUtil):
         self,
         names: list[str] | str | None = None,
         libname: AllLibs = "oseries",
-    ) -> list:
+    ) -> list[str]:
         """Parse names argument and return list of names.
 
         Public method that exposes name parsing functionality.
@@ -516,23 +512,23 @@ class BaseConnector(ABC, ConnectorUtil):
         """
         return self._parse_names(names, libname)
 
-    @property  # type: ignore
+    @property
     @functools.lru_cache()
-    def oseries(self):
+    def oseries(self) -> pd.DataFrame:
         """Dataframe with overview of oseries."""
-        return self.get_metadata("oseries", self.oseries_names)
+        return self.get_metadata(libname="oseries", names=self.oseries_names)
 
-    @property  # type: ignore
+    @property
     @functools.lru_cache()
-    def stresses(self):
+    def stresses(self) -> pd.DataFrame:
         """Dataframe with overview of stresses."""
-        return self.get_metadata("stresses", self.stresses_names)
+        return self.get_metadata(libname="stresses", names=self.stresses_names)
 
-    @property  # type: ignore
+    @property
     @functools.lru_cache()
-    def _modelnames_cache(self):
+    def _modelnames_cache(self) -> list[str]:
         """List of model names."""
-        return self._list_symbols("models")
+        return self._list_symbols(libname="models")
 
     @property
     def n_oseries(self):
@@ -570,9 +566,9 @@ class BaseConnector(ABC, ConnectorUtil):
         """
         return len(self.model_names)
 
-    @property  # type: ignore
+    @property
     @functools.lru_cache()
-    def oseries_models(self):
+    def oseries_models(self) -> dict[str, list[str]]:
         """List of model names per oseries.
 
         Returns
@@ -587,9 +583,9 @@ class BaseConnector(ABC, ConnectorUtil):
             d[onam] = self._get_item("oseries_models", onam)
         return d
 
-    @property  # type: ignore
+    @property
     @functools.lru_cache()
-    def stresses_models(self):
+    def stresses_models(self) -> dict[str, list[str]]:
         """List of model names per stress.
 
         Returns
@@ -946,7 +942,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def _update_series(
         self,
-        libname: str,
+        libname: TimeSeriesLibs,
         series: DataFrameOrSeries,
         name: str,
         metadata: dict | None = None,
@@ -992,9 +988,9 @@ class BaseConnector(ABC, ConnectorUtil):
         if metadata is not None:
             update_meta.update(metadata)
         self._add_series(
-            libname,
-            update,
-            name,
+            libname=libname,
+            series=update,
+            name=name,
             metadata=update_meta,
             validate=validate,
             overwrite=True,
@@ -1257,7 +1253,7 @@ class BaseConnector(ABC, ConnectorUtil):
         progressbar: bool = False,
         as_frame: bool = True,
         squeeze: bool = True,
-    ) -> dict | pd.DataFrame:
+    ) -> dict[str, Any] | pd.DataFrame:
         """Read metadata from database.
 
         Parameters
@@ -1298,7 +1294,7 @@ class BaseConnector(ABC, ConnectorUtil):
         return_metadata: bool = False,
         progressbar: bool = False,
         squeeze: bool = True,
-    ) -> DataFrameOrSeries | dict | (dict | list) | None:
+    ) -> DataFrameOrSeries | dict | list | None:
         """Get oseries from database.
 
         Parameters
@@ -1339,11 +1335,11 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def get_stresses(
         self,
-        names: list | str,
+        names: list[str] | str,
         return_metadata: bool = False,
         progressbar: bool = False,
         squeeze: bool = True,
-    ) -> DataFrameOrSeries | dict | (dict | list) | None:
+    ) -> DataFrameOrSeries | dict | list | None:
         """Get stresses from database.
 
         Parameters
@@ -1388,7 +1384,7 @@ class BaseConnector(ABC, ConnectorUtil):
         return_metadata: bool = False,
         progressbar: bool = False,
         squeeze: bool = True,
-    ) -> DataFrameOrSeries | dict | (dict | list) | None:
+    ) -> DataFrameOrSeries | dict | list | None:
         """Get stresses from database.
 
         Alias for `get_stresses()`
@@ -1914,7 +1910,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
     def get_model_time_series_names(
         self,
-        modelnames: (list | str) | None = None,
+        modelnames: list[str] | str | None = None,
         dropna: bool = True,
         progressbar: bool = True,
     ) -> DataFrameOrSeries:
@@ -1922,7 +1918,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
         Parameters
         ----------
-        modelnames : (list | str) | None, optional
+        modelnames : list[str] | str | None, optional
             list or name of models to get time series names for,
             by default None which will use all modelnames
         dropna : bool, optional
@@ -1940,7 +1936,8 @@ class BaseConnector(ABC, ConnectorUtil):
         """
         model_names = self._parse_names(modelnames, libname="models")
         structure = pd.DataFrame(
-            index=model_names, columns=["oseries"] + self.stresses_names
+            index=pd.Index(model_names),
+            columns=pd.Index(["oseries"] + self.stresses_names),
         )
         structure.index.name = "model"
 

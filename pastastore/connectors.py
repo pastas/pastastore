@@ -373,7 +373,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         max_workers: int | None = None,
         chunksize: int | None = None,
         desc: str = "",
-        initializer: Callable = None,
+        initializer: Callable | None = None,
         initargs: tuple | None = None,
     ):
         """Parallel processing of function.
@@ -471,7 +471,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         """
         return self._get_library(libname).list_symbols()
 
-    def _item_exists(self, libname: str, name: str) -> bool:
+    def _item_exists(self, libname: AllLibs, name: str) -> bool:
         """Check if item exists without scanning directory."""
         lib = self._get_library(libname)
         return lib.has_symbol(name)
