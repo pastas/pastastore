@@ -66,7 +66,7 @@ class Plots:
         libname : str
             name of the library to obtain time series from (oseries
             or stresses)
-        names : list of str, optional
+        names : list[str], optional
             list of time series names to plot, by default None
         ax : matplotlib.Axes, optional
             pass axes object to plot on existing axes, by default None,
@@ -154,7 +154,7 @@ class Plots:
 
         Parameters
         ----------
-        names : list of str, optional
+        names : list[str], optional
             list of oseries names to plot, by default None, which loads
             all oseries from store
         ax : matplotlib.Axes, optional
@@ -206,7 +206,7 @@ class Plots:
 
         Parameters
         ----------
-        names : list of str, optional
+        names : list[str], optional
             list of oseries names to plot, by default None, which loads
             all oseries from store
         kind : str, optional
@@ -494,7 +494,7 @@ class Plots:
         ----------
         statistic: str
             name of the statistic, e.g. "evp" or "rmse", by default "rsq"
-        modelnames: list of str, optional
+        modelnames: list[str], optional
             modelnames to plot statistic for, by default None, which
             uses all models in the store
         extend: bool, optional
