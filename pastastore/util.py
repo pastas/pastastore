@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from colorama import Back, Fore, Style
 from numpy.lib._iotools import NameValidator
+from pandas.io.formats.style import Styler
 from pandas.testing import assert_series_equal
 from pastas import Model
 from pastas.io.pas import PastasEncoder
@@ -455,7 +456,7 @@ def compare_models(
     stats: list[str] | None = None,
     detailed_comparison: bool = False,
     style_output: bool = False,
-) -> pd.DataFrame | pd.io.formats.style.Styler:
+) -> pd.DataFrame | Styler:
     """Compare two Pastas models.
 
     Parameters
