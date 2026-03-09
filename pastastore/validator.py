@@ -5,9 +5,10 @@ import logging
 import os
 import shutil
 import warnings
+from pathlib import Path
 
 # import weakref
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import pastas as ps
@@ -20,7 +21,6 @@ from pastastore.util import SeriesUsedByModel, _custom_warning, validate_names
 if TYPE_CHECKING:
     from pastastore.base import BaseConnector
 
-FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning
 
 logger = logging.getLogger(__name__)
@@ -336,7 +336,10 @@ class Validator:
             series_names = [
                 sm["stress"]["name"]
                 for sm in ml["stressmodels"].values()
-                if sm[classkey] not in (prec_evap_model + ["WellModel"])
+                if (
+                    sm[classkey] not in (prec_evap_model + ["WellModel"])
+                    and ("stress" in sm)  # some stressmodels have no stress
+                )
             ]
 
             # WellModel
@@ -356,12 +359,12 @@ class Validator:
                 prec_evap_model,
                 [i[classkey] for i in ml["stressmodels"].values()],
             ).any():
-                series_names += [
-                    istress["name"]
-                    for sm in ml["stressmodels"].values()
-                    if sm[classkey] in prec_evap_model
-                    for istress in [sm["prec"], sm["evap"]]
-                ]
+                for sm in ml["stressmodels"].values():
+                    if sm[classkey] in prec_evap_model:
+                        for istress in [sm["prec"], sm["evap"]]:
+                            series_names.append(istress["name"])
+                        if "temp" in sm and sm["temp"]:
+                            series_names.append(sm["temp"]["name"])
 
         else:
             raise TypeError("Expected pastas.Model or dict!")
@@ -372,12 +375,12 @@ class Validator:
             )
             raise ValueError(msg)
 
-    def check_oseries_in_store(self, ml: Union[ps.Model, dict]):
+    def check_oseries_in_store(self, ml: ps.Model | dict):
         """Check if Model oseries are contained in PastaStore (internal method).
 
         Parameters
         ----------
-        ml : Union[ps.Model, dict]
+        ml : ps.Model | dict
             pastas Model
         """
         if isinstance(ml, ps.Model):
@@ -402,6 +405,7 @@ class Validator:
                     s_org,
                     atol=self.SERIES_EQUALITY_ABSOLUTE_TOLERANCE,
                     rtol=self.SERIES_EQUALITY_RELATIVE_TOLERANCE,
+                    check_names=False,
                 )
             except AssertionError as e:
                 raise ValueError(
@@ -409,12 +413,12 @@ class Validator:
                     " is different from stored oseries! See stacktrace for differences."
                 ) from e
 
-    def check_stresses_in_store(self, ml: Union[ps.Model, dict]):
+    def check_stresses_in_store(self, ml: ps.Model | dict):
         """Check if stresses time series are contained in PastaStore (internal method).
 
         Parameters
         ----------
-        ml : Union[ps.Model, dict]
+        ml : ps.Model | dict
             pastas Model
         """
         prec_evap_model = ["RechargeModel", "TarsoModel"]
@@ -442,6 +446,8 @@ class Validator:
                                 s_org,
                                 atol=self.SERIES_EQUALITY_ABSOLUTE_TOLERANCE,
                                 rtol=self.SERIES_EQUALITY_RELATIVE_TOLERANCE,
+                                check_freq=False,  # ignore frequency differences
+                                check_names=False,
                             )
                         except AssertionError as e:
                             raise ValueError(
@@ -454,10 +460,14 @@ class Validator:
                 classkey = "class"
                 if sm[classkey] in prec_evap_model:
                     stresses = [sm["prec"], sm["evap"]]
+                    if "temp" in sm and sm["temp"]:
+                        stresses.append(sm["temp"])
                 elif sm[classkey] in ["WellModel"]:
                     stresses = sm["stress"]
-                else:
+                elif "stress" in sm:
                     stresses = [sm["stress"]]
+                else:
+                    stresses = []  # for StepModel, LinearTrend
                 for s in stresses:
                     if str(s["name"]) not in self.connector.stresses.index:
                         msg = (
@@ -468,12 +478,12 @@ class Validator:
         else:
             raise TypeError("Expected pastas.Model or dict!")
 
-    def check_config_connector_type(self, path: str) -> None:
+    def check_config_connector_type(self, path: Path) -> None:
         """Check if config file connector type matches connector instance.
 
         Parameters
         ----------
-        path : str
+        path : Path
             path to directory containing the pastastore config file
         """
         if path.exists() and path.is_dir():
