@@ -250,10 +250,12 @@ class HydroPandasExtension:
                 "oseries", names=[oseries] if oseries else None
             )
             if tmin is None:
-                tmin = tmintmax.loc[:, "tmin"].min() - Timedelta(days=10 * 365)
+                tmin = tmintmax.loc[:, "tmin"].min().floor("h") - Timedelta(
+                    days=10 * 365
+                )
             if tmax is None:
-                tmax = tmintmax.loc[:, "tmax"].max()
-        return tmin, tmax
+                tmax = tmintmax.loc[:, "tmax"].max().ceil("h")
+        return Timestamp(tmin).floor("h"), Timestamp(tmax).ceil("h")
 
     @staticmethod
     def _normalize_datetime_index(obs):
@@ -552,9 +554,6 @@ class HydroPandasExtension:
         unit_multiplier : float, optional
             multiply unit by this value before saving it in the store,
             by default 1.0 (no conversion)
-        fill_missing_obs : bool, optional
-            if True, fill missing observations by getting observations from nearest
-            station with data.
         fill_missing_obs : bool, optional
             if True, fill missing observations by getting observations from nearest
             station with data.
