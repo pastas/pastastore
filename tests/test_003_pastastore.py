@@ -1,5 +1,4 @@
 # ruff: noqa: D100 D103
-import os
 from pathlib import Path
 
 import numpy as np
@@ -527,9 +526,10 @@ def test_add_model_with_mismatching_index_attributes(pstore):
 
     # write file to pas, and read back in, which removes index.name and index.freq
     # attributes
-    ml.to_file("temp.pas")
-    ml2 = ps.io.load("temp.pas")
-    os.remove("temp.pas")  # delete temporary file
+    file = Path("temp.pas")
+    ml.to_file(file)
+    ml2 = ps.io.load(file)
+    file.unlink()  # delete temporary file
 
     # test add model
     pstore.add_model(ml2, overwrite=True)
