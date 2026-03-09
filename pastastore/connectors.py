@@ -15,9 +15,8 @@ from typing import Callable
 
 import pandas as pd
 from pastas.io.pas import PastasEncoder, pastas_hook
-from tqdm.auto import tqdm
-from tqdm.contrib.concurrent import process_map
 
+from pastastore._tqdm import process_map, tqdm
 from pastastore.base import BaseConnector, ModelAccessor
 from pastastore.typing import AllLibs, DataFrameOrSeries, TimeSeriesLibs
 from pastastore.util import _custom_warning, metadata_from_json, series_from_json

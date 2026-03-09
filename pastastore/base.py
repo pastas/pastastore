@@ -13,8 +13,8 @@ from typing import Any, Callable
 import pandas as pd
 import pastas as ps
 from packaging.version import parse as parse_version
-from tqdm.auto import tqdm
 
+from pastastore._tqdm import tqdm
 from pastastore.typing import AllLibs, DataFrameOrSeries, TimeSeriesLibs
 from pastastore.util import (
     ItemInLibraryException,
@@ -927,11 +927,15 @@ class BaseConnector(ABC, ConnectorUtil):
                 self._oseries_links_need_update.value = True
                 self._stresses_links_need_update.value = True
                 # this won't update main instance in parallel
-                self._added_models.append(name)
+                # ensure model name is only added once
+                if name not in self._added_models:
+                    self._added_models.append(name)
             else:
                 self._oseries_links_need_update = True
                 self._stresses_links_need_update = True
-                self._added_models.append(name)
+                # ensure model name is only added once
+                if name not in self._added_models:
+                    self._added_models.append(name)
             self._clear_cache("oseries_models")
             self._clear_cache("stresses_models")
         else:

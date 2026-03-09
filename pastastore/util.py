@@ -9,15 +9,14 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from colorama import Back, Fore, Style
 from numpy.lib._iotools import NameValidator
 from pandas.io.formats.style import Styler
 from pandas.testing import assert_series_equal
 from pastas import Model
 from pastas.io.pas import PastasEncoder
 from pastas.stats.tests import runs_test, stoffer_toloi
-from tqdm.auto import tqdm
 
+from pastastore._tqdm import tqdm
 from pastastore.styling import boolean_row_styler
 from pastastore.typing import TimeSeriesLibs
 
@@ -65,10 +64,15 @@ class ZipUtils:
         files = []
         for n in tqdm(names, desc=libname) if progressbar else names:
             s = self.pstore.conn._get_series(libname, n, progressbar=False)
-            if isinstance(s, pd.Series):
-                s = s.to_frame()
             try:
-                sjson = s.to_json(orient="columns")
+                if type(s) is pd.Series:
+                    s = s.to_frame()
+                if type(s) is pd.DataFrame:
+                    sjson = s.to_json(orient="columns")
+                else:
+                    # workaround for subclasses of DataFrame that override to_json,
+                    # looking at you hydropandas...
+                    sjson = pd.DataFrame(s).to_json(orient="columns")
             except ValueError as e:
                 msg = (
                     f"DatetimeIndex of '{n}' probably contains NaT "
@@ -185,7 +189,7 @@ class ColoredFormatter(logging.Formatter):
     def format(self, record) -> str:
         """Format the specified record as text."""
         record.color = self.colors.get(record.levelname, "")
-        record.reset = Style.RESET_ALL
+        record.reset = "\x1b[0m"
 
         return super().format(record)
 
@@ -212,11 +216,11 @@ def get_color_logger(level="INFO", logger_name=None):
         style="{",
         datefmt="%Y-%m-%d %H:%M:%S",
         colors={
-            "DEBUG": Fore.CYAN,
-            "INFO": Fore.GREEN,
-            "WARNING": Fore.YELLOW,
-            "ERROR": Fore.RED,
-            "CRITICAL": Fore.RED + Back.WHITE + Style.BRIGHT,
+            "DEBUG": "\x1b[36m",
+            "INFO": "\x1b[32m",
+            "WARNING": "\x1b[33m",
+            "ERROR": "\x1b[31m",
+            "CRITICAL": "\x1b[31m" + "\x1b[47m" + "\x1b[1m",
         },
     )
 

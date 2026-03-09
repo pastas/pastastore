@@ -13,8 +13,8 @@ import numpy as np
 import pandas as pd
 import pastas as ps
 from pastas.io.pas import pastas_hook
-from tqdm.auto import tqdm
 
+from pastastore._tqdm import tqdm
 from pastastore.base import BaseConnector
 from pastastore.connectors import ArcticDBConnector, DictConnector, PasConnector
 from pastastore.plotting import Maps, Plots
