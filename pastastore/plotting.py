@@ -17,6 +17,7 @@ follows::
 
 import logging
 import warnings
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -74,7 +75,7 @@ class Plots:
         libname : str
             name of the library to obtain time series from (oseries
             or stresses)
-        names : list of str, optional
+        names : list[str], optional
             list of time series names to plot, by default None
         ax : matplotlib.Axes, optional
             pass axes object to plot on existing axes, by default None,
@@ -162,7 +163,7 @@ class Plots:
 
         Parameters
         ----------
-        names : list of str, optional
+        names : list[str], optional
             list of oseries names to plot, by default None, which loads
             all oseries from store
         ax : matplotlib.Axes, optional
@@ -214,7 +215,7 @@ class Plots:
 
         Parameters
         ----------
-        names : list of str, optional
+        names : list[str], optional
             list of oseries names to plot, by default None, which loads
             all oseries from store
         kind : str, optional
@@ -502,7 +503,7 @@ class Plots:
         ----------
         statistic: str
             name of the statistic, e.g. "evp" or "rmse", by default "rsq"
-        modelnames: list of str, optional
+        modelnames: list[str], optional
             modelnames to plot statistic for, by default None, which
             uses all models in the store
         extend: bool, optional
@@ -663,12 +664,12 @@ class Maps:
 
         Parameters
         ----------
-        names : list of str, optional
+        names : list[str], optional
             list of names to plot
         kind: str, optional
             if passed, only plot stresses of a specific kind, default is None
             which plots all stresses.
-        extent : list of float, optional
+        extent : list[float], optional
             plot only stresses within extent [xmin, xmax, ymin, ymax]
         labels: bool, optional
             label models, by default True
@@ -756,7 +757,7 @@ class Maps:
         ----------
         names: list, optional
             oseries names, by default None which plots all oseries locations
-        extent : list of float, optional
+        extent : list[float], optional
             plot only oseries within extent [xmin, xmax, ymin, ymax]
         labels: bool or str, optional
             label models, by default True, if passed as "grouped", only the first
@@ -951,7 +952,7 @@ class Maps:
         ----------
         statistic: str
             name of the statistic, e.g. "evp" or "aic"
-        modelnames : list of str, optional
+        modelnames : list[str], optional
             list of modelnames to include
         label: bool, optional
             label points, by default True
@@ -1034,7 +1035,7 @@ class Maps:
         param_value: str, optional
             which parameter value to plot, by default "optimal", other options
             are "initial", "pmin", "pmax"
-        modelnames : list of str, optional
+        modelnames : list[str], optional
             list of modelnames to include
         label: bool, optional
             label points, by default True
@@ -1117,7 +1118,7 @@ class Maps:
         ----------
         signature: str
             name of the signature, e.g. "mean_annual_maximum" or "duration_curve_slope"
-        names : list of str, optional
+        names : list[str], optional
             list of observation well names to include
         label: bool, optional
             label points, by default True
@@ -1317,7 +1318,7 @@ class Maps:
         elif not isinstance(ml, ps.Model):
             raise TypeError("Pass model name as string or pastas.Model!")
 
-        stresses = pd.DataFrame(columns=["x", "y", "stressmodel", "color"])
+        stresses = pd.DataFrame(columns=pd.Index(["x", "y", "stressmodel", "color"]))
         count = 0
         for name, sm in ml.stressmodels.items():
             for istress in sm.stress:
@@ -1642,8 +1643,13 @@ class Maps:
 
     @staticmethod
     def add_labels(
-        df, ax, adjust=False, objects=None, adjust_text_kwargs=None, **kwargs
-    ):
+        df: pd.DataFrame,
+        ax: plt.Axes,
+        adjust: bool = False,
+        objects: Any | None = None,
+        adjust_text_kwargs: dict[str, Any] | None = None,
+        **kwargs,
+    ) -> None:
         """Add labels to points on plot.
 
         Uses dataframe index to label points.
@@ -1682,18 +1688,24 @@ class Maps:
                     )
                 )
             if adjust_text_kwargs is None:
-                adjust_text_kwargs = {}
-            adjust_text(
-                texts,
-                objects=objects,
-                force_text=(0.05, 0.10),
-                **{
+                adjust_text_kwargs = {
                     "arrowprops": {
                         "arrowstyle": "-",
                         "color": "k",
                         "alpha": 0.5,
                     }
-                },
+                }
+            else:
+                if "arrowprops" not in adjust_text_kwargs:
+                    adjust_text_kwargs["arrowprops"] = {
+                        "arrowstyle": "-",
+                        "color": "k",
+                        "alpha": 0.5,
+                    }
+            adjust_text(
+                texts,
+                objects=objects,
+                force_text=(0.05, 0.10),
                 **adjust_text_kwargs,
             )
 
