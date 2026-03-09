@@ -94,7 +94,7 @@ class PastaStore:
         update_path : bool, optional
             when True, use path derived from location of the config file instead of
             the stored path in the config file. If a PastaStore is moved, the path
-            in the config file will probably still refer to the old location. set to
+            in the config file will probably still refer to the old location. Set to
             False to read the file from the path listed in the config file. In that
             case config files do not need to be stored within the correct directory.
 
