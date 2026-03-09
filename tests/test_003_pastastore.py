@@ -512,3 +512,24 @@ def test_models_metadata(request, pstore):
 def test_pstore_validator_settings(pstore):
     _ = pstore.validator.settings
     _ = pstore.conn.validation_settings
+
+
+def test_add_model_with_mismatching_index_attributes(pstore):
+
+    # write prec with index.freq == "D" to pastastore
+    prec, pmeta = pstore.get_stress("prec1", return_metadata=True)
+    prec.index.freq = pd.infer_freq(prec.index)
+    pstore.add_stress(prec, "prec1", kind="prec", metadata=pmeta, overwrite=True)
+
+    # build a model
+    ml = pstore.create_model("oseries1")
+
+    # write file to pas, and read back in, which removes index.name and index.freq
+    # attributes
+    file = Path("temp.pas")
+    ml.to_file(file)
+    ml2 = ps.io.load(file)
+    file.unlink()  # delete temporary file
+
+    # test add model
+    pstore.add_model(ml2, overwrite=True)
