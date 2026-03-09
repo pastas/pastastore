@@ -4,9 +4,10 @@ import json
 import logging
 import os
 import warnings
+from collections.abc import Iterable
 from functools import partial
 from pathlib import Path
-from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable
 
 import numpy as np
 import pandas as pd
@@ -18,7 +19,7 @@ from pastastore.base import BaseConnector
 from pastastore.connectors import ArcticDBConnector, DictConnector, PasConnector
 from pastastore.plotting import Maps, Plots
 from pastastore.styling import boolean_styler
-from pastastore.typing import FrameOrSeriesUnion, PastasLibs, TimeSeriesLibs
+from pastastore.typing import DataFrameOrSeries, PastasLibs, TimeSeriesLibs
 from pastastore.util import ZipUtils, _custom_warning
 from pastastore.version import PASTAS_GEQ_150
 from pastastore.yaml_interface import PastastoreYAML
@@ -51,8 +52,8 @@ class PastaStore:
 
     def __init__(
         self,
-        connector: Optional[BaseConnector] = None,
-        name: Optional[str] = None,
+        connector: BaseConnector | None = None,
+        name: str | None = None,
     ):
         """Initialize PastaStore for managing pastas time series and models.
 
@@ -325,13 +326,13 @@ class PastaStore:
         return f"<PastaStore> {self.name}: \n - " + self.conn.__str__()
 
     def get_oseries_distances(
-        self, names: Optional[Union[list, str]] = None
-    ) -> FrameOrSeriesUnion:
+        self, names: list[str] | str | None = None
+    ) -> DataFrameOrSeries:
         """Get the distances in meters between the oseries.
 
         Parameters
         ----------
-        names: str or list of str
+        names: str | list[str]
             names of the oseries to calculate distances between
 
         Returns
@@ -362,15 +363,15 @@ class PastaStore:
 
     def get_nearest_oseries(
         self,
-        names: Optional[Union[list, str]] = None,
+        names: list[str] | str | None = None,
         n: int = 1,
-        maxdist: Optional[float] = None,
-    ) -> FrameOrSeriesUnion:
+        maxdist: float | None = None,
+    ) -> DataFrameOrSeries:
         """Get the nearest (n) oseries.
 
         Parameters
         ----------
-        names: str or list of str
+        names: str | list[str]
             string or list of strings with the name(s) of the oseries
         n: int
             number of oseries to obtain
@@ -400,19 +401,19 @@ class PastaStore:
 
     def get_distances(
         self,
-        oseries: Optional[Union[list, str]] = None,
-        stresses: Optional[Union[list, str]] = None,
-        kind: Optional[Union[str, List[str]]] = None,
-    ) -> FrameOrSeriesUnion:
+        oseries: list[str] | str | None = None,
+        stresses: list[str] | str | None = None,
+        kind: list[str] | str | None = None,
+    ) -> DataFrameOrSeries:
         """Get the distances in meters between the oseries and stresses.
 
         Parameters
         ----------
-        oseries: str or list of str
+        oseries: str | list[str]
             name(s) of the oseries
-        stresses: str or list of str
+        stresses: str | list[str]
             name(s) of the stresses
-        kind: str, list of str
+        kind: str | list[str]
             string or list of strings representing which kind(s) of
             stresses to consider
 
@@ -457,21 +458,21 @@ class PastaStore:
 
     def get_nearest_stresses(
         self,
-        oseries: Optional[Union[list, str]] = None,
-        stresses: Optional[Union[list, str]] = None,
-        kind: Optional[Union[list, str]] = None,
+        oseries: list[str] | str | None = None,
+        stresses: list[str] | str | None = None,
+        kind: list[str] | str | None = None,
         n: int = 1,
-        maxdist: Optional[float] = None,
-    ) -> FrameOrSeriesUnion:
+        maxdist: float | None = None,
+    ) -> DataFrameOrSeries:
         """Get the nearest (n) stresses of a specific kind.
 
         Parameters
         ----------
         oseries: str
             string with the name of the oseries
-        stresses: str or list of str
+        stresses: str | list[str]
             string with the name of the stresses
-        kind: str, list of str, optional
+        kind: str | list[str], optional
             string or list of str with the name of the kind(s)
             of stresses to consider
         n: int
@@ -511,10 +512,10 @@ class PastaStore:
 
         Parameters
         ----------
-        names : str, list of str, or None, optional
+        names : str | list[str], optional
             names of the time series, by default None which
             uses all the time series in the library
-        signatures : list of str, optional
+        signatures : list[str], optional
             list of groundwater signatures to compute, if None all groundwater
             signatures in ps.stats.signatures.__all__ are used, by default None
         libname : str
@@ -585,8 +586,8 @@ class PastaStore:
 
     def get_tmin_tmax(
         self,
-        libname: Optional[PastasLibs] = None,
-        names: Union[str, List[str], None] = None,
+        libname: PastasLibs | None = None,
+        names: str | list[str] | None = None,
         progressbar: bool = False,
     ) -> pd.DataFrame:
         """Get tmin and tmax for time series and/or models.
@@ -597,7 +598,7 @@ class PastaStore:
             name of the library containing the time series ('oseries', 'stresses',
             'models', or None), by default None which returns tmin/tmax for all
             libraries
-        names : str, list of str, or None, optional
+        names : str | list[str], optional
             names of the time series, by default None which
             uses all the time series in the library
         progressbar : bool, optional
@@ -617,7 +618,9 @@ class PastaStore:
         for lib in libs:
             _names = self.conn.parse_names(names, libname=lib)
             tmintmax = pd.DataFrame(
-                index=names, columns=["tmin", "tmax"], dtype="datetime64[ns]"
+                index=pd.Index(names) if names else None,
+                columns=pd.Index(["tmin", "tmax"]),
+                dtype="datetime64[ns]",
             )
             desc = f"Get tmin/tmax {lib}"
             for n in tqdm(_names, desc=desc) if progressbar else _names:
@@ -652,7 +655,7 @@ class PastaStore:
         libname : str
             name of the library containing the time series
             ('oseries', 'stresses', 'models')
-        names : str, list of str, or None, optional
+        names : str | list[str], optional
             list of names to include for computing the extent
         buffer : float, optional
             add this distance to the extent, by default 0.0
@@ -680,12 +683,12 @@ class PastaStore:
 
     def get_parameters(
         self,
-        parameters: Optional[List[str]] = None,
-        modelnames: Optional[List[str]] = None,
-        param_value: Optional[str] = "optimal",
-        progressbar: Optional[bool] = False,
-        ignore_errors: Optional[bool] = True,
-    ) -> FrameOrSeriesUnion:
+        parameters: list[str] | None = None,
+        modelnames: list[str] | None = None,
+        param_value: str | None = "optimal",
+        progressbar: bool | None = False,
+        ignore_errors: bool | None = True,
+    ) -> DataFrameOrSeries:
         """Get model parameters.
 
         NaN-values are returned when the parameters are not present in the model or the
@@ -693,10 +696,10 @@ class PastaStore:
 
         Parameters
         ----------
-        parameters : list of str, optional
+        parameters : list[str], optional
             names of the parameters, by default None which uses all
             parameters from each model
-        modelnames : str or list of str, optional
+        modelnames : str | list[str], optional
             name(s) of model(s), by default None in which case all models
             are used
         param_value : str, optional
@@ -716,13 +719,19 @@ class PastaStore:
         modelnames = self.conn.parse_names(modelnames, libname="models")
 
         # create dataframe for results
-        p = pd.DataFrame(index=modelnames, columns=parameters)
+        p = pd.DataFrame(
+            index=pd.Index(modelnames),
+            columns=pd.Index(parameters) if parameters else None,
+            dtype=float,
+        )
 
         # loop through model names and store results
         desc = "Get model parameters"
         for mlname in tqdm(modelnames, desc=desc) if progressbar else modelnames:
             try:
-                mldict = self.get_models(mlname, return_dict=True, progressbar=False)
+                mldict = self.conn.get_models(
+                    mlname, return_dict=True, progressbar=False
+                )
             except Exception as e:
                 if ignore_errors:
                     p.loc[mlname, :] = np.nan
@@ -744,22 +753,22 @@ class PastaStore:
 
     def get_statistics(
         self,
-        statistics: Union[str, List[str]],
-        modelnames: Optional[List[str]] = None,
+        statistics: str | list[str],
+        modelnames: list[str] | None = None,
         parallel: bool = False,
-        progressbar: Optional[bool] = False,
-        ignore_errors: Optional[bool] = False,
+        progressbar: bool = False,
+        ignore_errors: bool = False,
         fancy_output: bool = True,
         **kwargs,
-    ) -> FrameOrSeriesUnion:
+    ) -> DataFrameOrSeries:
         """Get model statistics.
 
         Parameters
         ----------
-        statistics : str or list of str
+        statistics : str | list[str]
             statistic or list of statistics to calculate, e.g. ["evp", "rsq", "rmse"],
             for a full list see `pastas.modelstats.Statistics.ops`.
-        modelnames : list of str, optional
+        modelnames : list[str], optional
             modelnames to calculates statistics for, by default None, which
             uses all models in the store
         progressbar : bool, optional
@@ -791,17 +800,19 @@ class PastaStore:
             if self.conn.conn_type == "pas":
                 kwargs["connector"] = self.conn
             return self.apply(
-                "models",
-                self.conn._get_statistics,
-                modelnames,
+                libname="models",
+                func=self.conn._get_statistics,
+                names=modelnames,
                 kwargs=kwargs,
                 parallel=parallel,
                 progressbar=progressbar,
                 fancy_output=fancy_output,
-            ).T  # transpose to match serial output
+            ).transpose()  # transpose to match serial output
         else:
             # create dataframe for results
-            s = pd.DataFrame(index=modelnames, columns=statistics, data=np.nan)
+            s = pd.DataFrame(
+                index=pd.Index(modelnames), columns=pd.Index(statistics), data=np.nan
+            )
 
             # loop through model names
             desc = "Get model statistics"
@@ -822,7 +833,7 @@ class PastaStore:
     def create_model(
         self,
         name: str,
-        modelname: Optional[str] = None,
+        modelname: str | None = None,
         add_recharge: bool = True,
         add_ar_noisemodel: bool = False,
         recharge_name: str = "recharge",
@@ -875,20 +886,20 @@ class PastaStore:
 
     def create_models_bulk(
         self,
-        oseries: Optional[Union[list, str]] = None,
+        oseries: list[str] | str | None = None,
         add_recharge: bool = True,
         solve: bool = False,
         store_models: bool = True,
         ignore_errors: bool = False,
-        suffix: Optional[str] = None,
+        suffix: str | None = None,
         progressbar: bool = True,
         **kwargs,
-    ) -> Union[Tuple[dict, dict], dict]:
+    ) -> tuple[dict, dict] | dict:
         """Bulk creation of pastas models.
 
         Parameters
         ----------
-        oseries : list of str, optional
+        oseries : list[str], optional
             names of oseries to create models for, by default None,
             which creates models for all oseries
         add_recharge : bool, optional
@@ -993,10 +1004,10 @@ class PastaStore:
 
     def _parse_stresses(
         self,
-        stresses: Union[str, List[str], Dict[str, str]],
-        kind: Optional[str],
+        stresses: str | list[str] | dict[str, str],
+        kind: str | None,
         stressmodel,
-        oseries: Optional[str] = None,
+        oseries: str | None = None,
     ):
         # parse stresses for RechargeModel, allow list of len 2 or 3 and
         # set correct kwarg names
@@ -1111,7 +1122,7 @@ class PastaStore:
                         # assume name is name of stress
                         names.append(item)
                 # get stresses and metadata
-                stress_series, imeta = self.get_stresses(
+                stress_series, imeta = self.conn.get_stresses(
                     names, return_metadata=True, squeeze=True
                 )
                 # replace stress name(s) with time series
@@ -1129,13 +1140,13 @@ class PastaStore:
 
     def get_stressmodel(
         self,
-        stresses: Union[str, List[str], Dict[str, str]],
+        stresses: str | list[str] | dict[str, str],
         stressmodel=ps.StressModel,
-        stressmodel_name: Optional[str] = None,
+        stressmodel_name: str | None = None,
         rfunc=ps.Exponential,
-        rfunc_kwargs: Optional[dict] = None,
-        kind: Optional[Union[List[str], str]] = None,
-        oseries: Optional[str] = None,
+        rfunc_kwargs: dict | None = None,
+        kind: list[str] | str | None = None,
+        oseries: str | None = None,
         **kwargs,
     ):
         """Get a Pastas stressmodel from stresses time series in Pastastore.
@@ -1150,7 +1161,7 @@ class PastaStore:
 
         Parameters
         ----------
-        stresses : str, list of str, or dict
+        stresses : str | list[str] | dict
             name(s) of the time series to use for the stressmodel, or dictionary
             with key(s) and value(s) as time series name(s). Options include:
                - name of stress: `"prec_stn"`
@@ -1169,7 +1180,7 @@ class PastaStore:
             response function class to use, by default ps.Exponential
         rfunc_kwargs : dict, optional
             keyword arguments to pass to the response function, by default None
-        kind : str or list of str, optional
+        kind : str | list[str], optional
             specify kind of stress(es) to use, by default None, useful in combination
             with 'nearest' option for defining stresses
         oseries : str, optional
@@ -1268,13 +1279,13 @@ class PastaStore:
 
     def add_stressmodel(
         self,
-        ml: Union[ps.Model, str],
-        stresses: Union[str, List[str], Dict[str, str]],
+        ml: ps.Model | str,
+        stresses: str | list[str] | dict[str, str],
         stressmodel=ps.StressModel,
-        stressmodel_name: Optional[str] = None,
+        stressmodel_name: str | None = None,
         rfunc=ps.Exponential,
-        rfunc_kwargs: Optional[dict] = None,
-        kind: Optional[Union[List[str], str]] = None,
+        rfunc_kwargs: dict | None = None,
+        kind: list[str] | str | None = None,
         **kwargs,
     ):
         """Add a pastas StressModel from stresses time series in Pastastore.
@@ -1293,7 +1304,7 @@ class PastaStore:
             pastas.Model object to add StressModel to, if passed as string,
             model is loaded from store, the stressmodel is added and then written
             back to the store.
-        stresses : str, list of str, or dict
+        stresses : str | list[str] | dict
             name(s) of the time series to use for the stressmodel, or dictionary
             with key(s) and value(s) as time series name(s). Options include:
                - name of stress: `"prec_stn"`
@@ -1312,7 +1323,7 @@ class PastaStore:
             response function class to use, by default ps.Exponential
         rfunc_kwargs : dict, optional
             keyword arguments to pass to the response function, by default None
-        kind : str or list of str, optional
+        kind : str | list[str], optional
             specify kind of stress(es) to use, by default None, useful in combination
             with 'nearest' option for defining stresses
         **kwargs
@@ -1329,7 +1340,7 @@ class PastaStore:
             **kwargs,
         )
         if isinstance(ml, str):
-            ml = self.conn.get_model(ml)
+            ml: ps.Model = self.conn.get_model(ml)
             ml.add_stressmodel(sm)
             self.conn.add_model(ml, overwrite=True)
             logger.info(
@@ -1342,19 +1353,19 @@ class PastaStore:
 
     def solve_models(
         self,
-        modelnames: Union[List[str], str, None] = None,
+        modelnames: list[str] | str | None = None,
         report: bool = False,
         ignore_solve_errors: bool = False,
         progressbar: bool = True,
         parallel: bool = False,
-        max_workers: Optional[int] = None,
+        max_workers: int | None = None,
         **kwargs,
     ) -> None:
         """Solves the models in the store.
 
         Parameters
         ----------
-        modelnames : list of str, optional
+        modelnames : list[str], optional
             list of model names, if None all models in the pastastore
             are solved.
         report : boolean, optional
@@ -1459,7 +1470,7 @@ class PastaStore:
                - t95 response < half length calibration period
                - |model parameters| < 1.96 * σ (std deviation)
                - model parameters are not on bounds
-        modelnames : list of str, optional
+        modelnames : list[str], optional
             list of modelnames to perform checks on, by default None
         style_output : bool, optional
             if True, return styled dataframe with pass/fail colors,
@@ -1487,12 +1498,12 @@ class PastaStore:
         else:
             return chkdf
 
-    def to_zip(self, fname: str, overwrite=False, progressbar: bool = True):
+    def to_zip(self, fname: str | Path, overwrite=False, progressbar: bool = True):
         """Write data to zipfile.
 
         Parameters
         ----------
-        fname : str
+        fname : str | Path
             name of zipfile
         overwrite : bool, optional
             if True, overwrite existing file
@@ -1519,7 +1530,7 @@ class PastaStore:
 
     def export_model_series_to_csv(
         self,
-        names: Optional[Union[list, str]] = None,
+        names: list[str] | str | None = None,
         exportdir: Path | str = ".",
         exportmeta: bool = True,
     ):  # pragma: no cover
@@ -1527,7 +1538,7 @@ class PastaStore:
 
         Parameters
         ----------
-        names : Optional[Union[list, str]], optional
+        names : list[str] | str | None, optional
             names of models to export, by default None, which uses retrieves
             all models from database
         exportdir : str, optional
@@ -1538,10 +1549,10 @@ class PastaStore:
         names = self.conn.parse_names(names, libname="models")
         exportdir = Path(exportdir)
         for name in names:
-            mldict = self.get_models(name, return_dict=True)
+            mldict = self.conn.get_models(name, return_dict=True)
 
             oname = mldict["oseries"]["name"]
-            o = self.get_oseries(oname)
+            o = self.conn.get_oseries(oname)
             o.to_csv(exportdir / f"{oname}.csv")
 
             if exportmeta:
@@ -1573,8 +1584,8 @@ class PastaStore:
     def from_zip(
         cls,
         fname: str,
-        conn: Optional[BaseConnector] = None,
-        storename: Optional[str] = None,
+        conn: BaseConnector | None = None,
+        storename: str | None = None,
         progressbar: bool = True,
         series_ext_json: bool = False,
     ):
@@ -1594,7 +1605,7 @@ class PastaStore:
             show progressbar, by default True
         series_ext_json : bool, optional
             if True, series are expected to have a .json extension, by default False,
-            which assumes a .pas extension. Set this option to true for reading
+            which assumes a .pas extension. set this option to true for reading
             zipfiles created with older versions of pastastore <1.8.0.
 
         Returns
@@ -1642,7 +1653,12 @@ class PastaStore:
                         s.index = pd.to_datetime(s.index, unit="ms")
                     s = s.sort_index()
                     meta = json.load(archive.open(f.replace(f".{ext}", f"_meta.{ext}")))
-                    conn._add_series(libname, s, fjson.split(".")[0], metadata=meta)
+                    conn._add_series(
+                        libname=libname,
+                        series=s,
+                        name=fjson.split(".")[0],
+                        metadata=meta,
+                    )
                 elif libname in ["models"]:
                     ml = json.load(archive.open(f), object_hook=pastas_hook)
                     conn.add_model(ml)
@@ -1652,8 +1668,8 @@ class PastaStore:
 
     def search(
         self,
-        s: Optional[Union[list, str]] = None,
-        libname: Optional[PastasLibs] = None,
+        s: list | str | None = None,
+        libname: PastasLibs | None = None,
         case_sensitive: bool = True,
         sort=True,
     ):
@@ -1732,16 +1748,16 @@ class PastaStore:
     def apply(
         self,
         libname: PastasLibs,
-        func: callable,
-        names: Optional[Union[str, List[str]]] = None,
-        kwargs: Optional[dict] = None,
+        func: Callable,
+        names: list[str] | str | None = None,
+        kwargs: dict | None = None,
         progressbar: bool = True,
         parallel: bool = False,
-        max_workers: Optional[int] = None,
+        max_workers: int | None = None,
         fancy_output: bool = True,
-        initializer: Callable = None,
-        initargs: Optional[tuple] = None,
-    ) -> Union[dict, pd.Series, pd.DataFrame]:
+        initializer: Callable | None = None,
+        initargs: tuple | None = None,
+    ) -> dict | pd.Series | pd.DataFrame | Any:
         """Apply function to items in library.
 
         Supported libraries are oseries, stresses, and models.
@@ -1755,7 +1771,7 @@ class PastaStore:
             the library as its first argument. Additional keyword arguments can be
             specified. The function can return any result, or update an item in the
             database without returning anything.
-        names : str, list of str, optional
+        names : str | list[str], optional
             apply function to these names, by default None which loops over all stored
             items in library
         kwargs : dict, optional
@@ -1830,9 +1846,9 @@ class PastaStore:
     @staticmethod
     def _fancy_output(
         result: Iterable,
-        names: List[str],
-        label: Optional[str] = None,
-    ) -> Union[pd.Series, pd.DataFrame, dict]:
+        names: list[str],
+        label: str | None = None,
+    ) -> pd.Series | pd.DataFrame | dict | None:
         """Convert apply result to pandas Series, DataFrame or dict.
 
         Parameters
@@ -1872,7 +1888,7 @@ class PastaStore:
     def within(
         self,
         extent: list,
-        names: Optional[list[str]] = None,
+        names: list[str] | None = None,
         libname: PastasLibs = "oseries",
     ):
         """Get names of items within extent.
@@ -1881,7 +1897,7 @@ class PastaStore:
         ----------
         extent : list
             list with [xmin, xmax, ymin, ymax]
-        names : str, list of str, optional
+        names : str | list[str], optional
             list of names to include, by default None
         libname : str, optional
             name of library, must be one of ('oseries', 'stresses', 'models'), by
