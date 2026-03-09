@@ -25,6 +25,61 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 logger = logging.getLogger(__name__)
 
 
+def list_contextily_providers():
+    """List contextily providers.
+
+    Taken from contextily notebooks.
+
+    Returns
+    -------
+    providers : dict
+        dictionary containing all providers. See keys for names
+        that can be passed as map_provider arguments.
+    """
+    import contextily as ctx
+
+    providers = {}
+
+    def get_providers(provider):
+        if "url" in provider:
+            providers[provider["name"]] = provider
+        else:
+            for prov in provider.values():
+                get_providers(prov)
+
+    get_providers(ctx.providers)
+    return providers
+
+
+def add_background_map(
+    ax, proj="epsg:28992", map_provider="OpenStreetMap.Mapnik", **kwargs
+):
+    """Add background map to axes using contextily.
+
+    Parameters
+    ----------
+    ax : matplotlib.Axes
+        axes to add background map to
+    map_provider : str, optional
+        name of map provider, see `contextily.providers` for options.
+        Default is 'OpenStreetMap.Mapnik'
+    proj : pyproj.Proj or str, optional
+        projection for background map, default is 'epsg:28992'
+        (RD Amersfoort, a projection for the Netherlands)
+    **kwargs
+        additional keyword arguments passed to `contextily.add_basemap`
+    """
+    import contextily as ctx
+
+    if isinstance(proj, str):
+        import pyproj
+
+        proj = pyproj.Proj(proj)
+
+    providers = list_contextily_providers()
+    ctx.add_basemap(ax, source=providers[map_provider], crs=proj.srs, **kwargs)
+
+
 class Maps:
     """Map Class for PastaStore.
 
@@ -1182,19 +1237,7 @@ class Maps:
             dictionary containing all providers. See keys for names
             that can be passed as map_provider arguments.
         """
-        import contextily as ctx
-
-        providers = {}
-
-        def get_providers(provider):
-            if "url" in provider:
-                providers[provider["name"]] = provider
-            else:
-                for prov in provider.values():
-                    get_providers(prov)
-
-        get_providers(ctx.providers)
-        return providers
+        return list_contextily_providers()
 
     @staticmethod
     def add_background_map(
@@ -1204,24 +1247,18 @@ class Maps:
 
         Parameters
         ----------
-        ax: matplotlib.Axes
+        ax : matplotlib.Axes
             axes to add background map to
-        map_provider: str, optional
+        map_provider : str, optional
             name of map provider, see `contextily.providers` for options.
             Default is 'OpenStreetMap.Mapnik'
-        proj: pyproj.Proj or str, optional
+        proj : pyproj.Proj or str, optional
             projection for background map, default is 'epsg:28992'
             (RD Amersfoort, a projection for the Netherlands)
+        **kwargs
+            additional keyword arguments passed to `contextily.add_basemap`
         """
-        import contextily as ctx
-
-        if isinstance(proj, str):
-            import pyproj
-
-            proj = pyproj.Proj(proj)
-
-        providers = Maps._list_contextily_providers()
-        ctx.add_basemap(ax, source=providers[map_provider], crs=proj.srs, **kwargs)
+        add_background_map(ax, proj=proj, map_provider=map_provider, **kwargs)
 
     @staticmethod
     def add_labels(
