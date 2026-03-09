@@ -618,7 +618,7 @@ class PastaStore:
         for lib in libs:
             _names = self.conn.parse_names(names, libname=lib)
             tmintmax = pd.DataFrame(
-                index=pd.Index(names),
+                index=pd.Index(names) if names else None,
                 columns=pd.Index(["tmin", "tmax"]),
                 dtype="datetime64[ns]",
             )
@@ -719,7 +719,11 @@ class PastaStore:
         modelnames = self.conn.parse_names(modelnames, libname="models")
 
         # create dataframe for results
-        p = pd.DataFrame(index=pd.Index(modelnames), columns=pd.Index(parameters))
+        p = pd.DataFrame(
+            index=pd.Index(modelnames),
+            columns=pd.Index(parameters) if parameters else None,
+            dtype=float,
+        )
 
         # loop through model names and store results
         desc = "Get model parameters"

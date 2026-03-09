@@ -117,23 +117,26 @@ def example_pastastore(conn="DictConnector"):
     }
     pstore.conn.add_oseries(oseries.dropna(), "head_mw", metadata=ometa)
 
-    prec = meny.loc["Precipitation", "obs"].rename("prec")
+    prec = meny.loc["Precipitation", "obs"]
     prec.index = prec.index.round("D")
+    prec.name = "prec"
     pmeta = {
         "x": prec.meta["x"],
         "y": prec.meta["y"],
     }
     pstore.conn.add_stress(prec, "prec_mw", kind="prec", metadata=pmeta)
-    evap = meny.loc["Evaporation", "obs"].rename("evap")
+    evap = meny.loc["Evaporation", "obs"]
     evap.index = evap.index.round("D")
+    evap.name = "evap"
     emeta = {
         "x": evap.meta["x"],
         "y": evap.meta["y"],
     }
     pstore.conn.add_stress(evap, "evap_mw", kind="evap", metadata=emeta)
 
-    pressure = meny.loc["Air Pressure", "obs"].rename("pressure")
+    pressure = meny.loc["Air Pressure", "obs"]
     pressure.index = pressure.index.round("D")
+    pressure.name = "pressure"
     pres_meta = {
         "x": pressure.meta["x"],
         "y": pressure.meta["y"],
