@@ -37,6 +37,13 @@ conn = None
 class ParallelUtil:
     """Mix-in class for storing parallelizable methods."""
 
+    # Declared here so type checkers know these attributes exist on the mixin.
+    # Concrete subclasses (ArcticDBConnector, PasConnector) initialize them as
+    # plain booleans in __init__; _ensure_manager_proxies() upgrades them to
+    # multiprocessing.Manager proxies lazily when parallel workers are spawned.
+    _oseries_links_need_update: bool
+    _stresses_links_need_update: bool
+
     def _ensure_manager_proxies(self) -> None:
         """Lazily initialize Manager proxies for cross-process communication.
 
