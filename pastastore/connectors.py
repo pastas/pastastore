@@ -4,10 +4,9 @@ import json
 import logging
 import os
 import warnings
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from copy import deepcopy
 from functools import partial
-from multiprocessing import Manager
 from pathlib import Path
 
 # import weakref
@@ -37,6 +36,37 @@ conn = None
 
 class ParallelUtil:
     """Mix-in class for storing parallelizable methods."""
+
+    def _ensure_manager_proxies(self) -> None:
+        """Lazily initialize Manager proxies for cross-process communication.
+
+        Defers Manager creation until parallel workers are actually about to
+        be spawned, avoiding the Windows multiprocessing bootstrap error that
+        occurs when a Manager is created at module-import time (outside of a
+        ``if __name__ == '__main__'`` block).
+
+        On Windows the "spawn" start method re-imports the calling script for
+        every new process.  If a ``multiprocessing.Manager()`` is created
+        during that re-import, it tries to spawn another process, leading to
+        infinite recursion.  By deferring the Manager creation to the moment
+        just before ``ProcessPoolExecutor`` is entered, we ensure it is only
+        ever created inside a proper ``__main__`` context.
+        """
+        if not hasattr(self._oseries_links_need_update, "value"):
+            from multiprocessing import Manager
+
+            mgr = Manager()
+            # Keep a reference so the manager process is not garbage-collected
+            # while parallel workers are still running.
+            self._manager = mgr
+            current_o = bool(self._oseries_links_need_update)
+            current_s = bool(self._stresses_links_need_update)
+            self._oseries_links_need_update = mgr.Value(
+                "_oseries_links_need_update", current_o
+            )
+            self._stresses_links_need_update = mgr.Value(
+                "_stresses_links_need_update", current_s
+            )
 
     @staticmethod
     def _solve_model(
@@ -129,8 +159,13 @@ class ParallelUtil:
             min(32, os.cpu_count() + 4) if max_workers is None else max_workers
         )
         if chunksize is None:
-            # 14 chunks per worker balances overhead vs granularity
-            # from stackoverflow link posted in docstring.
+            # chunksize controls how many items are batched into a single IPC
+            # round-trip to a worker process. Larger values reduce per-task
+            # overhead but coarsen load-balancing. The heuristic below (14
+            # chunks per worker) is from the SO answer linked in the docstring
+            # and works well when task durations are roughly uniform.
+            # Note: chunksize only applies to executor.map(); submit()-based
+            # dispatch (used in the progressbar path) ignores it entirely.
             CHUNKS_PER_WORKER = 14
             num_chunks = max_workers * CHUNKS_PER_WORKER
             chunksize = max(njobs // num_chunks, 1)
@@ -183,20 +218,12 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         self._initialize(verbose=verbose)
         self.models = ModelAccessor(self)
 
-        # set shared memory manager flags for parallel operations
-        # NOTE: there is no stored reference to manager object, meaning
-        # that it cannot be properly shutdown. We let the Python garbage collector
-        # do this, but the downside is there is a risk some background
-        # processes potentially continue to run.
-        mgr = Manager()
-        self._oseries_links_need_update = mgr.Value(
-            "_oseries_links_need_update",
-            False,
-        )
-        self._stresses_links_need_update = mgr.Value(
-            "_stresses_links_need_update",
-            False,
-        )
+        # Flags start as simple booleans; they are upgraded to Manager proxies
+        # lazily in _ensure_manager_proxies() when parallel processing begins.
+        # This avoids spawning a Manager process at import/init time, which
+        # breaks on Windows outside of a ``if __name__ == '__main__'`` guard.
+        self._oseries_links_need_update = False
+        self._stresses_links_need_update = False
         if not worker_process:
             # for older versions of PastaStore, if oseries_models library is empty
             # populate oseries - models database
@@ -377,7 +404,13 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
     ):
         """Parallel processing of function.
 
-        Does not return results, so function must store results in database.
+        .. warning::
+            When ``progressbar=True``, tasks are dispatched with
+            ``submit()`` + ``as_completed()``, so results are returned in
+            **completion order**, not submission order.  When ``progressbar=False``,
+            ``executor.map()`` is used and order is preserved.  If your caller
+            needs results aligned to ``names``, sort the returned list by name
+            after the call.
 
         Note
         ----
@@ -414,6 +447,10 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         initargs : tuple, optional
             arguments to pass to initializer function, by default None
         """
+        # Upgrade boolean flags to Manager proxies before spawning workers so
+        # that state changes in child processes are visible in the main process.
+        self._ensure_manager_proxies()
+
         max_workers, chunksize = self._get_max_workers_and_chunksize(
             max_workers, len(names), chunksize
         )
@@ -437,17 +474,18 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
                 with ProcessPoolExecutor(
                     max_workers=max_workers, initializer=initializer, initargs=initargs
                 ) as executor:
-                    for item in executor.map(
-                        partial(func, **kwargs), names, chunksize=chunksize
-                    ):
-                        result.append(item)
+                    futures = [
+                        executor.submit(partial(func, **kwargs), name) for name in names
+                    ]
+                    for future in as_completed(futures):
+                        result.append(future.result())
                         pbar.update()
         else:
             with ProcessPoolExecutor(
                 max_workers=max_workers, initializer=initializer, initargs=initargs
             ) as executor:
-                result = executor.map(
-                    partial(func, **kwargs), names, chunksize=chunksize
+                result = list(
+                    executor.map(partial(func, **kwargs), names, chunksize=chunksize)
                 )
 
         # update links if models were stored
@@ -681,20 +719,12 @@ class PasConnector(BaseConnector, ParallelUtil):
         self._initialize(verbose=verbose)
         self.models = ModelAccessor(self)
 
-        # set shared memory manager flags for parallel operations
-        # NOTE: there is no stored reference to manager object, meaning
-        # that it cannot be properly shutdown. We let the Python garbage collector
-        # do this, but the downside is there is a risk some background
-        # processes potentially continue to run.
-        mgr = Manager()
-        self._oseries_links_need_update = mgr.Value(
-            "_oseries_links_need_update",
-            False,
-        )
-        self._stresses_links_need_update = mgr.Value(
-            "_stresses_links_need_update",
-            False,
-        )
+        # Flags start as simple booleans; they are upgraded to Manager proxies
+        # lazily in _ensure_manager_proxies() when parallel processing begins.
+        # This avoids spawning a Manager process at import/init time, which
+        # breaks on Windows outside of a ``if __name__ == '__main__'`` guard.
+        self._oseries_links_need_update = False
+        self._stresses_links_need_update = False
 
         # for older versions of PastaStore, if oseries_models library is empty
         # populate oseries_models library
@@ -916,6 +946,14 @@ class PasConnector(BaseConnector, ParallelUtil):
 
         Does not return results, so function must store results in database.
 
+        .. warning::
+            When ``progressbar=True``, tasks are dispatched with
+            ``submit()`` + ``as_completed()``, so results are returned in
+            **completion order**, not submission order.  When ``progressbar=False``,
+            ``executor.map()`` is used and order is preserved.  If your caller
+            needs results aligned to ``names``, sort the returned list by name
+            after the call.
+
         Parameters
         ----------
         func : function
@@ -935,6 +973,10 @@ class PasConnector(BaseConnector, ParallelUtil):
         initargs : tuple, optional
             arguments to pass to initializer function, by default None
         """
+        # Upgrade boolean flags to Manager proxies before spawning workers so
+        # that state changes in child processes are visible in the main process.
+        self._ensure_manager_proxies()
+
         max_workers, chunksize = self._get_max_workers_and_chunksize(
             max_workers, len(names), chunksize
         )
@@ -951,10 +993,12 @@ class PasConnector(BaseConnector, ParallelUtil):
                         initializer=initializer,
                         initargs=initargs,
                     ) as executor:
-                        for item in executor.map(
-                            partial(func, **kwargs), names, chunksize=chunksize
-                        ):
-                            result.append(item)
+                        futures = [
+                            executor.submit(partial(func, **kwargs), name)
+                            for name in names
+                        ]
+                        for future in as_completed(futures):
+                            result.append(future.result())
                             pbar.update()
             else:
                 result = process_map(
@@ -967,8 +1011,8 @@ class PasConnector(BaseConnector, ParallelUtil):
                 )
         else:
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
-                result = executor.map(
-                    partial(func, **kwargs), names, chunksize=chunksize
+                result = list(
+                    executor.map(partial(func, **kwargs), names, chunksize=chunksize)
                 )
 
         # update links if models were stored
