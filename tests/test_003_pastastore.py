@@ -442,6 +442,36 @@ def test_oseries_distances(pstore):
     _ = pstore.get_nearest_oseries()
 
 
+def test_get_nearest_stresses(pstore):
+    # Test with single kind
+    result_prec = pstore.get_nearest_stresses(pstore.oseries_names, kind="prec")
+    assert isinstance(result_prec, pd.DataFrame)
+    assert result_prec.index.tolist() == pstore.oseries_names
+    assert result_prec.shape == (len(pstore.oseries_names), 1)
+
+    # Test with multiple kinds (n=1 returns single nearest from combined list)
+    result_multi = pstore.get_nearest_stresses(
+        pstore.oseries_names, kind=["evap", "prec"]
+    )
+    assert isinstance(result_multi, pd.DataFrame)
+    assert result_multi.index.tolist() == pstore.oseries_names
+    assert result_multi.shape == (len(pstore.oseries_names), 1)
+
+    # Test with multiple kinds and n=2 (returns 2 nearest from combined list)
+    result_n2 = pstore.get_nearest_stresses(
+        pstore.oseries_names, kind=["evap", "prec"], n=2
+    )
+    assert isinstance(result_n2, pd.DataFrame)
+    assert result_n2.index.tolist() == pstore.oseries_names
+    assert result_n2.shape == (len(pstore.oseries_names), 2)
+
+    # Verify the values are stress names
+    for idx in result_n2.index:
+        for col in result_n2.columns:
+            if pd.notna(result_n2.loc[idx, col]):
+                assert result_n2.loc[idx, col] in pstore.stresses_names
+
+
 def test_repr(pstore):
     pstore.__repr__()
 
