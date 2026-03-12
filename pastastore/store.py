@@ -17,7 +17,8 @@ from pastas.io.pas import pastas_hook
 from pastastore._tqdm import tqdm
 from pastastore.base import BaseConnector
 from pastastore.connectors import ArcticDBConnector, DictConnector, PasConnector
-from pastastore.plotting import Maps, Plots
+from pastastore.mapping import Maps
+from pastastore.plotting import Plots
 from pastastore.styling import boolean_styler
 from pastastore.typing import DataFrameOrSeries, PastasLibs, TimeSeriesLibs
 from pastastore.util import ZipUtils, _custom_warning
@@ -491,11 +492,9 @@ class PastaStore:
 
         data = pd.DataFrame(columns=np.arange(n))
 
-        for series in distances.index:
-            series = pd.DataFrame(
-                [distances.loc[series].dropna().sort_values().index[:n]]
-            )
-            data = pd.concat([data, series], axis=0)
+        for series_name in distances.index:
+            nearest = distances.loc[series_name].dropna().sort_values().index[:n]
+            data.loc[series_name, range(len(nearest))] = nearest
         return data
 
     def get_signatures(
