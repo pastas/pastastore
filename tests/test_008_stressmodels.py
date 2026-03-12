@@ -121,7 +121,7 @@ def test_wellmodel(pstore):
     # test nearest n with n exceeded
     with pytest.raises(ValueError, match=r"Could not find*"):
         pstore.get_stressmodel(
-            "nearest 3",
+            "nearest 6",
             kind="well",
             stressmodel="WellModel",
             oseries="oseries1",
