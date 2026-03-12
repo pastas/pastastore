@@ -61,7 +61,7 @@ Plots
 Maps
 ----
 
-.. autoclass:: pastastore.plotting.Maps
+.. autoclass:: pastastore.mapping.Maps
    :members:
    :undoc-members:
    :private-members:
