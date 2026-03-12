@@ -249,26 +249,37 @@ class BaseConnector(ABC, ConnectorUtil):
     _added_models = []  # internal list of added models used for updating links
 
     def __getstate__(self):
-        """Replace Manager proxies with simple values for pickling.
+        """Return picklable state, stripping Manager objects and proxies.
 
-        Manager proxies cannot be pickled, so we convert them to simple booleans.
-        This allows connectors to be pickled for multiprocessing.
+        ``multiprocessing.Manager`` instances and their proxy objects cannot
+        be pickled.  When a connector is serialised for a worker process the
+        flags are stored as plain ``bool`` values so that workers start with a
+        clean, independent copy.  The ``_manager`` attribute (if present) is
+        removed entirely.
         """
         state = self.__dict__.copy()
-        # Replace unpicklable Manager proxies with their values
-        state["_oseries_links_need_update"] = self._oseries_links_need_update.value
-        state["_stresses_links_need_update"] = self._stresses_links_need_update.value
+        # Remove the Manager instance – it is not picklable and workers do not
+        # need a reference back to the main-process manager server.
+        state.pop("_manager", None)
+        # Replace Manager proxy values with plain booleans.  The flags may
+        # already be plain booleans when _ensure_manager_proxies() has not yet
+        # been called (lazy init), so we guard with hasattr.
+        if hasattr(self._oseries_links_need_update, "value"):
+            state["_oseries_links_need_update"] = self._oseries_links_need_update.value
+            state["_stresses_links_need_update"] = (
+                self._stresses_links_need_update.value
+            )
         return state
 
     def __setstate__(self, state):
-        """Replace Manager proxies with simple booleans after unpickling.
+        """Restore state after unpickling.
 
-        After unpickling, use simple booleans instead of recreating Manager.
-        This works because worker processes don't need shared memory - they
-        work on independent copies of the connector.
+        After unpickling, flags are plain booleans (set by ``__getstate__``).
+        Worker processes operate on independent copies and do not need shared
+        memory proxies.
         """
         self.__dict__.update(state)
-        # Flags are already simple booleans from __getstate__
+        # Flags are already plain booleans from __getstate__; nothing more to do.
 
     def __repr__(self):
         """Representation string of the object."""

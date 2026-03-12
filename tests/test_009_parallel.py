@@ -147,15 +147,15 @@ class TestParallelButNotReally:
         )
 
         # check update parameters are set to True
-        assert pstore_with_models.conn._oseries_links_need_update.value is True
-        assert pstore_with_models.conn._stresses_links_need_update.value is True
+        assert pstore_with_models.conn._oseries_links_need_update is True
+        assert pstore_with_models.conn._stresses_links_need_update is True
 
         # trigger update
         pstore_with_models.conn._trigger_links_update_if_needed()
 
         # after update, flags should be False
-        assert pstore_with_models.conn._oseries_links_need_update.value is False
-        assert pstore_with_models.conn._stresses_links_need_update.value is False
+        assert pstore_with_models.conn._oseries_links_need_update is False
+        assert pstore_with_models.conn._stresses_links_need_update is False
 
     @for_connectors(connectors=["pas", "arcticdb"])
     def test_oseries_models_triggers_update(self, pstore_with_models):
@@ -176,8 +176,8 @@ class TestParallelButNotReally:
         )
 
         # check update parameters are set to True
-        assert pstore_with_models.conn._oseries_links_need_update.value is True
-        assert pstore_with_models.conn._stresses_links_need_update.value is True
+        assert pstore_with_models.conn._oseries_links_need_update is True
+        assert pstore_with_models.conn._stresses_links_need_update is True
 
         # trigger update
         om = pstore_with_models.oseries_models
@@ -187,8 +187,8 @@ class TestParallelButNotReally:
         assert om["oseries2"] == ["oseries2"]
 
         # after update, flags should be False
-        assert pstore_with_models.conn._oseries_links_need_update.value is False
-        assert pstore_with_models.conn._stresses_links_need_update.value is False
+        assert pstore_with_models.conn._oseries_links_need_update is False
+        assert pstore_with_models.conn._stresses_links_need_update is False
 
     @for_connectors(connectors=["pas", "arcticdb"])
     def test_stresses_models_triggers_update(self, pstore_with_models):
@@ -209,8 +209,8 @@ class TestParallelButNotReally:
         )
 
         # check update parameters are set to True
-        assert pstore_with_models.conn._oseries_links_need_update.value is True
-        assert pstore_with_models.conn._stresses_links_need_update.value is True
+        assert pstore_with_models.conn._oseries_links_need_update is True
+        assert pstore_with_models.conn._stresses_links_need_update is True
 
         # trigger update
         sm = pstore_with_models.stresses_models
@@ -222,8 +222,8 @@ class TestParallelButNotReally:
         assert sm["evap2"] == ["oseries2"]
 
         # after update, flags should be False
-        assert pstore_with_models.conn._oseries_links_need_update.value is False
-        assert pstore_with_models.conn._stresses_links_need_update.value is False
+        assert pstore_with_models.conn._oseries_links_need_update is False
+        assert pstore_with_models.conn._stresses_links_need_update is False
 
     @for_connectors(connectors=["pas", "arcticdb"])
     def test_oseries_with_models_triggers_update(self, pstore_with_models):
@@ -244,8 +244,8 @@ class TestParallelButNotReally:
         )
 
         # check update parameters are set to True
-        assert pstore_with_models.conn._oseries_links_need_update.value is True
-        assert pstore_with_models.conn._stresses_links_need_update.value is True
+        assert pstore_with_models.conn._oseries_links_need_update is True
+        assert pstore_with_models.conn._stresses_links_need_update is True
 
         # trigger update
         owm = pstore_with_models.oseries_with_models
@@ -255,8 +255,8 @@ class TestParallelButNotReally:
         assert "oseries2" in owm
 
         # after update, flags should be False
-        assert pstore_with_models.conn._oseries_links_need_update.value is False
-        assert pstore_with_models.conn._stresses_links_need_update.value is False
+        assert pstore_with_models.conn._oseries_links_need_update is False
+        assert pstore_with_models.conn._stresses_links_need_update is False
 
     @for_connectors(connectors=["pas", "arcticdb"])
     def test_stresses_with_models_triggers_update(self, pstore_with_models):
@@ -277,8 +277,8 @@ class TestParallelButNotReally:
         )
 
         # check update parameters are set to True
-        assert pstore_with_models.conn._oseries_links_need_update.value is True
-        assert pstore_with_models.conn._stresses_links_need_update.value is True
+        assert pstore_with_models.conn._oseries_links_need_update is True
+        assert pstore_with_models.conn._stresses_links_need_update is True
 
         # check if result is correct
         swm = pstore_with_models.stresses_with_models
@@ -289,8 +289,8 @@ class TestParallelButNotReally:
         assert "evap2" in swm
 
         # after update, flags should be False
-        assert pstore_with_models.conn._oseries_links_need_update.value is False
-        assert pstore_with_models.conn._stresses_links_need_update.value is False
+        assert pstore_with_models.conn._oseries_links_need_update is False
+        assert pstore_with_models.conn._stresses_links_need_update is False
 
 
 def add_model_pas(name):
