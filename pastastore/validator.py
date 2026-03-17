@@ -391,7 +391,8 @@ class Validator:
             raise TypeError("Expected pastas.Model or dict!")
         if name not in self.connector.oseries.index:
             msg = (
-                f"Cannot add model because oseries '{name}' is not contained in store."
+                f"Cannot add model '{ml.name}' because oseries '{name}'"
+                " is not contained in store."
             )
             raise LookupError(msg)
         # expensive check
@@ -409,7 +410,7 @@ class Validator:
                 )
             except AssertionError as e:
                 raise ValueError(
-                    f"Cannot add model because model oseries '{name}'"
+                    f"Cannot add model '{ml.name}' because model oseries '{name}'"
                     " is different from stored oseries! See stacktrace for differences."
                 ) from e
 
@@ -432,7 +433,7 @@ class Validator:
                 for s in stresses:
                     if str(s.name) not in self.connector.stresses.index:
                         msg = (
-                            f"Cannot add model because stress '{s.name}' "
+                            f"Cannot add model '{ml.name}' because stress '{s.name}' "
                             "is not contained in store."
                         )
                         raise LookupError(msg)
@@ -451,7 +452,7 @@ class Validator:
                             )
                         except AssertionError as e:
                             raise ValueError(
-                                f"Cannot add model because model stress "
+                                f"Cannot add model '{ml.name}' because model stress "
                                 f"'{s.name}' is different from stored stress! "
                                 "See stacktrace for differences."
                             ) from e
@@ -471,8 +472,8 @@ class Validator:
                 for s in stresses:
                     if str(s["name"]) not in self.connector.stresses.index:
                         msg = (
-                            f"Cannot add model because stress '{s['name']}' "
-                            "is not contained in store."
+                            f"Cannot add model '{ml.name}' because stress '{s['name']}'"
+                            " is not contained in store."
                         )
                         raise LookupError(msg)
         else:
