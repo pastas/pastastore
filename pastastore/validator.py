@@ -406,6 +406,7 @@ class Validator:
                     s_org,
                     atol=self.SERIES_EQUALITY_ABSOLUTE_TOLERANCE,
                     rtol=self.SERIES_EQUALITY_RELATIVE_TOLERANCE,
+                    check_freq=False,  # ignore frequency differences
                     check_names=False,
                 )
             except AssertionError as e:
