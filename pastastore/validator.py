@@ -389,7 +389,7 @@ class Validator:
             name = str(ml["oseries"]["name"])
         else:
             raise TypeError("Expected pastas.Model or dict!")
-        if self.connector._item_exists("oseries", name):
+        if not self.connector._item_exists("oseries", name):
             msg = (
                 f"Cannot add model '{ml.name}' because oseries '{name}'"
                 " is not contained in store."
@@ -432,7 +432,7 @@ class Validator:
                 else:
                     stresses = sm.stress
                 for s in stresses:
-                    if self.connector._item_exists("stresses", s.name):
+                    if not self.connector._item_exists("stresses", s.name):
                         msg = (
                             f"Cannot add model '{ml.name}' because stress '{s.name}' "
                             "is not contained in store."
@@ -471,7 +471,7 @@ class Validator:
                 else:
                     stresses = []  # for StepModel, LinearTrend
                 for s in stresses:
-                    if self.connector._item_exists("stresses", s["name"]):
+                    if not self.connector._item_exists("stresses", s["name"]):
                         msg = (
                             f"Cannot add model '{ml.name}' because stress '{s['name']}'"
                             " is not contained in store."
