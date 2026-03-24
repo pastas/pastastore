@@ -138,7 +138,7 @@ class ConnectorUtil:
         # oseries
         if "series" not in mdict["oseries"]:
             name = str(mdict["oseries"]["name"])
-            if self._item_exists("oseries", name):
+            if not self._item_exists("oseries", name):
                 msg = f"oseries '{name}' not present in library"
                 raise LookupError(msg)
             mdict["oseries"]["series"] = self.get_oseries(name).squeeze()
