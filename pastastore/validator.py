@@ -402,12 +402,17 @@ class Validator:
             # Access to _series_original is necessary for validation with Pastas models
             so = ml.oseries._series_original  # noqa: SLF001
             try:
+                # NOTE: check_freq and check_names are set to False because these
+                # attributes do not survive the roundtrip to a JSON file and back.
+                # This is the behavior of pandas, so as long as the values are the same,
+                # the series are considered equal. We should avoid using these
+                # attributes.
                 assert_series_equal(
                     so.dropna(),
                     s_org,
                     atol=self.SERIES_EQUALITY_ABSOLUTE_TOLERANCE,
                     rtol=self.SERIES_EQUALITY_RELATIVE_TOLERANCE,
-                    check_freq=False,  # ignore frequency differences
+                    check_freq=False,
                     check_names=False,
                 )
             except AssertionError as e:
@@ -442,6 +447,8 @@ class Validator:
                     if self.CHECK_MODEL_SERIES_VALUES:
                         s_org = self.connector.get_stresses(s.name).squeeze()
                         # Access to _series_original needed for Pastas validation
+                        # NOTE: check_freq and check_names are set to False. See
+                        # comment in check_oseries_in_store() for explanation.
                         so = s._series_original  # noqa: SLF001
                         try:
                             assert_series_equal(
@@ -449,7 +456,7 @@ class Validator:
                                 s_org,
                                 atol=self.SERIES_EQUALITY_ABSOLUTE_TOLERANCE,
                                 rtol=self.SERIES_EQUALITY_RELATIVE_TOLERANCE,
-                                check_freq=False,  # ignore frequency differences
+                                check_freq=False,
                                 check_names=False,
                             )
                         except AssertionError as e:
