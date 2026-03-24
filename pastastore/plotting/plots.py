@@ -18,8 +18,6 @@ import pandas as pd
 import pastas as ps
 from matplotlib.colors import BoundaryNorm, LogNorm
 
-from pastastore.mapping import Maps as _Maps
-
 logger = logging.getLogger(__name__)
 
 
@@ -606,17 +604,3 @@ class Plots:
             kwargs.setdefault("ax", ax)
         cm.plot(**kwargs)
         return cm
-
-
-class Maps(_Maps):
-    """Deprecated: Use pastastore.mapping.Maps instead.
-
-    This class is kept for backward compatibility.
-    """
-
-    def __init__(self, *args, **kwargs):
-        logger.warning(
-            "Maps class in plotting module is deprecated. "
-            "Use pastastore.mapping.Maps instead."
-        )
-        super().__init__(*args, **kwargs)
