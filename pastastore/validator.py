@@ -370,8 +370,9 @@ class Validator:
             raise TypeError("Expected pastas.Model or dict!")
         if len(series_names) - len(set(series_names)) > 0:
             msg = (
-                "There are multiple stresses series with the same name! "
-                "Each series name must be unique for the PastaStore!"
+                "There are multiple stresses series with the "
+                f"same name {series_names[0]}. Each series name"
+                " must be unique for the PastaStore!"
             )
             raise ValueError(msg)
 

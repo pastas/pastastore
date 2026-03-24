@@ -17,8 +17,7 @@ from pastas.io.pas import pastas_hook
 from pastastore._tqdm import tqdm
 from pastastore.base import BaseConnector
 from pastastore.connectors import ArcticDBConnector, DictConnector, PasConnector
-from pastastore.mapping import Maps
-from pastastore.plotting import Plots
+from pastastore.plotting import Maps, Plots
 from pastastore.styling import boolean_styler
 from pastastore.typing import DataFrameOrSeries, PastasLibs, TimeSeriesLibs
 from pastastore.util import ZipUtils, _custom_warning

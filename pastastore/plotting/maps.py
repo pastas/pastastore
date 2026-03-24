@@ -94,7 +94,7 @@ class Maps:
     """
 
     def __init__(self, pstore):
-        """Initialize Plots class for Pastastore.
+        """Initialize Maps class for Pastastore.
 
         Parameters
         ----------
@@ -108,7 +108,7 @@ class Maps:
         methods = "".join(
             [f"\n - {meth}" for meth in dir(self) if not meth.startswith("_")]
         )
-        return "Mapping submodule, available methods:" + methods
+        return "Maps submodule, available methods:" + methods
 
     def stresses(
         self,
