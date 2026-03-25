@@ -13,11 +13,18 @@ import hydropandas as hpd
 import numpy as np
 from hydropandas.io.knmi import _get_default_settings, download_knmi_data, get_stations
 from pandas import DataFrame, Series, Timedelta, Timestamp
-from pastas.timeseries_utils import timestep_weighted_resample
 
 from pastastore._tqdm import tqdm
 from pastastore.extensions.accessor import register_pastastore_accessor
 from pastastore.typing import TimeSeriesLibs
+from pastastore.version import PASTAS_GEQ_200
+
+if PASTAS_GEQ_200:
+    from pastas.timeseries_utils import time_weighted_resample
+else:
+    from pastas.timeseries_utils import (
+        timestep_weighted_resample as time_weighted_resample,
+    )
 
 logger = logging.getLogger("hydropandas_extension")
 
@@ -275,7 +282,7 @@ class HydroPandasExtension:
         else:
             metadata = {}
         return obs.__class__(
-            timestep_weighted_resample(
+            time_weighted_resample(
                 # force series, see https://github.com/pastas/pastas/issues/1020
                 obs.squeeze(),
                 obs.index.normalize(),

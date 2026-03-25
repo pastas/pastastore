@@ -11,6 +11,9 @@ from pytest_dependency import depends
 
 import pastastore as pst
 from pastastore.util import SeriesUsedByModel
+from pastastore.version import PASTAS_GEQ_200
+
+ATTR = "stresses" if PASTAS_GEQ_200 else "stress"
 
 
 @pytest.mark.dependency
@@ -433,7 +436,7 @@ def test_update_ts_settings(request, pstore):
     assert ml2.oseries.settings["tmax"] == o.index[-1]
     assert ml2.stressmodels["recharge"].prec.settings["tmax"] == tmax
     assert ml2.stressmodels["recharge"].evap.settings["tmax"] == tmax
-    assert ml2.stressmodels["prec"].stress[0].settings["tmax"] == p2.index[-1]
+    assert getattr(ml2.stressmodels["prec"], ATTR)[0].settings["tmax"] == p2.index[-1]
     pstore.del_models("ml_oseries2")
     pstore.validator.set_check_model_series_values(True)
 

@@ -17,6 +17,7 @@ from pandas.testing import assert_series_equal
 
 from pastastore.typing import PastasLibs
 from pastastore.util import SeriesUsedByModel, _custom_warning, validate_names
+from pastastore.version import PASTAS_GEQ_200
 
 if TYPE_CHECKING:
     from pastastore.base import BaseConnector
@@ -324,10 +325,11 @@ class Validator:
         prec_evap_model = ["RechargeModel", "TarsoModel"]
 
         if isinstance(ml, ps.Model):
+            attr = "stresses" if PASTAS_GEQ_200 else "stress"
             series_names = [
                 istress.series.name
                 for sm in ml.stressmodels.values()
-                for istress in sm.stress
+                for istress in getattr(sm, attr)
             ]
 
         elif isinstance(ml, dict):
@@ -433,8 +435,12 @@ class Validator:
         if isinstance(ml, ps.Model):
             for sm in ml.stressmodels.values():
                 # Check class name using type instead of protected _name attribute
-                if type(sm).__name__ in prec_evap_model:
+                if PASTAS_GEQ_200:
+                    stresses = list(sm.stresses)
+                elif type(sm).__name__ in prec_evap_model:
                     stresses = [sm.prec, sm.evap]
+                    if sm.temp is not None:
+                        stresses.append(sm.temp)
                 else:
                     stresses = sm.stress
                 for s in stresses:
