@@ -4,7 +4,6 @@ import inspect
 from importlib import metadata
 
 import pandas as pd
-import pastas as ps
 import pytest
 
 import pastastore as pst

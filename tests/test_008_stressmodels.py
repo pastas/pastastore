@@ -1,9 +1,11 @@
 # ruff: noqa: D100 D103
 import pastas as ps
 import pytest
+
 from pastastore.version import PASTAS_GEQ_200
 
 ATTR = "stresses" if PASTAS_GEQ_200 else "stress"
+
 
 def test_stressmodel_time_series_name(pstore):
     pstore.get_stressmodel("evap1")
