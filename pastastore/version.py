@@ -8,7 +8,7 @@ from packaging.version import parse as parse_version
 PASTAS_VERSION = parse_version(ps.__version__)
 PASTAS_GEQ_150 = PASTAS_VERSION >= parse_version("1.5.0")
 
-__version__ = "1.13.0"
+__version__ = "1.14.0.dev0"
 
 
 def show_versions(optional=False) -> None:
