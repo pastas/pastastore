@@ -263,6 +263,151 @@ def test_save_and_load_model(request, pstore):
     assert pst.util.compare_models(ml, ml2)
 
 
+def test_save_and_load_stressmodel(pstore):
+    """Test saving and loading a simple StressModel."""
+    o = pstore.get_oseries("oseries1")
+    ml = ps.Model(o, name="test_stressmodel")
+
+    # Add a single StressModel with precipitation
+    p = pstore.get_stresses("prec1")
+    sm = ps.StressModel(p, ps.Exponential(), "prec")
+    ml.add_stressmodel(sm)
+    pstore.add_model(ml)
+
+    # Load and compare
+    ml2 = pstore.get_models(ml.name)
+    assert pst.util.compare_models(ml, ml2)
+
+    pstore.del_models("test_stressmodel")
+
+
+def test_save_and_load_rechargemodel(pstore):
+    """Test saving and loading a RechargeModel."""
+    o = pstore.get_oseries("oseries2")
+    ml = ps.Model(o, name="test_rechargemodel")
+
+    # Add RechargeModel with precipitation and evaporation
+    p = pstore.get_stresses("prec2")
+    e = pstore.get_stresses("evap2")
+    rm = ps.RechargeModel(p, e, ps.Exponential(), "recharge")
+    ml.add_stressmodel(rm)
+
+    # save as ps.Model
+    pstore.add_model(ml, overwrite=True)
+    assert pst.util.compare_models(ml, pstore.models[ml.name])
+
+    # save as dict
+    pstore.add_model(ml.to_dict(), overwrite=True)
+    assert pst.util.compare_models(ml, pstore.models[ml.name])
+
+    pstore.del_models("test_rechargemodel")
+
+
+def test_save_and_load_tarsomodel(pstore):
+    """Test saving and loading a TarsoModel."""
+    if parse(ps.__version__) < parse("1.8.0"):
+        pytest.skip("TarsoModel requires pastas >= 1.8.0")
+
+    o = pstore.get_oseries("oseries1").squeeze()
+    ml = ps.Model(o, name="test_tarsomodel", constant=False)
+
+    # Add TarsoModel with precipitation, evaporation, and oseries
+    # TarsoModel cannot be combined with a constant
+    p = pstore.get_stresses("prec1")
+    e = pstore.get_stresses("evap1")
+    tm = ps.TarsoModel(p, e, oseries=o, rfunc=ps.Exponential(), name="tarso")
+    ml.add_stressmodel(tm)
+    pstore.add_model(ml, overwrite=True)
+
+    # save as ps.Model
+    pstore.add_model(ml, overwrite=True)
+    assert pst.util.compare_models(ml, pstore.models[ml.name])
+
+    # save as dict
+    pstore.add_model(ml.to_dict(), overwrite=True)
+    assert pst.util.compare_models(ml, pstore.models[ml.name])
+
+    pstore.del_models("test_tarsomodel")
+
+
+def test_save_and_load_stepmodel(pstore):
+    """Test saving and loading a StepModel."""
+    o = pstore.get_oseries("oseries2")
+    ml = ps.Model(o, name="test_stepmodel")
+
+    # Add a StressModel first with explicit stress settings
+    p = pstore.get_stresses("prec2")
+    sm = ps.StressModel(p, ps.Exponential(), "prec", settings="prec")
+    ml.add_stressmodel(sm)
+
+    # Add StepModel at a specific date
+    step_date = pd.Timestamp("2013-01-01")
+    step = ps.StepModel(step_date, "step")
+    ml.add_stressmodel(step)
+
+    # save as ps.Model
+    pstore.add_model(ml, overwrite=True)
+    assert pst.util.compare_models(ml, pstore.models[ml.name])
+
+    # save as dict
+    pstore.add_model(ml.to_dict(), overwrite=True)
+    assert pst.util.compare_models(ml, pstore.models[ml.name])
+
+    pstore.del_models("test_stepmodel")
+
+
+def test_save_and_load_lineartrend(pstore):
+    """Test saving and loading a model with LinearTrend."""
+    o = pstore.get_oseries("oseries1")
+    ml = ps.Model(o, name="test_lineartrend")
+
+    # Add a StressModel first with explicit stress settings
+    p = pstore.get_stresses("prec1")
+    sm = ps.StressModel(p, ps.Exponential(), "prec", settings="prec")
+    ml.add_stressmodel(sm)
+
+    # Add LinearTrend with start and end dates
+    lt = ps.LinearTrend(start=o.index[0], end=o.index[-1], name="trend")
+    ml.add_stressmodel(lt)
+    ml.solve(report=False)
+
+    # save as ps.Model
+    pstore.add_model(ml, overwrite=True)
+    assert pst.util.compare_models(ml, pstore.models[ml.name])
+
+    # save as dict
+    pstore.add_model(ml.to_dict(), overwrite=True)
+    assert pst.util.compare_models(ml, pstore.models[ml.name])
+
+    pstore.del_models("test_lineartrend")
+
+
+def test_save_and_load_wellmodel(pstore):
+    """Test saving and loading a WellModel."""
+    o = pstore.get_oseries("oseries3")
+    ml = ps.Model(o, name="test_wellmodel")
+
+    # Add WellModel with well extraction
+    w1 = pstore.get_stresses("well1")
+    # WellModel requires distances (in this case arbitrary distances in meters)
+    # and a HantushWellModel response function
+    distances = [500]
+    wm = ps.WellModel(
+        [w1], name="wells", distances=distances, rfunc=ps.HantushWellModel()
+    )
+    ml.add_stressmodel(wm)
+
+    # save as ps.Model
+    pstore.add_model(ml, overwrite=True)
+    assert pst.util.compare_models(ml, pstore.models[ml.name])
+
+    # save as dict
+    pstore.add_model(ml.to_dict(), overwrite=True)
+    assert pst.util.compare_models(ml, pstore.models[ml.name])
+
+    pstore.del_models("test_wellmodel")
+
+
 def test_update_ts_settings(request, pstore):
     pstore.validator.set_check_model_series_values(False)
 
@@ -295,6 +440,36 @@ def test_update_ts_settings(request, pstore):
 
 def test_oseries_distances(pstore):
     _ = pstore.get_nearest_oseries()
+
+
+def test_get_nearest_stresses(pstore):
+    # Test with single kind
+    result_prec = pstore.get_nearest_stresses(pstore.oseries_names, kind="prec")
+    assert isinstance(result_prec, pd.DataFrame)
+    assert result_prec.index.tolist() == pstore.oseries_names
+    assert result_prec.shape == (len(pstore.oseries_names), 1)
+
+    # Test with multiple kinds (n=1 returns single nearest from combined list)
+    result_multi = pstore.get_nearest_stresses(
+        pstore.oseries_names, kind=["evap", "prec"]
+    )
+    assert isinstance(result_multi, pd.DataFrame)
+    assert result_multi.index.tolist() == pstore.oseries_names
+    assert result_multi.shape == (len(pstore.oseries_names), 1)
+
+    # Test with multiple kinds and n=2 (returns 2 nearest from combined list)
+    result_n2 = pstore.get_nearest_stresses(
+        pstore.oseries_names, kind=["evap", "prec"], n=2
+    )
+    assert isinstance(result_n2, pd.DataFrame)
+    assert result_n2.index.tolist() == pstore.oseries_names
+    assert result_n2.shape == (len(pstore.oseries_names), 2)
+
+    # Verify the values are stress names
+    for idx in result_n2.index:
+        for col in result_n2.columns:
+            if pd.notna(result_n2.loc[idx, col]):
+                assert result_n2.loc[idx, col] in pstore.stresses_names
 
 
 def test_repr(pstore):
@@ -367,3 +542,24 @@ def test_models_metadata(request, pstore):
 def test_pstore_validator_settings(pstore):
     _ = pstore.validator.settings
     _ = pstore.conn.validation_settings
+
+
+def test_add_model_with_mismatching_index_attributes(pstore):
+
+    # write prec with index.freq == "D" to pastastore
+    prec, pmeta = pstore.get_stress("prec1", return_metadata=True)
+    prec.index.freq = pd.infer_freq(prec.index)
+    pstore.add_stress(prec, "prec1", kind="prec", metadata=pmeta, overwrite=True)
+
+    # build a model
+    ml = pstore.create_model("oseries1")
+
+    # write file to pas, and read back in, which removes index.name and index.freq
+    # attributes
+    file = Path("temp.pas")
+    ml.to_file(file)
+    ml2 = ps.io.load(file)
+    file.unlink()  # delete temporary file
+
+    # test add model
+    pstore.add_model(ml2, overwrite=True)

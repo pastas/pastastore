@@ -91,3 +91,20 @@ def test_map_modelstat(request, pstore):
 @pytest.mark.dependency
 def test_list_ctx_providers(request, pstore):
     pstore.maps._list_contextily_providers()
+
+
+@pytest.mark.dependency
+def test_standalone_list_ctx_providers(request):
+    from pastastore.plotting import list_contextily_providers
+
+    list_contextily_providers()
+
+
+@pytest.mark.bgmap
+def test_standalone_add_background_map(pstore):
+    from pastastore.plotting import add_background_map
+
+    if pstore.type == "pas":
+        ax = pstore.maps.oseries()
+        add_background_map(ax)
+        plt.close(ax.figure)

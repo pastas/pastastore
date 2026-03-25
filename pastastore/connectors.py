@@ -4,22 +4,20 @@ import json
 import logging
 import os
 import warnings
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from copy import deepcopy
 from functools import partial
-from multiprocessing import Manager
 from pathlib import Path
 
 # import weakref
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable
 
 import pandas as pd
 from pastas.io.pas import PastasEncoder, pastas_hook
-from tqdm.auto import tqdm
-from tqdm.contrib.concurrent import process_map
 
+from pastastore._tqdm import process_map, tqdm
 from pastastore.base import BaseConnector, ModelAccessor
-from pastastore.typing import AllLibs, FrameOrSeriesUnion, TimeSeriesLibs
+from pastastore.typing import AllLibs, DataFrameOrSeries, TimeSeriesLibs
 from pastastore.util import _custom_warning, metadata_from_json, series_from_json
 from pastastore.validator import Validator
 
@@ -39,17 +37,55 @@ conn = None
 class ParallelUtil:
     """Mix-in class for storing parallelizable methods."""
 
+    # Declared here so type checkers know these attributes exist on the mixin.
+    # Concrete subclasses (ArcticDBConnector, PasConnector) initialize them as
+    # plain booleans in __init__; _ensure_manager_proxies() upgrades them to
+    # multiprocessing.Manager proxies lazily when parallel workers are spawned.
+    _oseries_links_need_update: bool
+    _stresses_links_need_update: bool
+
+    def _ensure_manager_proxies(self) -> None:
+        """Lazily initialize Manager proxies for cross-process communication.
+
+        Defers Manager creation until parallel workers are actually about to
+        be spawned, avoiding the Windows multiprocessing bootstrap error that
+        occurs when a Manager is created at module-import time (outside of a
+        ``if __name__ == '__main__'`` block).
+
+        On Windows the "spawn" start method re-imports the calling script for
+        every new process.  If a ``multiprocessing.Manager()`` is created
+        during that re-import, it tries to spawn another process, leading to
+        infinite recursion.  By deferring the Manager creation to the moment
+        just before ``ProcessPoolExecutor`` is entered, we ensure it is only
+        ever created inside a proper ``__main__`` context.
+        """
+        if not hasattr(self._oseries_links_need_update, "value"):
+            from multiprocessing import Manager
+
+            mgr = Manager()
+            # Keep a reference so the manager process is not garbage-collected
+            # while parallel workers are still running.
+            self._manager = mgr
+            current_o = bool(self._oseries_links_need_update)
+            current_s = bool(self._stresses_links_need_update)
+            self._oseries_links_need_update = mgr.Value(
+                "_oseries_links_need_update", current_o
+            )
+            self._stresses_links_need_update = mgr.Value(
+                "_stresses_links_need_update", current_s
+            )
+
     @staticmethod
     def _solve_model(
         ml_name: str,
-        connector: Optional[BaseConnector] = None,
+        connector: BaseConnector | None = None,
         report: bool = False,
         ignore_solve_errors: bool = False,
         **kwargs,
     ) -> None:
         """Solve a model in the store (internal method).
 
-        ml_name : list of str, optional
+        ml_name : list[str], optional
             name of a model in the pastastore
         connector : PasConnector, optional
             Connector to use, by default None which gets the global ArcticDB
@@ -95,8 +131,8 @@ class ParallelUtil:
     @staticmethod
     def _get_statistics(
         name: str,
-        statistics: List[str],
-        connector: Union[None, BaseConnector] = None,
+        statistics: list[str],
+        connector: None | BaseConnector = None,
         **kwargs,
     ) -> pd.Series:
         """Get statistics for a model in the store (internal method).
@@ -121,7 +157,7 @@ class ParallelUtil:
     @staticmethod
     def _get_max_workers_and_chunksize(
         max_workers: int, njobs: int, chunksize: int = None
-    ) -> Tuple[int, int]:
+    ) -> tuple[int, int]:
         """Get the maximum workers and chunksize for parallel processing.
 
         From: https://stackoverflow.com/a/42096963/10596229
@@ -130,8 +166,13 @@ class ParallelUtil:
             min(32, os.cpu_count() + 4) if max_workers is None else max_workers
         )
         if chunksize is None:
-            # 14 chunks per worker balances overhead vs granularity
-            # from stackoverflow link posted in docstring.
+            # chunksize controls how many items are batched into a single IPC
+            # round-trip to a worker process. Larger values reduce per-task
+            # overhead but coarsen load-balancing. The heuristic below (14
+            # chunks per worker) is from the SO answer linked in the docstring
+            # and works well when task durations are roughly uniform.
+            # Note: chunksize only applies to executor.map(); submit()-based
+            # dispatch (used in the progressbar path) ignores it entirely.
             CHUNKS_PER_WORKER = 14
             num_chunks = max_workers * CHUNKS_PER_WORKER
             chunksize = max(njobs // num_chunks, 1)
@@ -184,20 +225,12 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         self._initialize(verbose=verbose)
         self.models = ModelAccessor(self)
 
-        # set shared memory manager flags for parallel operations
-        # NOTE: there is no stored reference to manager object, meaning
-        # that it cannot be properly shutdown. We let the Python garbage collector
-        # do this, but the downside is there is a risk some background
-        # processes potentially continue to run.
-        mgr = Manager()
-        self._oseries_links_need_update = mgr.Value(
-            "_oseries_links_need_update",
-            False,
-        )
-        self._stresses_links_need_update = mgr.Value(
-            "_stresses_links_need_update",
-            False,
-        )
+        # Flags start as simple booleans; they are upgraded to Manager proxies
+        # lazily in _ensure_manager_proxies() when parallel processing begins.
+        # This avoids spawning a Manager process at import/init time, which
+        # breaks on Windows outside of a ``if __name__ == '__main__'`` guard.
+        self._oseries_links_need_update = False
+        self._stresses_links_need_update = False
         if not worker_process:
             # for older versions of PastaStore, if oseries_models library is empty
             # populate oseries - models database
@@ -277,9 +310,9 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
     def _add_item(
         self,
         libname: AllLibs,
-        item: Union[FrameOrSeriesUnion, Dict],
+        item: DataFrameOrSeries | dict,
         name: str,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
         **_,
     ) -> None:
         """Add item to library (time series or model) (internal method).
@@ -288,11 +321,11 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         ----------
         libname : str
             name of the library
-        item : Union[FrameorSeriesUnion, Dict]
+        item : DataFrameOrSeries | dict
             item to add, either time series or pastas.Model as dictionary
         name : str
             name of the item
-        metadata : Optional[Dict], optional
+        metadata : dict | None, optional
             dictionary containing metadata, by default None
         """
         lib = self._get_library(libname)
@@ -311,7 +344,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
             logger.debug("Writing item '%s' to ArcticDB library '%s'.", name, libname)
             lib.write(name, item, metadata=metadata)
 
-    def _get_item(self, libname: AllLibs, name: str) -> Union[FrameOrSeriesUnion, Dict]:
+    def _get_item(self, libname: AllLibs, name: str) -> DataFrameOrSeries | dict:
         """Retrieve item from library (internal method).
 
         Parameters
@@ -323,7 +356,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
 
         Returns
         -------
-        item : Union[FrameorSeriesUnion, Dict]
+        item : DataFrameOrSeries | dict
             time series or model dictionary
         """
         lib = self._get_library(libname)
@@ -367,18 +400,24 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
     def _parallel(
         self,
         func: Callable,
-        names: List[str],
-        kwargs: Optional[Dict] = None,
-        progressbar: Optional[bool] = True,
-        max_workers: Optional[int] = None,
-        chunksize: Optional[int] = None,
+        names: list[str],
+        kwargs: dict | None = None,
+        progressbar: bool | None = True,
+        max_workers: int | None = None,
+        chunksize: int | None = None,
         desc: str = "",
-        initializer: Callable = None,
-        initargs: Optional[tuple] = None,
+        initializer: Callable | None = None,
+        initargs: tuple | None = None,
     ):
         """Parallel processing of function.
 
-        Does not return results, so function must store results in database.
+        .. warning::
+            When ``progressbar=True``, tasks are dispatched with
+            ``submit()`` + ``as_completed()``, so results are returned in
+            **completion order**, not submission order.  When ``progressbar=False``,
+            ``executor.map()`` is used and order is preserved.  If your caller
+            needs results aligned to ``names``, sort the returned list by name
+            after the call.
 
         Note
         ----
@@ -415,6 +454,10 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         initargs : tuple, optional
             arguments to pass to initializer function, by default None
         """
+        # Upgrade boolean flags to Manager proxies before spawning workers so
+        # that state changes in child processes are visible in the main process.
+        self._ensure_manager_proxies()
+
         max_workers, chunksize = self._get_max_workers_and_chunksize(
             max_workers, len(names), chunksize
         )
@@ -438,17 +481,18 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
                 with ProcessPoolExecutor(
                     max_workers=max_workers, initializer=initializer, initargs=initargs
                 ) as executor:
-                    for item in executor.map(
-                        partial(func, **kwargs), names, chunksize=chunksize
-                    ):
-                        result.append(item)
+                    futures = [
+                        executor.submit(partial(func, **kwargs), name) for name in names
+                    ]
+                    for future in as_completed(futures):
+                        result.append(future.result())
                         pbar.update()
         else:
             with ProcessPoolExecutor(
                 max_workers=max_workers, initializer=initializer, initargs=initargs
             ) as executor:
-                result = executor.map(
-                    partial(func, **kwargs), names, chunksize=chunksize
+                result = list(
+                    executor.map(partial(func, **kwargs), names, chunksize=chunksize)
                 )
 
         # update links if models were stored
@@ -456,7 +500,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
 
         return result
 
-    def _list_symbols(self, libname: AllLibs) -> List[str]:
+    def _list_symbols(self, libname: AllLibs) -> list[str]:
         """List symbols in a library (internal method).
 
         Parameters
@@ -471,7 +515,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         """
         return self._get_library(libname).list_symbols()
 
-    def _item_exists(self, libname: str, name: str) -> bool:
+    def _item_exists(self, libname: AllLibs, name: str) -> bool:
         """Check if item exists without scanning directory."""
         lib = self._get_library(libname)
         return lib.has_symbol(name)
@@ -527,9 +571,9 @@ class DictConnector(BaseConnector, ParallelUtil):
     def _add_item(
         self,
         libname: str,
-        item: Union[FrameOrSeriesUnion, Dict],
+        item: DataFrameOrSeries | dict,
         name: str,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
         **_,
     ) -> None:
         """Add item (time series or models) (internal method).
@@ -538,7 +582,7 @@ class DictConnector(BaseConnector, ParallelUtil):
         ----------
         libname : str
             name of library
-        item : FrameorSeriesUnion
+        item : DataFrameOrSeries
             pandas.Series or pandas.DataFrame containing data
         name : str
             name of the item
@@ -555,7 +599,7 @@ class DictConnector(BaseConnector, ParallelUtil):
         else:
             lib[name] = (metadata, item)
 
-    def _get_item(self, libname: AllLibs, name: str) -> Union[FrameOrSeriesUnion, Dict]:
+    def _get_item(self, libname: AllLibs, name: str) -> DataFrameOrSeries | dict:
         """Retrieve item from database (internal method).
 
         Parameters
@@ -567,7 +611,7 @@ class DictConnector(BaseConnector, ParallelUtil):
 
         Returns
         -------
-        item : Union[FrameorSeriesUnion, Dict]
+        item : DataFrameOrSeries | dict
             time series or model dictionary, modifying the returned object will not
             affect the stored data, like in a real database
         """
@@ -630,7 +674,7 @@ class DictConnector(BaseConnector, ParallelUtil):
             " use PasConnector or ArcticDBConnector."
         )
 
-    def _list_symbols(self, libname: AllLibs) -> List[str]:
+    def _list_symbols(self, libname: AllLibs) -> list[str]:
         """List symbols in a library (internal method).
 
         Parameters
@@ -682,20 +726,12 @@ class PasConnector(BaseConnector, ParallelUtil):
         self._initialize(verbose=verbose)
         self.models = ModelAccessor(self)
 
-        # set shared memory manager flags for parallel operations
-        # NOTE: there is no stored reference to manager object, meaning
-        # that it cannot be properly shutdown. We let the Python garbage collector
-        # do this, but the downside is there is a risk some background
-        # processes potentially continue to run.
-        mgr = Manager()
-        self._oseries_links_need_update = mgr.Value(
-            "_oseries_links_need_update",
-            False,
-        )
-        self._stresses_links_need_update = mgr.Value(
-            "_stresses_links_need_update",
-            False,
-        )
+        # Flags start as simple booleans; they are upgraded to Manager proxies
+        # lazily in _ensure_manager_proxies() when parallel processing begins.
+        # This avoids spawning a Manager process at import/init time, which
+        # breaks on Windows outside of a ``if __name__ == '__main__'`` guard.
+        self._oseries_links_need_update = False
+        self._stresses_links_need_update = False
 
         # for older versions of PastaStore, if oseries_models library is empty
         # populate oseries_models library
@@ -755,9 +791,9 @@ class PasConnector(BaseConnector, ParallelUtil):
     def _add_item(
         self,
         libname: str,
-        item: Union[FrameOrSeriesUnion, Dict],
+        item: DataFrameOrSeries | dict,
         name: str,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
         **_,
     ) -> None:
         """Add item (time series or models) (internal method).
@@ -766,7 +802,7 @@ class PasConnector(BaseConnector, ParallelUtil):
         ----------
         libname : str
             name of library
-        item : FrameorSeriesUnion
+        item : DataFrameOrSeries
             pandas.Series or pandas.DataFrame containing data
         name : str
             name of the item
@@ -820,7 +856,7 @@ class PasConnector(BaseConnector, ParallelUtil):
                 logger.debug("Writing link list '%s' to disk at '%s'.", name, fname)
                 fm.write(jsondict)
 
-    def _get_item(self, libname: AllLibs, name: str) -> Union[FrameOrSeriesUnion, Dict]:
+    def _get_item(self, libname: AllLibs, name: str) -> DataFrameOrSeries | dict:
         """Retrieve item (internal method).
 
         Parameters
@@ -832,7 +868,7 @@ class PasConnector(BaseConnector, ParallelUtil):
 
         Returns
         -------
-        item : Union[FrameorSeriesUnion, Dict]
+        item : DataFrameOrSeries | dict
             time series or model dictionary
         """
         lib = self._get_library(libname)
@@ -904,18 +940,26 @@ class PasConnector(BaseConnector, ParallelUtil):
     def _parallel(
         self,
         func: Callable,
-        names: List[str],
-        kwargs: Optional[dict] = None,
-        progressbar: Optional[bool] = True,
-        max_workers: Optional[int] = None,
-        chunksize: Optional[int] = None,
+        names: list[str],
+        kwargs: dict | None = None,
+        progressbar: bool | None = True,
+        max_workers: int | None = None,
+        chunksize: int | None = None,
         desc: str = "",
         initializer: Callable = None,
-        initargs: Optional[tuple] = None,
+        initargs: tuple | None = None,
     ):
         """Parallel processing of function.
 
         Does not return results, so function must store results in database.
+
+        .. warning::
+            When ``progressbar=True``, tasks are dispatched with
+            ``submit()`` + ``as_completed()``, so results are returned in
+            **completion order**, not submission order.  When ``progressbar=False``,
+            ``executor.map()`` is used and order is preserved.  If your caller
+            needs results aligned to ``names``, sort the returned list by name
+            after the call.
 
         Parameters
         ----------
@@ -936,6 +980,10 @@ class PasConnector(BaseConnector, ParallelUtil):
         initargs : tuple, optional
             arguments to pass to initializer function, by default None
         """
+        # Upgrade boolean flags to Manager proxies before spawning workers so
+        # that state changes in child processes are visible in the main process.
+        self._ensure_manager_proxies()
+
         max_workers, chunksize = self._get_max_workers_and_chunksize(
             max_workers, len(names), chunksize
         )
@@ -952,10 +1000,12 @@ class PasConnector(BaseConnector, ParallelUtil):
                         initializer=initializer,
                         initargs=initargs,
                     ) as executor:
-                        for item in executor.map(
-                            partial(func, **kwargs), names, chunksize=chunksize
-                        ):
-                            result.append(item)
+                        futures = [
+                            executor.submit(partial(func, **kwargs), name)
+                            for name in names
+                        ]
+                        for future in as_completed(futures):
+                            result.append(future.result())
                             pbar.update()
             else:
                 result = process_map(
@@ -968,8 +1018,8 @@ class PasConnector(BaseConnector, ParallelUtil):
                 )
         else:
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
-                result = executor.map(
-                    partial(func, **kwargs), names, chunksize=chunksize
+                result = list(
+                    executor.map(partial(func, **kwargs), names, chunksize=chunksize)
                 )
 
         # update links if models were stored
@@ -977,7 +1027,7 @@ class PasConnector(BaseConnector, ParallelUtil):
 
         return result
 
-    def _list_symbols(self, libname: AllLibs) -> List[str]:
+    def _list_symbols(self, libname: AllLibs) -> list[str]:
         """List symbols in a library (internal method).
 
         Parameters

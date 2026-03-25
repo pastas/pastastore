@@ -5,9 +5,10 @@ import logging
 import os
 import shutil
 import warnings
+from pathlib import Path
 
 # import weakref
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import pastas as ps
@@ -20,7 +21,6 @@ from pastastore.util import SeriesUsedByModel, _custom_warning, validate_names
 if TYPE_CHECKING:
     from pastastore.base import BaseConnector
 
-FrameorSeriesUnion = Union[pd.DataFrame, pd.Series]
 warnings.showwarning = _custom_warning
 
 logger = logging.getLogger(__name__)
@@ -336,7 +336,10 @@ class Validator:
             series_names = [
                 sm["stress"]["name"]
                 for sm in ml["stressmodels"].values()
-                if sm[classkey] not in (prec_evap_model + ["WellModel"])
+                if (
+                    sm[classkey] not in (prec_evap_model + ["WellModel"])
+                    and ("stress" in sm)  # some stressmodels have no stress
+                )
             ]
 
             # WellModel
@@ -356,28 +359,29 @@ class Validator:
                 prec_evap_model,
                 [i[classkey] for i in ml["stressmodels"].values()],
             ).any():
-                series_names += [
-                    istress["name"]
-                    for sm in ml["stressmodels"].values()
-                    if sm[classkey] in prec_evap_model
-                    for istress in [sm["prec"], sm["evap"]]
-                ]
+                for sm in ml["stressmodels"].values():
+                    if sm[classkey] in prec_evap_model:
+                        for istress in [sm["prec"], sm["evap"]]:
+                            series_names.append(istress["name"])
+                        if "temp" in sm and sm["temp"]:
+                            series_names.append(sm["temp"]["name"])
 
         else:
             raise TypeError("Expected pastas.Model or dict!")
         if len(series_names) - len(set(series_names)) > 0:
             msg = (
-                "There are multiple stresses series with the same name! "
-                "Each series name must be unique for the PastaStore!"
+                "There are multiple stresses series with the "
+                f"same name {series_names[0]}. Each series name"
+                " must be unique for the PastaStore!"
             )
             raise ValueError(msg)
 
-    def check_oseries_in_store(self, ml: Union[ps.Model, dict]):
+    def check_oseries_in_store(self, ml: ps.Model | dict):
         """Check if Model oseries are contained in PastaStore (internal method).
 
         Parameters
         ----------
-        ml : Union[ps.Model, dict]
+        ml : ps.Model | dict
             pastas Model
         """
         if isinstance(ml, ps.Model):
@@ -386,9 +390,10 @@ class Validator:
             name = str(ml["oseries"]["name"])
         else:
             raise TypeError("Expected pastas.Model or dict!")
-        if name not in self.connector.oseries.index:
+        if not self.connector._item_exists("oseries", name):
             msg = (
-                f"Cannot add model because oseries '{name}' is not contained in store."
+                f"Cannot add model '{ml.name}' because oseries '{name}'"
+                " is not contained in store."
             )
             raise LookupError(msg)
         # expensive check
@@ -397,24 +402,31 @@ class Validator:
             # Access to _series_original is necessary for validation with Pastas models
             so = ml.oseries._series_original  # noqa: SLF001
             try:
+                # NOTE: check_freq and check_names are set to False because these
+                # attributes do not survive the roundtrip to a JSON file and back.
+                # This is the behavior of pandas, so as long as the values are the same,
+                # the series are considered equal. We should avoid using these
+                # attributes.
                 assert_series_equal(
                     so.dropna(),
                     s_org,
                     atol=self.SERIES_EQUALITY_ABSOLUTE_TOLERANCE,
                     rtol=self.SERIES_EQUALITY_RELATIVE_TOLERANCE,
+                    check_freq=False,
+                    check_names=False,
                 )
             except AssertionError as e:
                 raise ValueError(
-                    f"Cannot add model because model oseries '{name}'"
+                    f"Cannot add model '{ml.name}' because model oseries '{name}'"
                     " is different from stored oseries! See stacktrace for differences."
                 ) from e
 
-    def check_stresses_in_store(self, ml: Union[ps.Model, dict]):
+    def check_stresses_in_store(self, ml: ps.Model | dict):
         """Check if stresses time series are contained in PastaStore (internal method).
 
         Parameters
         ----------
-        ml : Union[ps.Model, dict]
+        ml : ps.Model | dict
             pastas Model
         """
         prec_evap_model = ["RechargeModel", "TarsoModel"]
@@ -426,15 +438,17 @@ class Validator:
                 else:
                     stresses = sm.stress
                 for s in stresses:
-                    if str(s.name) not in self.connector.stresses.index:
+                    if not self.connector._item_exists("stresses", s.name):
                         msg = (
-                            f"Cannot add model because stress '{s.name}' "
+                            f"Cannot add model '{ml.name}' because stress '{s.name}' "
                             "is not contained in store."
                         )
                         raise LookupError(msg)
                     if self.CHECK_MODEL_SERIES_VALUES:
                         s_org = self.connector.get_stresses(s.name).squeeze()
                         # Access to _series_original needed for Pastas validation
+                        # NOTE: check_freq and check_names are set to False. See
+                        # comment in check_oseries_in_store() for explanation.
                         so = s._series_original  # noqa: SLF001
                         try:
                             assert_series_equal(
@@ -442,10 +456,12 @@ class Validator:
                                 s_org,
                                 atol=self.SERIES_EQUALITY_ABSOLUTE_TOLERANCE,
                                 rtol=self.SERIES_EQUALITY_RELATIVE_TOLERANCE,
+                                check_freq=False,
+                                check_names=False,
                             )
                         except AssertionError as e:
                             raise ValueError(
-                                f"Cannot add model because model stress "
+                                f"Cannot add model '{ml.name}' because model stress "
                                 f"'{s.name}' is different from stored stress! "
                                 "See stacktrace for differences."
                             ) from e
@@ -454,26 +470,30 @@ class Validator:
                 classkey = "class"
                 if sm[classkey] in prec_evap_model:
                     stresses = [sm["prec"], sm["evap"]]
+                    if "temp" in sm and sm["temp"]:
+                        stresses.append(sm["temp"])
                 elif sm[classkey] in ["WellModel"]:
                     stresses = sm["stress"]
-                else:
+                elif "stress" in sm:
                     stresses = [sm["stress"]]
+                else:
+                    stresses = []  # for StepModel, LinearTrend
                 for s in stresses:
-                    if str(s["name"]) not in self.connector.stresses.index:
+                    if not self.connector._item_exists("stresses", s["name"]):
                         msg = (
-                            f"Cannot add model because stress '{s['name']}' "
-                            "is not contained in store."
+                            f"Cannot add model '{ml.name}' because stress '{s['name']}'"
+                            " is not contained in store."
                         )
                         raise LookupError(msg)
         else:
             raise TypeError("Expected pastas.Model or dict!")
 
-    def check_config_connector_type(self, path: str) -> None:
+    def check_config_connector_type(self, path: Path) -> None:
         """Check if config file connector type matches connector instance.
 
         Parameters
         ----------
-        path : str
+        path : Path
             path to directory containing the pastastore config file
         """
         if path.exists() and path.is_dir():

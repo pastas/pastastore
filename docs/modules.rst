@@ -53,7 +53,7 @@ PastaStore
 Plots
 -----
 
-.. autoclass:: pastastore.plotting.Plots
+.. autoclass:: pastastore.plotting.plots.Plots
    :members:
    :undoc-members:
    :private-members:
@@ -61,7 +61,7 @@ Plots
 Maps
 ----
 
-.. autoclass:: pastastore.plotting.Maps
+.. autoclass:: pastastore.plotting.maps.Maps
    :members:
    :undoc-members:
    :private-members:
