@@ -1979,8 +1979,8 @@ class BaseConnector(ABC, ConnectorUtil):
             libname = "_modelnames_cache"
         getattr(BaseConnector, libname).fget.cache_clear()
 
-    def repair(self):
-        """Repair the database.
+    def rebuild(self):
+        """Rebuild the database.
 
         No data is lost in this operation! The reverse lookup tables are updated,
         and the cached properties are deleted so they are updated on next access.
@@ -1990,13 +1990,13 @@ class BaseConnector(ABC, ConnectorUtil):
         are still present in the oseries_models and stresses_models libraries, or vice
         versa.
         """
-        logger.info("Repairing database '%s' ...", self.name)
+        logger.info("Rebuilding database '%s' ...", self.name)
         self.empty_library("oseries_models", prompt=False, progressbar=False)
         self.empty_library("stresses_models", prompt=False, progressbar=False)
         for libname in ["models", "oseries", "stresses"]:
             self._clear_cache(libname)
         self._update_time_series_model_links(progressbar=True)
-        logger.info("Database '%s' repaired.", self.name)
+        logger.info("Database '%s' rebuilt.", self.name)
 
 
 class ModelAccessor:
