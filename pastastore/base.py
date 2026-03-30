@@ -1979,6 +1979,21 @@ class BaseConnector(ABC, ConnectorUtil):
             libname = "_modelnames_cache"
         getattr(BaseConnector, libname).fget.cache_clear()
 
+    def repair(self):
+        """Repair the database.
+
+        This method can be used to repair the database in case of corruption or
+        inconsistencies. The specific repair actions depend on the implementation
+        of the connector and the underlying database.
+        """
+        logger.info("Repairing database '%s' ...", self.name)
+        self.empty_library("oseries_models", prompt=False, progressbar=False)
+        self.empty_library("stresses_models", prompt=False, progressbar=False)
+        for libname in ["models", "oseries", "stresses"]:
+            self._clear_cache(libname)
+        self._update_time_series_model_links(progressbar=True)
+        logger.info("Database '%s' repaired.", self.name)
+
 
 class ModelAccessor:
     """Object for managing access to stored models.
