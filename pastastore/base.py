@@ -1982,9 +1982,13 @@ class BaseConnector(ABC, ConnectorUtil):
     def repair(self):
         """Repair the database.
 
+        No data is lost in this operation! The reverse lookup tables are updated,
+        and the cached properties are deleted so they are updated on next access.
+
         This method can be used to repair the database in case of corruption or
-        inconsistencies. The specific repair actions depend on the implementation
-        of the connector and the underlying database.
+        inconsistencies. Use when models have been deleted from the models library, but
+        are still present in the oseries_models and stresses_models libraries, or vice
+        versa.
         """
         logger.info("Repairing database '%s' ...", self.name)
         self.empty_library("oseries_models", prompt=False, progressbar=False)
