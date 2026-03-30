@@ -4,10 +4,17 @@ import inspect
 from importlib import metadata
 
 import pandas as pd
-import pastas as ps
 import pytest
 
 import pastastore as pst
+from pastastore.version import PASTAS_GEQ_200
+
+if PASTAS_GEQ_200:
+    from pastas.timeseries_utils import time_weighted_resample
+else:
+    from pastas.timeseries_utils import (
+        timestep_weighted_resample as time_weighted_resample,
+    )
 
 params = [
     "dict",
@@ -51,11 +58,10 @@ def data2():
 @pytest.fixture(scope="module")
 def data3():
     w = pd.read_csv("./tests/data/well_month_end.csv", index_col=0, parse_dates=True)
-    w = ps.ts.timestep_weighted_resample(
+    w = time_weighted_resample(
         w,
         pd.date_range(w.index[0] - pd.offsets.MonthBegin(), w.index[-1], freq="D"),
     ).bfill()
-
     d = {
         "oseries3": pd.read_csv(
             "./tests/data/gw_obs.csv", index_col=0, parse_dates=True

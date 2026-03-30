@@ -19,6 +19,7 @@ from pastas.stats.tests import runs_test, stoffer_toloi
 from pastastore._tqdm import tqdm
 from pastastore.styling import boolean_row_styler
 from pastastore.typing import TimeSeriesLibs
+from pastastore.version import PASTAS_GEQ_200
 
 logger = logging.getLogger(__name__)
 
@@ -527,8 +528,11 @@ def compare_models(
                 type(sm.rfunc).__name__ if sm.rfunc is not None else "NA"
             )
 
-            if type(sm).__name__ == "RechargeModel":
-                stresses = [sm.prec, sm.evap]
+            if PASTAS_GEQ_200:
+                stresses = list(sm.stresses)
+            elif type(sm).__name__ == "RechargeModel":
+                temp = [sm.temp] if sm.temp is not None else []
+                stresses = [sm.prec, sm.evap] + temp
             else:
                 stresses = sm.stress
 

@@ -6,13 +6,16 @@ from typing import Literal
 import pandas as pd
 from hydropandas import Obs, ObsCollection
 
-try:
-    from pastas.timeseries_utils import timestep_weighted_resample
-except ModuleNotFoundError:
-    from pastas.utils import timestep_weighted_resample
-
 import pastastore as pst
 from pastastore.base import BaseConnector
+from pastastore.version import PASTAS_GEQ_200
+
+if PASTAS_GEQ_200:
+    from pastas.timeseries_utils import time_weighted_resample
+else:
+    from pastas.timeseries_utils import (
+        timestep_weighted_resample as time_weighted_resample,
+    )
 
 
 def example_pastastore(conn="DictConnector"):
@@ -75,7 +78,7 @@ def example_pastastore(conn="DictConnector"):
 
     # well 1
     s = pd.read_csv(datadir / "well.csv", index_col=0, parse_dates=True)
-    s = timestep_weighted_resample(s, pd.date_range(s.index[0], s.index[-1], freq="D"))
+    s = time_weighted_resample(s, pd.date_range(s.index[0], s.index[-1], freq="D"))
     pstore.conn.add_stress(s, "well1", kind="well", metadata={"x": 164691, "y": 423579})
 
     # river notebook data (nb5)
@@ -155,7 +158,7 @@ def example_pastastore(conn="DictConnector"):
         # replace spaces in names for Pastas
         name = extr.replace(" ", "_").lower()
         # resample to daily timestep
-        ts_d = timestep_weighted_resample(
+        ts_d = time_weighted_resample(
             ts, pd.date_range(ts.index[0], ts.index[-1], freq="D")
         )
         pstore.conn.add_stress(ts_d, name, kind="well", metadata=wmeta)

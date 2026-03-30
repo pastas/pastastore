@@ -22,6 +22,8 @@ from matplotlib.collections import LineCollection
 from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+from pastastore.version import PASTAS_GEQ_200
+
 logger = logging.getLogger(__name__)
 
 
@@ -954,8 +956,9 @@ class Maps:
 
         stresses = pd.DataFrame(columns=["x", "y", "stressmodel", "color"])
         count = 0
+        attr = "stresses" if PASTAS_GEQ_200 else "stress"
         for name, sm in ml.stressmodels.items():
-            for istress in sm.stress:
+            for istress in getattr(sm, attr):
                 if metadata_source == "model":
                     xi = istress.metadata["x"]
                     yi = istress.metadata["y"]

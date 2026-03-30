@@ -2,6 +2,10 @@
 import pastas as ps
 import pytest
 
+from pastastore.version import PASTAS_GEQ_200
+
+ATTR = "stresses" if PASTAS_GEQ_200 else "stress"
+
 
 def test_stressmodel_time_series_name(pstore):
     pstore.get_stressmodel("evap1")
@@ -9,11 +13,11 @@ def test_stressmodel_time_series_name(pstore):
 
 def test_stressmodel_override_settings(pstore):
     sm = pstore.get_stressmodel("prec1", settings="evap")
-    assert sm.stress[0].settings["fill_nan"] == "interpolate"
+    assert getattr(sm, ATTR)[0].settings["fill_nan"] == "interpolate"
 
     # override settings by passing kind: bit weird, but good to check
     sm = pstore.get_stressmodel("prec1", kind="evap")
-    assert sm.stress[0].settings["fill_nan"] == "interpolate"
+    assert getattr(sm, ATTR)[0].settings["fill_nan"] == "interpolate"
 
 
 def test_stressmodel_rfunc_kwargs(pstore):
@@ -38,28 +42,28 @@ def test_stressmodel_nearest_no_kind_specified(pstore):
 def test_stressmodel_nearest_kind(pstore):
     # nearest kind
     sm = pstore.get_stressmodel("nearest evap", oseries="oseries1")
-    assert sm.stress[0].name == "evap1"
+    assert getattr(sm, ATTR)[0].name == "evap1"
 
     # nearest kind in dict
     sm = pstore.get_stressmodel({"stress": "nearest evap"}, oseries="oseries1")
-    assert sm.stress[0].name == "evap1"
+    assert getattr(sm, ATTR)[0].name == "evap1"
 
     # nearest and kind separate
     sm = pstore.get_stressmodel({"stress": "nearest"}, kind="evap", oseries="oseries1")
-    assert sm.stress[0].name == "evap1"
+    assert getattr(sm, ATTR)[0].name == "evap1"
 
     # nearest in dict and kind separate
     sm = pstore.get_stressmodel(
         {"stress": ["nearest"]}, kind="evap", oseries="oseries1"
     )
-    assert sm.stress[0].name == "evap1"
+    assert getattr(sm, ATTR)[0].name == "evap1"
 
 
 def test_recharge_model(pstore):
     # test list of stress names
     rm = pstore.get_stressmodel(["prec1", "evap1"], stressmodel="RechargeModel")
-    assert rm.stress[0].name == "prec1"
-    assert rm.stress[1].name == "evap1"
+    assert getattr(rm, ATTR)[0].name == "prec1"
+    assert getattr(rm, ATTR)[1].name == "evap1"
 
     # test list of nearest
     rm = pstore.get_stressmodel(
@@ -67,8 +71,8 @@ def test_recharge_model(pstore):
         stressmodel="RechargeModel",
         oseries="oseries1",
     )
-    assert rm.stress[0].name == "prec1"
-    assert rm.stress[1].name == "evap1"
+    assert getattr(rm, ATTR)[0].name == "prec1"
+    assert getattr(rm, ATTR)[1].name == "evap1"
 
     # test dict, no kind specified
     rm = pstore.get_stressmodel(
@@ -76,8 +80,8 @@ def test_recharge_model(pstore):
         stressmodel="RechargeModel",
         oseries="oseries1",
     )
-    assert rm.stress[0].name == "prec1"
-    assert rm.stress[1].name == "evap1"
+    assert getattr(rm, ATTR)[0].name == "prec1"
+    assert getattr(rm, ATTR)[1].name == "evap1"
 
     # test list, bare nearest with kind specified
     rm = pstore.get_stressmodel(
@@ -86,8 +90,8 @@ def test_recharge_model(pstore):
         stressmodel="RechargeModel",
         oseries="oseries1",
     )
-    assert rm.stress[0].name == "prec1"
-    assert rm.stress[1].name == "evap1"
+    assert getattr(rm, ATTR)[0].name == "prec1"
+    assert getattr(rm, ATTR)[1].name == "evap1"
 
 
 def test_wellmodel(pstore):
@@ -97,8 +101,8 @@ def test_wellmodel(pstore):
         stressmodel="WellModel",
         oseries="oseries1",
     )
-    assert wm.stress[0].name == "well1"
-    assert wm.stress[1].name == "well2"
+    assert getattr(wm, ATTR)[0].name == "well1"
+    assert getattr(wm, ATTR)[1].name == "well2"
 
     # test nearest with no kind specified
     wm = pstore.get_stressmodel(
@@ -106,8 +110,8 @@ def test_wellmodel(pstore):
         stressmodel="WellModel",
         oseries="oseries1",
     )
-    assert wm.stress[0].name == "well1"
-    assert wm.stress[1].name == "well2"
+    assert getattr(wm, ATTR)[0].name == "well1"
+    assert getattr(wm, ATTR)[1].name == "well2"
 
     # test nearest n, with non-existing kind specified
     with pytest.raises(ValueError, match=r"Could not find stresses*"):

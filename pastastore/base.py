@@ -1917,10 +1917,12 @@ class BaseConnector(ABC, ConnectorUtil):
                         stresses.append(sm.temp.name)
                 elif hasattr(sm, "stress"):
                     smstress = sm.stress
-                    if not isinstance(smstress, list):
+                    if not isinstance(smstress, (list, tuple)):
                         smstress = [smstress]
                     for s in smstress:
                         stresses.append(s.name)
+                elif hasattr(sm, "stresses"):
+                    stresses += list(sm.stresses)
         return list(set(stresses))
 
     def get_model_time_series_names(

@@ -2,9 +2,16 @@
 import pytest
 from pandas import Timestamp
 from pandas.testing import assert_series_equal
-from pastas.timeseries_utils import timestep_weighted_resample
 
 import pastastore as pst
+from pastastore.version import PASTAS_GEQ_200
+
+if PASTAS_GEQ_200:
+    from pastas.timeseries_utils import time_weighted_resample
+else:
+    from pastas.timeseries_utils import (
+        timestep_weighted_resample as time_weighted_resample,
+    )
 
 
 def create_test_zip():
@@ -99,11 +106,12 @@ def test_update_stresses():
     )
     for i in range(2):
         o = oc.obs.iloc[i].squeeze("columns") * 1e3
-        resampled_result = (timestep_weighted_resample(o, o.index.normalize())).dropna()
+        resampled_result = (time_weighted_resample(o, o.index.normalize())).dropna()
         assert_series_equal(
             pstore.get_stress(pstore.stresses_names[i]).squeeze(),
             resampled_result,
             check_names=False,
+            check_freq=False,
         )
 
 
