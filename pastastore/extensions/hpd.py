@@ -632,10 +632,13 @@ class HydroPandasExtension:
         **kwargs : dict, optional
             Additional keyword arguments to pass to `hpd.read_knmi()`
         """
-        if "source" not in self._store.stresses.columns:
+        missing_cols = {"source", "meteo_var", "unit"}.difference(
+            self._store.stresses.columns
+        )
+        if len(missing_cols) > 0:
             msg = (
-                "Cannot update KNMI stresses! "
-                "KNMI stresses cannot be identified if 'source' column is not defined."
+                "Cannot update KNMI stresses! KNMI stresses cannot "
+                f"be updated if {missing_cols} are not defined in metadata."
             )
             logger.error(msg)
             if raise_on_error:
@@ -645,7 +648,7 @@ class HydroPandasExtension:
 
         if names is None:
             names = self._store.stresses.loc[
-                self._store.stresses["source"] == "KNMI"
+                self._store.stresses["source"].lower() == "knmi"
             ].index.tolist()
 
         tmintmax = self._store.get_tmin_tmax("stresses", names=names)
@@ -679,7 +682,7 @@ class HydroPandasExtension:
                 maxtmax = maxtmax_rd
 
             # 1 days extra to ensure computation of daily totals using
-            # timestep_weighted_resample
+            # time_weighted_resample
             if tmin is None:
                 itmin = tmintmax.loc[name, "tmax"] - Timedelta(days=1)
             else:
@@ -687,7 +690,7 @@ class HydroPandasExtension:
 
             # ensure 2 observations at least
             if itmin >= (maxtmax - Timedelta(days=1)):
-                logger.debug("KNMI %s is already up to date." % name)
+                logger.debug("KNMI %s is already up to date.", name)
                 continue
 
             if tmax is None:
@@ -715,20 +718,23 @@ class HydroPandasExtension:
                 stn = stress_station
             else:
                 stns = get_stations(meteo_var)
-                stn_name = name.split("_")[-1].lower()
-                mask = stns["name"].str.lower().str.replace(" ", "-") == stn_name
-                if not mask.any():
-                    logger.warning(
-                        "Station '%s' not found in list of KNMI %s stations."
-                        % (stn_name, meteo_var)
-                    )
-                    continue
-                stn = stns.loc[mask].index[0]
+                try:
+                    stn = int(name.split("_")[-1])
+                except ValueError:
+                    stn_name = " ".join(name.split("_")[1:-1].lower())
+                    mask = stns["name"].str.lower().str.replace(" ", "-") == stn_name
+                    if not mask.any():
+                        logger.warning(
+                            "Station '%s' not found in list of KNMI %s stations."
+                            % (stn_name, meteo_var)
+                        )
+                        continue
+                    stn = stns.loc[mask].index[0]
 
-            if unit == "m":
-                unit_multiplier = 1.0
-            elif unit == "mm":
+            if unit.startswith("mm"):
                 unit_multiplier = 1e3
+            elif unit.startswith("m"):
+                unit_multiplier = 1.0
             elif unit.count("m") == 1 and unit.endswith("m"):
                 unit_multiplier = float(unit.replace("m", "").replace("*", ""))
             else:
