@@ -245,7 +245,7 @@ class BaseConnector(ABC, ConnectorUtil):
 
     _conn_type: str | None = None
     _validator: Validator | None = None
-    name: str | None = None 
+    name: str | None = None
 
     def __init__(self):
         self._added_models = []  # internal list of added models used for updating links

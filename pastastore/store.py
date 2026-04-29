@@ -1628,7 +1628,7 @@ class PastaStore:
             if storename is None:
                 storename = conn.name
             # because of the short-circuit, the model cache and reverse lookup tables
-            # are not aware of the extracted models. Guarantee the update of the 
+            # are not aware of the extracted models. Guarantee the update of the
             # connector here to ensure everything is recomputed.
             conn._clear_cache("_modelnames_cache")
             conn._update_time_series_model_links(recompute=True)
