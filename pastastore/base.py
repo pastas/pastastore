@@ -235,18 +235,20 @@ class BaseConnector(ABC, ConnectorUtil):
     BaseConnector. Your class has to override each abstractmethod and property.
     """
 
-    _default_library_names = [
+    _default_library_names = (
         "oseries",
         "stresses",
         "models",
         "oseries_models",
         "stresses_models",
-    ]
+    )
 
     _conn_type: str | None = None
     _validator: Validator | None = None
     name: str | None = None
-    _added_models = []  # internal list of added models used for updating links
+
+    def __init__(self):
+        self._added_models = []  # internal list of added models used for updating links
 
     def __getstate__(self):
         """Return picklable state, stripping Manager objects and proxies.
