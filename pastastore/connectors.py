@@ -213,6 +213,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
 
         set_config_string("PickledMetadata.LogLevel", "DEBUG")
 
+        super().__init__()
         self.uri = uri
         self.name = name
 
