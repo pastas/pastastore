@@ -670,8 +670,8 @@ class BaseConnector(ABC, ConnectorUtil):
                     )
                 else:
                     ps.validate_stress(series)
-        in_store = getattr(self, f"{libname}_names")
-        if name not in in_store or overwrite:
+
+        if overwrite or not self._item_exists(libname, name):
             self._add_item(libname, series, name, metadata=metadata)
             self._clear_cache(libname)
         elif (libname == "oseries" and self._item_exists("oseries_models", name)) or (
@@ -774,7 +774,7 @@ class BaseConnector(ABC, ConnectorUtil):
         """
         if libname not in ["oseries", "stresses"]:
             raise ValueError("Library must be 'oseries' or 'stresses'!")
-        if name in getattr(self, f"{libname}_names"):
+        if self._item_exists(libname, name):
             self._update_series(
                 libname, series, name, metadata=metadata, validate=validate, force=force
             )
