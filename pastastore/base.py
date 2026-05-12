@@ -248,7 +248,8 @@ class BaseConnector(ABC, ConnectorUtil):
     name: str | None = None
 
     def __init__(self):
-        self._added_models = []  # internal list of added models used for updating links
+        # internal list of added models used for updating links
+        self._added_models: list[str] = []
 
     def __getstate__(self):
         """Return picklable state, stripping Manager objects and proxies.
