@@ -1908,9 +1908,10 @@ class BaseConnector(ABC, ConnectorUtil):
         """
         oseries_links = {}
         stresses_links = {}
+        n_total = len(modelnames) if modelnames is not None else self.n_models
         for mldict in tqdm(
             self.iter_models(modelnames=modelnames, return_dict=True),
-            total=self.n_models,
+            total=n_total,
             desc=f"{'Recompute' if recompute else 'Get'} models per time series",
             disable=not progressbar,
         ):
