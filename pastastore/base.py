@@ -1769,7 +1769,8 @@ class BaseConnector(ABC, ConnectorUtil):
         for stress_name in stress_names:
             if not self._item_exists("stresses_models", stress_name):
                 logger.debug(
-                    "No stresses_models entry for '%s' when removing model '%s'; skipping.",
+                    "No stresses_models entry for '%s' "
+                    "when removing model '%s'; skipping.",
                     stress_name,
                     model_name,
                 )
