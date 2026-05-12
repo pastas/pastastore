@@ -1549,25 +1549,30 @@ class BaseConnector(ABC, ConnectorUtil):
             if ui.lower() != "y":
                 return
 
-        if libname == "models":
-            # also delete linked modelnames linked to oseries and stresses
+        clearing_models = libname == "models"
+        if clearing_models:
             libs = ["models", "oseries_models", "stresses_models"]
         else:
             libs = [libname]
 
-        # delete items and clear caches
-        for libname in libs:
-            names = self._parse_names(None, libname)
+        for lib in libs:
+            names = self._parse_names(None, lib)
             for name in (
-                tqdm(names, desc=f"Deleting items from {libname}")
-                if progressbar
-                else names
+                tqdm(names, desc=f"Deleting items from {lib}") if progressbar else names
             ):
-                self._del_item(libname, name, force=True)
-            self._clear_cache(libname)
-            logger.info(
-                "Emptied library %s in %s: %s", libname, self.name, self.__class__
-            )
+                self._del_item(lib, name, force=True)
+            self._clear_cache(lib)
+            logger.info("Emptied library %s in %s: %s", lib, self.name, self.__class__)
+
+        if clearing_models:
+            # Discard any pending model names — those models no longer exist.
+            self._added_models = []
+            if hasattr(self._oseries_links_need_update, "value"):
+                self._oseries_links_need_update.value = False
+                self._stresses_links_need_update.value = False
+            else:
+                self._oseries_links_need_update = False
+                self._stresses_links_need_update = False
 
     def _iter_series(self, libname: TimeSeriesLibs, names: list[str] | None = None):
         """Iterate over time series in library (internal method).
