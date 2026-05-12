@@ -1854,8 +1854,8 @@ class BaseConnector(ABC, ConnectorUtil):
     def _trigger_links_update_if_needed(
         self, modelnames: list[str] | None = None, progressbar: bool = False
     ):
-        # Check if time series-> model links need updating
-        # Handle both Manager proxies (main) and booleans (worker after pickle)
+        # Check if time series -> model links need updating.
+        # Handle both Manager proxies (main) and booleans (worker after pickle).
         needs_update = (
             self._oseries_links_need_update.value
             if hasattr(self._oseries_links_need_update, "value")
@@ -1863,8 +1863,8 @@ class BaseConnector(ABC, ConnectorUtil):
         )
         if needs_update:
             self._clear_cache("_modelnames_cache")
-            # Set BOTH flags to False BEFORE updating to prevent recursion
-            # (update always recomputes both oseries and stresses links)
+            # Set flags to False BEFORE updating to prevent recursion.
+            # They are restored in the except block if the update fails.
             if hasattr(self._oseries_links_need_update, "value"):
                 self._oseries_links_need_update.value = False
                 self._stresses_links_need_update.value = False
@@ -1872,13 +1872,24 @@ class BaseConnector(ABC, ConnectorUtil):
                 self._oseries_links_need_update = False
                 self._stresses_links_need_update = False
                 modelnames = self._added_models
-            if modelnames is None or len(modelnames) > 0:
-                self._update_time_series_model_links(
-                    modelnames=modelnames, recompute=True, progressbar=progressbar
-                )
-            self._added_models = []  # reset list of added models
+            try:
+                if modelnames is None or len(modelnames) > 0:
+                    self._update_time_series_model_links(
+                        modelnames=modelnames, recompute=True, progressbar=progressbar
+                    )
+            except Exception:
+                # Restore flags so the next access will retry the update.
+                if hasattr(self._oseries_links_need_update, "value"):
+                    self._oseries_links_need_update.value = True
+                    self._stresses_links_need_update.value = True
+                else:
+                    self._oseries_links_need_update = True
+                    self._stresses_links_need_update = True
+                raise
+            finally:
+                self._added_models = []  # always reset regardless of success/failure
         else:
-            self._added_models = []  # reset list of added models
+            self._added_models = []
 
     def _get_time_series_model_links(
         self,
