@@ -496,8 +496,21 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
                     executor.map(partial(func, **kwargs), names, chunksize=chunksize)
                 )
 
-        # update links if models were stored
-        self._trigger_links_update_if_needed(modelnames=names)
+        # Signal that reverse-lookup tables need updating. On fork-based start
+        # methods (Linux) workers may have already set the proxy flag; on
+        # spawn-based methods (Windows/macOS) they cannot, so we always set it
+        # here. The actual update is deferred to the next access of
+        # oseries_with_models / stresses_with_models / oseries_models /
+        # stresses_models, keeping _parallel() free of the update cost.
+        if hasattr(self._oseries_links_need_update, "value"):
+            self._oseries_links_need_update.value = True
+            self._stresses_links_need_update.value = True
+            # Clear lru_caches so that the next access of oseries_models /
+            # stresses_models re-runs the getter (which calls
+            # _trigger_links_update_if_needed and actually does the update).
+            self._clear_cache("oseries_models")
+            self._clear_cache("stresses_models")
+            self._clear_cache("_modelnames_cache")
 
         return result
 
@@ -1023,8 +1036,21 @@ class PasConnector(BaseConnector, ParallelUtil):
                     executor.map(partial(func, **kwargs), names, chunksize=chunksize)
                 )
 
-        # update links if models were stored
-        self._trigger_links_update_if_needed(modelnames=names)
+        # Signal that reverse-lookup tables need updating. On fork-based start
+        # methods (Linux) workers may have already set the proxy flag; on
+        # spawn-based methods (Windows/macOS) they cannot, so we always set it
+        # here. The actual update is deferred to the next access of
+        # oseries_with_models / stresses_with_models / oseries_models /
+        # stresses_models, keeping _parallel() free of the update cost.
+        if hasattr(self._oseries_links_need_update, "value"):
+            self._oseries_links_need_update.value = True
+            self._stresses_links_need_update.value = True
+            # Clear lru_caches so that the next access of oseries_models /
+            # stresses_models re-runs the getter (which calls
+            # _trigger_links_update_if_needed and actually does the update).
+            self._clear_cache("oseries_models")
+            self._clear_cache("stresses_models")
+            self._clear_cache("_modelnames_cache")
 
         return result
 
