@@ -364,10 +364,10 @@ def test_parallel_add_model(conn_type, data1, data2):
             max_workers=1,
         )
 
-        # check update parameters are set to False, since after parallel these are
-        # recomputed automatically
-        assert ppstore.conn._oseries_links_need_update.value is False
-        assert ppstore.conn._stresses_links_need_update.value is False
+        # check update parameters are set to True, since after parallel the update
+        # is deferred to the next access of oseries/stresses_models
+        assert ppstore.conn._oseries_links_need_update.value is True
+        assert ppstore.conn._stresses_links_need_update.value is True
 
         # check if result is correct
         om = ppstore.oseries_models
@@ -388,6 +388,11 @@ def test_parallel_add_model(conn_type, data1, data2):
         assert "oseries2" in sm["prec2"]
         assert "oseries1" in sm["evap1"]
         assert "oseries2" in sm["evap2"]
+
+        # check update parameters are set to False, since after access the updates
+        # should have been triggered
+        assert ppstore.conn._oseries_links_need_update.value is False
+        assert ppstore.conn._stresses_links_need_update.value is False
 
     finally:
         pst.util.delete_pastastore(ppstore)
