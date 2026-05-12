@@ -218,6 +218,30 @@ class Validator:
         else:
             return validate
 
+    def disable(self):
+        """Turn OFF all checks for maximum performance.
+
+        This will turn off all checks in the Validator, which will increase
+        performance but can lead to data integrity issues if not used carefully.
+        Use with caution!
+        """
+        self.set_check_model_series_values(False)
+        self.set_use_pastas_validate_series(False)
+        self.set_validate_metadata(False)
+        self.set_protect_series_in_models(False)
+
+    def enable(self):
+        """Turn ON all checks for maximum safety.
+
+        This will turn on all checks in the Validator, which will decrease
+        performance but ensures data integrity. It is recommended to keep all
+        checks on.
+        """
+        self.set_check_model_series_values(True)
+        self.set_use_pastas_validate_series(True)
+        self.set_validate_metadata(True)
+        self.set_protect_series_in_models(True)
+
     @staticmethod
     def check_filename_illegal_chars(libname: PastasLibs, name: str) -> str:
         """Check filename for invalid characters (internal method).
