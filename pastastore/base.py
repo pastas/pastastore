@@ -1127,17 +1127,19 @@ class BaseConnector(ABC, ConnectorUtil):
             print information about deleted models, by default True
         """
         names = self._parse_names(names, libname="models")
-        for n in names:
-            mldict = self.get_models(n, return_dict=True)
-            oname = mldict["oseries"]["name"]
-            self._del_item("models", n)
-            # delete reference to added model if present
-            if n in self._added_models:
-                self._added_models.remove(n)
-            else:
+        try:
+            for n in names:
+                mldict = self.get_models(n, return_dict=True)
+                oname = mldict["oseries"]["name"]
+                self._del_item("models", n)
+                # remove from pending-update queue if present
+                if n in self._added_models:
+                    self._added_models.remove(n)
+                # always clean up reverse-lookup tables (no-ops if already gone)
                 self._del_oseries_model_link(oname, n)
                 self._del_stress_model_link(self._get_model_stress_names(mldict), n)
-        self._clear_cache("_modelnames_cache")
+        finally:
+            self._clear_cache("_modelnames_cache")
         if verbose:
             logger.info("Deleted %d model(s) from database.", len(names))
 
