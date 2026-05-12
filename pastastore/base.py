@@ -1733,8 +1733,23 @@ class BaseConnector(ABC, ConnectorUtil):
         mlnam : str
             name of model
         """
+        if not self._item_exists("oseries_models", onam):
+            logger.debug(
+                "No oseries_models entry for '%s' when removing model '%s'; skipping.",
+                onam,
+                mlnam,
+            )
+            self._clear_cache("oseries_models")
+            return
         modellist = self._get_item("oseries_models", onam)
-        modellist.remove(mlnam)
+        try:
+            modellist.remove(mlnam)
+        except ValueError:
+            logger.debug(
+                "Model '%s' not found in oseries_models for '%s'; skipping.",
+                mlnam,
+                onam,
+            )
         if len(modellist) == 0:
             self._del_item("oseries_models", onam)
         else:
@@ -1752,8 +1767,23 @@ class BaseConnector(ABC, ConnectorUtil):
             Name of the model to remove from the stress links.
         """
         for stress_name in stress_names:
+            if not self._item_exists("stresses_models", stress_name):
+                logger.debug(
+                    "No stresses_models entry for '%s' when removing model '%s'; skipping.",
+                    stress_name,
+                    model_name,
+                )
+                continue
             modellist = self._get_item("stresses_models", stress_name)
-            modellist.remove(model_name)
+            try:
+                modellist.remove(model_name)
+            except ValueError:
+                logger.debug(
+                    "Model '%s' not found in stresses_models for '%s'; skipping.",
+                    model_name,
+                    stress_name,
+                )
+                continue
             if len(modellist) == 0:
                 self._del_item("stresses_models", stress_name)
             else:
