@@ -1,4 +1,3 @@
-# ruff: noqa: B019
 """Base classes for PastaStore Connectors."""
 
 import functools
