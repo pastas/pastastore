@@ -197,6 +197,8 @@ class Maps:
 
         if show_legend and kind_to_color is not None:
             for k, color in kind_to_color.items():
+                for kw in ["c", "s"]:
+                    kwargs.pop(kw, None)
                 ax.plot([], [], color=color, label=k, **kwargs, marker="o", ls="none")
             ax.legend(loc=(0, 1), frameon=False, ncol=5)
 
