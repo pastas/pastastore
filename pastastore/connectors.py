@@ -503,11 +503,13 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
                 with ProcessPoolExecutor(
                     max_workers=max_workers, initializer=initializer, initargs=initargs
                 ) as executor:
-                    futures = [
-                        executor.submit(partial(func, **kwargs), name) for name in names
-                    ]
-                    for future in as_completed(futures):
+                    pending = {
+                        executor.submit(partial(func, **kwargs), name): name
+                        for name in names
+                    }
+                    for future in as_completed(pending):
                         result.append(future.result())
+                        del pending[future]
                         pbar.update()
         else:
             with ProcessPoolExecutor(
@@ -1052,12 +1054,13 @@ class PasConnector(BaseConnector, ParallelUtil):
                         initializer=initializer,
                         initargs=initargs,
                     ) as executor:
-                        futures = [
-                            executor.submit(partial(func, **kwargs), name)
+                        pending = {
+                            executor.submit(partial(func, **kwargs), name): name
                             for name in names
-                        ]
-                        for future in as_completed(futures):
+                        }
+                        for future in as_completed(pending):
                             result.append(future.result())
+                            del pending[future]
                             pbar.update()
             else:
                 result = process_map(
