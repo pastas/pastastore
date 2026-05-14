@@ -2022,12 +2022,11 @@ class BaseConnector(ABC, ConnectorUtil):
         else:
             return structure
 
-    @staticmethod
-    def _clear_cache(libname: AllLibs) -> None:
-        """Clear cached property."""
+    def _clear_cache(self, libname: AllLibs) -> None:
+        """Clear cached property by removing it from the instance __dict__."""
         if libname == "models":
             libname = "_modelnames_cache"
-        getattr(BaseConnector, libname).fget.cache_clear()
+        self.__dict__.pop(libname, None)
 
     def rebuild(self):
         """Rebuild the database.
