@@ -43,6 +43,23 @@ class ParallelUtil:
     _oseries_links_need_update: bool
     _stresses_links_need_update: bool
 
+    def __del__(self) -> None:
+        """Shut down the Manager subprocess when the connector is garbage collected."""
+        mgr = getattr(self, "_manager", None)
+        if mgr is not None:
+            try:
+                mgr.shutdown()
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+    def __enter__(self):
+        """Support use as a context manager."""
+        return self
+
+    def __exit__(self, *args) -> None:
+        """Shut down the Manager subprocess on context-manager exit."""
+        self.__del__()
+
     def _ensure_manager_proxies(self) -> None:
         """Lazily initialize Manager proxies for cross-process communication.
 
