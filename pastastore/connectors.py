@@ -236,7 +236,8 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
             # for older versions of PastaStore, if oseries_models library is empty
             # populate oseries - models database
             if (self.n_models > 0) and (
-                len(self.oseries_models) == 0 or len(self.stresses_models) == 0
+                len(self._list_symbols("oseries_models")) == 0
+                or len(self._list_symbols("stresses_models")) == 0
             ):
                 self._update_time_series_model_links(recompute=False, progressbar=True)
             # write pstore file to store database info that can be used to load pstore
@@ -753,8 +754,9 @@ class PasConnector(BaseConnector, ParallelUtil):
 
         # for older versions of PastaStore, if oseries_models library is empty
         # populate oseries_models library
-        if (self.n_models > 0) and (
-            len(self.oseries_models) == 0 or len(self.stresses_models) == 0
+        if not self._library_is_empty("models") and (
+            self._library_is_empty("oseries_models")
+            or self._library_is_empty("stresses_models")
         ):
             self._update_time_series_model_links(recompute=False, progressbar=True)
         # write pstore file to store database info that can be used to load pstore
@@ -780,6 +782,15 @@ class PasConnector(BaseConnector, ParallelUtil):
                         libdir,
                     )
             setattr(self, f"lib_{val}", self.path / val)
+
+    def _library_is_empty(self, libname: str) -> bool:
+        """Return True if a library directory contains no .pas files.
+
+        Uses ``next()`` to short-circuit after the first hit, so it avoids
+        enumerating the entire directory.
+        """
+        lib = self._get_library(libname)
+        return next(lib.glob("*.pas"), None) is None
 
     def _write_pstore_config_file(self):
         """Write pstore configuration file to store database info."""
