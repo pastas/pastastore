@@ -1097,3 +1097,42 @@ class PasConnector(BaseConnector, ParallelUtil):
         lib = self._get_library(libname)
         path = lib / f"{name}.pas"
         return path.exists()
+
+    @property
+    @functools.lru_cache()
+    def oseries_names(self) -> list[str]:
+        """Cached list of oseries names."""
+        return self._list_symbols("oseries")
+
+    @property
+    @functools.lru_cache()
+    def stresses_names(self) -> list[str]:
+        """Cached list of stress names."""
+        return self._list_symbols("stresses")
+
+    @property
+    @functools.lru_cache()
+    def oseries_with_models(self) -> list[str]:
+        """Cached list of oseries used in models."""
+        self._trigger_links_update_if_needed()
+        return self._list_symbols("oseries_models")
+
+    @property
+    @functools.lru_cache()
+    def stresses_with_models(self) -> list[str]:
+        """Cached list of stresses used in models."""
+        self._trigger_links_update_if_needed()
+        return self._list_symbols("stresses_models")
+
+    @staticmethod
+    def _clear_cache(libname: str) -> None:
+        """Clear cached properties, including PasConnector-level overrides."""
+        BaseConnector._clear_cache(libname)
+        _pas_extra = {
+            "oseries": "oseries_names",
+            "stresses": "stresses_names",
+            "oseries_models": "oseries_with_models",
+            "stresses_models": "stresses_with_models",
+        }
+        if libname in _pas_extra:
+            getattr(PasConnector, _pas_extra[libname]).fget.cache_clear()
