@@ -526,20 +526,17 @@ class BaseConnector(ABC, ConnectorUtil):
         """
         return self._parse_names(names, libname)
 
-    @property
-    @functools.lru_cache()
+    @functools.cached_property
     def oseries(self) -> pd.DataFrame:
         """Dataframe with overview of oseries."""
         return self.get_metadata(libname="oseries", names=self.oseries_names)
 
-    @property
-    @functools.lru_cache()
+    @functools.cached_property
     def stresses(self) -> pd.DataFrame:
         """Dataframe with overview of stresses."""
         return self.get_metadata(libname="stresses", names=self.stresses_names)
 
-    @property
-    @functools.lru_cache()
+    @functools.cached_property
     def _modelnames_cache(self) -> list[str]:
         """List of model names."""
         return self._list_symbols(libname="models")
@@ -580,8 +577,7 @@ class BaseConnector(ABC, ConnectorUtil):
         """
         return len(self.model_names)
 
-    @property
-    @functools.lru_cache()
+    @functools.cached_property
     def oseries_models(self) -> dict[str, list[str]]:
         """List of model names per oseries.
 
@@ -597,8 +593,7 @@ class BaseConnector(ABC, ConnectorUtil):
             d[onam] = self._get_item("oseries_models", onam)
         return d
 
-    @property
-    @functools.lru_cache()
+    @functools.cached_property
     def stresses_models(self) -> dict[str, list[str]]:
         """List of model names per stress.
 
