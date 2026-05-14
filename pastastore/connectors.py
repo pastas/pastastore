@@ -279,11 +279,15 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         elif path is None and "lmdb" not in self.uri:
             raise ValueError("Please provide a path to write the pastastore file!")
 
-        with (path / self.name / f"{self.name}.pastastore").open(
-            "w",
-            encoding="utf-8",
-        ) as f:
-            json.dump(config, f)
+        fpath = path / self.name / f"{self.name}.pastastore"
+        new_content = json.dumps(config)
+        if fpath.exists():
+            try:
+                if fpath.read_text(encoding="utf-8") == new_content:
+                    return
+            except OSError:
+                pass
+        fpath.write_text(new_content, encoding="utf-8")
 
     def _library_name(self, libname: AllLibs) -> str:
         """Get full library name according to ArcticDB (internal method)."""
@@ -784,8 +788,15 @@ class PasConnector(BaseConnector, ParallelUtil):
             "name": self.name,
             "path": str(self.parentdir.absolute()),
         }
-        with (self.path / f"{self.name}.pastastore").open("w", encoding="utf-8") as f:
-            json.dump(config, f)
+        fpath = self.path / f"{self.name}.pastastore"
+        new_content = json.dumps(config)
+        if fpath.exists():
+            try:
+                if fpath.read_text(encoding="utf-8") == new_content:
+                    return
+            except OSError:
+                pass
+        fpath.write_text(new_content, encoding="utf-8")
 
     def _get_library(self, libname: AllLibs) -> Path:
         """Get path to directory holding data.
