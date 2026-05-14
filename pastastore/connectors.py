@@ -1,5 +1,6 @@
 """Module containing classes for connecting to different data stores."""
 
+import functools
 import json
 import logging
 import os
