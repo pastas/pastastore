@@ -872,7 +872,6 @@ class Maps:
             s = 70
             marker = "o"
             kwargs = {}
-
         # if column is passed for coloring pts
         if column:
             c = df.loc[:, column]
