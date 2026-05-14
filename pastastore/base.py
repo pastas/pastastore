@@ -264,6 +264,16 @@ class BaseConnector(ABC, ConnectorUtil):
         # Remove the Manager instance – it is not picklable and workers do not
         # need a reference back to the main-process manager server.
         state.pop("_manager", None)
+        # Strip cached_property values so large DataFrames are not serialised
+        # over IPC.  Workers recreate the cache on first access.
+        for _cached in (
+            "oseries",
+            "stresses",
+            "_modelnames_cache",
+            "oseries_models",
+            "stresses_models",
+        ):
+            state.pop(_cached, None)
         # Replace Manager proxy values with plain booleans.  The flags may
         # already be plain booleans when _ensure_manager_proxies() has not yet
         # been called (lazy init), so we guard with hasattr.
