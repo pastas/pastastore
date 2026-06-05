@@ -1009,7 +1009,7 @@ class PastaStore:
     ):
         # parse stresses for RechargeModel, allow list of len 2 or 3 and
         # set correct kwarg names
-        if stressmodel._name == "RechargeModel":
+        if stressmodel.__name__ == "RechargeModel":
             if isinstance(stresses, list):
                 if len(stresses) == 2:
                     stresses = {
@@ -1039,7 +1039,7 @@ class PastaStore:
             raise TypeError("stresses must be a list, string or dictionary!")
 
         # if no kind specified, set to well for WellModel
-        if stressmodel._name == "WellModel":
+        if stressmodel.__name__ == "WellModel":
             if kind is None:
                 kind = "well"
 
@@ -1082,7 +1082,7 @@ class PastaStore:
                                 # if RechargeModel, we can infer kind
                                 if (
                                     _kind is None
-                                    and stressmodel._name == "RechargeModel"
+                                    and stressmodel.__name__ == "RechargeModel"
                                 ):
                                     kind = k
                                 elif _kind is None:  # catch no kind with bare nearest
@@ -1203,12 +1203,12 @@ class PastaStore:
 
         # get stressmodel name if not provided
         if stressmodel_name is None:
-            if stressmodel._name == "RechargeModel":
+            if stressmodel.__name__ == "RechargeModel":
                 stressmodel_name = "recharge"
             elif len(metadata) == 1:
                 stressmodel_name = stresses["stress"].squeeze().name
             else:
-                stressmodel_name = stressmodel._name
+                stressmodel_name = stressmodel.__name__
 
         # check if metadata is list of len 1 and unpack
         if isinstance(metadata, list) and len(metadata) == 1:
@@ -1244,7 +1244,7 @@ class PastaStore:
             rfunc_kwargs = {}
 
         # special for WellModels
-        if stressmodel._name == "WellModel":
+        if stressmodel.__name__ == "WellModel":
             if isinstance(stresses["stress"], list):
                 names = [s.squeeze().name for s in stresses["stress"]]
             else:
