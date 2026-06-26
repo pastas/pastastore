@@ -49,15 +49,40 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
-        pastas-version:
-          [
-            "git+https://github.com/pastas/pastas.git@v1.4.0",
-            "git+https://github.com/pastas/pastas.git@v1.5.0",
-            "git+https://github.com/pastas/pastas.git@v1.14.0",
-            "git+https://github.com/pastas/pastas.git@dev",
-          ]
-        experimental: [false]
+        include:
+          # Old Pastas releases
+          - python-version: "3.9"
+            pastas-version: "git+https://github.com/pastas/pastas.git@v1.4.0"
+            experimental: false
+
+          - python-version: "3.9"
+            pastas-version: "git+https://github.com/pastas/pastas.git@v1.5.0"
+            experimental: false
+
+          # Supported releases
+          - python-version: "3.11"
+            pastas-version: "git+https://github.com/pastas/pastas.git@v1.14.0"
+            experimental: false
+
+          - python-version: "3.12"
+            pastas-version: "git+https://github.com/pastas/pastas.git@v1.14.0"
+            experimental: false
+
+          - python-version: "3.13"
+            pastas-version: "git+https://github.com/pastas/pastas.git@v1.14.0"
+            experimental: false
+
+          - python-version: "3.11"
+            pastas-version: "git+https://github.com/pastas/pastas.git@dev"
+            experimental: false
+
+          - python-version: "3.12"
+            pastas-version: "git+https://github.com/pastas/pastas.git@dev"
+            experimental: false
+
+          - python-version: "3.13"
+            pastas-version: "git+https://github.com/pastas/pastas.git@dev"
+            experimental: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
