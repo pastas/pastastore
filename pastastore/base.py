@@ -1263,7 +1263,10 @@ class BaseConnector(ABC, ConnectorUtil):
         desc = f"Get {libname}"
         n = None
         for n in tqdm(names, desc=desc) if progressbar else names:
-            ts[n] = self._get_item(libname, n)
+            series = self._get_item(libname, n)
+            if hasattr(series.index, "as_unit"):  # pandas >= 3.0
+                series.index = series.index.as_unit("us")
+            ts[n] = series
         # return frame if len == 1
         if len(ts) == 1 and squeeze:
             return ts[n]
