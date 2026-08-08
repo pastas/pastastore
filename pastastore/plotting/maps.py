@@ -422,6 +422,7 @@ class Maps:
             series.rename("value", inplace=True)
 
         df = self.pstore.oseries.join(series, how="left")
+        df = df.loc[series.index]
 
         return self.dataframe(
             df,
