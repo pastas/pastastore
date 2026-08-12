@@ -273,8 +273,11 @@ def test_save_and_load_stressmodel(pstore):
 
     # Add a single StressModel with precipitation
     p = pstore.get_stresses("prec1")
-    sm = ps.StressModel(p, ps.Exponential(), "prec")
-    ml.add_stressmodel(sm)
+    if PASTAS_GEQ_200:
+        sm = ps.StressModel(ml, p, ps.Exponential(), "prec")
+    else:
+        sm = ps.StressModel(p, ps.Exponential(), "prec")
+        ml.add_stressmodel(sm)
     pstore.add_model(ml)
 
     # Load and compare
@@ -292,8 +295,11 @@ def test_save_and_load_rechargemodel(pstore):
     # Add RechargeModel with precipitation and evaporation
     p = pstore.get_stresses("prec2")
     e = pstore.get_stresses("evap2")
-    rm = ps.RechargeModel(p, e, ps.Exponential(), "recharge")
-    ml.add_stressmodel(rm)
+    if PASTAS_GEQ_200:
+        rm = ps.RechargeModel(ml, p, e, ps.Exponential(), "recharge")
+    else:
+        rm = ps.RechargeModel(p, e, ps.Exponential(), "recharge")
+        ml.add_stressmodel(rm)
 
     # save as ps.Model
     pstore.add_model(ml, overwrite=True)
@@ -318,8 +324,12 @@ def test_save_and_load_tarsomodel(pstore):
     # TarsoModel cannot be combined with a constant
     p = pstore.get_stresses("prec1")
     e = pstore.get_stresses("evap1")
-    tm = ps.TarsoModel(p, e, oseries=o, rfunc=ps.Exponential(), name="tarso")
-    ml.add_stressmodel(tm)
+    if PASTAS_GEQ_200:
+        tm = ps.TarsoModel(ml, p, e, rfunc=ps.Exponential(), name="tarso")
+    else:
+        tm = ps.TarsoModel(p, e, oseries=o, rfunc=ps.Exponential(), name="tarso")
+        ml.add_stressmodel(tm)
+
     pstore.add_model(ml, overwrite=True)
 
     # save as ps.Model
@@ -340,16 +350,19 @@ def test_save_and_load_stepmodel(pstore):
 
     # Add a StressModel first with explicit stress settings
     p = pstore.get_stresses("prec2")
-    sm = ps.StressModel(p, ps.Exponential(), "prec", settings="prec")
-    ml.add_stressmodel(sm)
+    if PASTAS_GEQ_200:
+        sm = ps.StressModel(ml, p, ps.Exponential(), "prec", settings="prec")
+    else:
+        sm = ps.StressModel(p, ps.Exponential(), "prec", settings="prec")
+        ml.add_stressmodel(sm)
 
     # Add StepModel at a specific date
     step_date = pd.Timestamp("2013-01-01")
     if PASTAS_GEQ_200:
-        step = ps.StepModel(tstart=step_date, name="step")
+        step = ps.StepModel(ml, tstart=step_date, name="step")
     else:
         step = ps.StepModel(step_date, "step")
-    ml.add_stressmodel(step)
+        ml.add_stressmodel(step)
 
     # save as ps.Model
     pstore.add_model(ml, overwrite=True)
@@ -369,12 +382,17 @@ def test_save_and_load_lineartrend(pstore):
 
     # Add a StressModel first with explicit stress settings
     p = pstore.get_stresses("prec1")
-    sm = ps.StressModel(p, ps.Exponential(), "prec", settings="prec")
-    ml.add_stressmodel(sm)
+    if PASTAS_GEQ_200:
+        sm = ps.StressModel(ml, p, ps.Exponential(), "prec", settings="prec")
+        # Add LinearTrend with start and end dates
+        lt = ps.LinearTrend(ml, tstart=o.index[0], tend=o.index[-1], name="trend")
+    else:
+        sm = ps.StressModel(p, ps.Exponential(), "prec", settings="prec")
+        ml.add_stressmodel(sm)
+        # Add LinearTrend with start and end dates
+        lt = ps.LinearTrend(start=o.index[0], end=o.index[-1], name="trend")
+        ml.add_stressmodel(lt)
 
-    # Add LinearTrend with start and end dates
-    lt = ps.LinearTrend(start=o.index[0], end=o.index[-1], name="trend")
-    ml.add_stressmodel(lt)
     ml.solve(report=False)
 
     # save as ps.Model
@@ -398,10 +416,15 @@ def test_save_and_load_wellmodel(pstore):
     # WellModel requires distances (in this case arbitrary distances in meters)
     # and a HantushWellModel response function
     distances = [500]
-    wm = ps.WellModel(
-        [w1], name="wells", distances=distances, rfunc=ps.HantushWellModel()
-    )
-    ml.add_stressmodel(wm)
+    if PASTAS_GEQ_200:
+        wm = ps.WellModel(
+            ml, [w1], name="wells", distances=distances, rfunc=ps.HantushWellModel()
+        )
+    else:
+        wm = ps.WellModel(
+            [w1], name="wells", distances=distances, rfunc=ps.HantushWellModel()
+        )
+        ml.add_stressmodel(wm)
 
     # save as ps.Model
     pstore.add_model(ml, overwrite=True)
@@ -424,14 +447,20 @@ def test_update_ts_settings(request, pstore):
     p = pstore.get_stresses(pnam)
     enam = pstore.get_nearest_stresses("oseries2", kind="evap").iloc[0]
     e = pstore.get_stresses(enam)
-    rm = ps.RechargeModel(p.loc[:"2013"], e.loc[:"2013"])
-    ml.add_stressmodel(rm)
+    if PASTAS_GEQ_200:
+        rm = ps.RechargeModel(ml, p.loc[:"2013"], e.loc[:"2013"])
+    else:
+        rm = ps.RechargeModel(p.loc[:"2013"], e.loc[:"2013"])
+        ml.add_stressmodel(rm)
     tmax = p.index.intersection(e.index).max()
     ml.solve()
 
     p2 = pstore.get_stresses("prec1")
-    sm = ps.StressModel(p2.loc[:"2013"], ps.Exponential(), "prec")
-    ml.add_stressmodel(sm)
+    if PASTAS_GEQ_200:
+        sm = ps.StressModel(ml, p2.loc[:"2013"], ps.Exponential(), "prec")
+    else:
+        sm = ps.StressModel(p2.loc[:"2013"], ps.Exponential(), "prec")
+        ml.add_stressmodel(sm)
     pstore.add_model(ml)
 
     ml2 = pstore.get_models(ml.name, update_ts_settings=True)
