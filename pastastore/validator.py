@@ -8,7 +8,7 @@ import warnings
 from pathlib import Path
 
 # import weakref
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import pandas as pd
 import pastas as ps
@@ -440,6 +440,7 @@ class Validator:
                     rtol=self.SERIES_EQUALITY_RELATIVE_TOLERANCE,
                     check_freq=False,
                     check_names=False,
+                    check_index_type=False,
                 )
             except AssertionError as e:
                 raise ValueError(
@@ -488,6 +489,7 @@ class Validator:
                                 rtol=self.SERIES_EQUALITY_RELATIVE_TOLERANCE,
                                 check_freq=False,
                                 check_names=False,
+                                check_index_type=False,
                             )
                         except AssertionError as e:
                             raise ValueError(
@@ -572,3 +574,22 @@ class Validator:
                 raise SeriesUsedByModel(
                     msg.format(libname=libname, name=name, n_models=n_models)
                 )
+
+    def series_index_unit(self, series, unit: Literal["ms", "us", "ns"] = "ms"):
+        """Ensure series index is in specified unit (internal method).
+
+        Parameters
+        ----------
+        series : pandas.Series or pandas.DataFrame
+            time series to check
+        unit : str, optional
+            unit to convert index to (default: 'ms' for milliseconds)
+
+        Returns
+        -------
+        pandas.Series or pandas.DataFrame
+            time series with index in given unit (default: milliseconds)
+        """
+        if series.index.unit != unit:
+            series.index = series.index.as_unit(unit)
+        return series
