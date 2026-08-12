@@ -8,24 +8,36 @@ ATTR = "stresses" if PASTAS_GEQ_200 else "stress"
 
 
 def test_stressmodel_time_series_name(pstore):
-    pstore.get_stressmodel("evap1")
+    kwargs = {}
+    if PASTAS_GEQ_200:
+        kwargs["model"] = pstore.create_model("oseries1", add_recharge=False)
+    pstore.get_stressmodel("evap1", **kwargs)
 
 
 def test_stressmodel_override_settings(pstore):
-    sm = pstore.get_stressmodel("prec1", settings="evap")
+    kwargs = {}
+    if PASTAS_GEQ_200:
+        kwargs["model"] = pstore.create_model("oseries1", add_recharge=False)
+    sm = pstore.get_stressmodel("prec1", settings="evap", **kwargs)
     assert getattr(sm, ATTR)[0].settings["fill_nan"] == "interpolate"
 
     # override settings by passing kind: bit weird, but good to check
-    sm = pstore.get_stressmodel("prec1", kind="evap")
+    sm = pstore.get_stressmodel("prec1", kind="evap", **kwargs)
     assert getattr(sm, ATTR)[0].settings["fill_nan"] == "interpolate"
 
 
 def test_stressmodel_rfunc_kwargs(pstore):
-    sm = pstore.get_stressmodel("well1", rfunc=ps.Hantush, rfunc_kwargs={"quad": True})
+    kwargs = {}
+    if PASTAS_GEQ_200:
+        kwargs["model"] = pstore.create_model("oseries1", add_recharge=False)
+    sm = pstore.get_stressmodel(
+        "well1", rfunc=ps.Hantush, rfunc_kwargs={"quad": True}, **kwargs
+    )
     assert sm.rfunc.quad
 
 
 def test_stressmodel_nearest_kind_no_oseries_specified(pstore):
+
     with pytest.raises(ValueError, match=r"Getting nearest stress*"):
         pstore.get_stressmodel("nearest evap")  # error oseries
 
@@ -40,26 +52,37 @@ def test_stressmodel_nearest_no_kind_specified(pstore):
 
 
 def test_stressmodel_nearest_kind(pstore):
+    kwargs = {}
+    if PASTAS_GEQ_200:
+        kwargs["model"] = pstore.create_model("oseries1", add_recharge=False)
     # nearest kind
-    sm = pstore.get_stressmodel("nearest evap", oseries="oseries1")
+    sm = pstore.get_stressmodel("nearest evap", oseries="oseries1", **kwargs)
     assert getattr(sm, ATTR)[0].name == "evap1"
 
     # nearest kind in dict
-    sm = pstore.get_stressmodel({"stress": "nearest evap"}, oseries="oseries1")
+    sm = pstore.get_stressmodel(
+        {"stress": "nearest evap"}, oseries="oseries1", **kwargs
+    )
     assert getattr(sm, ATTR)[0].name == "evap1"
 
     # nearest and kind separate
-    sm = pstore.get_stressmodel({"stress": "nearest"}, kind="evap", oseries="oseries1")
+    sm = pstore.get_stressmodel(
+        {"stress": "nearest"}, kind="evap", oseries="oseries1", **kwargs
+    )
     assert getattr(sm, ATTR)[0].name == "evap1"
 
     # nearest in dict and kind separate
     sm = pstore.get_stressmodel(
-        {"stress": ["nearest"]}, kind="evap", oseries="oseries1"
+        {"stress": ["nearest"]}, kind="evap", oseries="oseries1", **kwargs
     )
     assert getattr(sm, ATTR)[0].name == "evap1"
 
 
 def test_recharge_model(pstore):
+    kwargs = {}
+    if PASTAS_GEQ_200:
+        kwargs["model"] = pstore.create_model("oseries1", add_recharge=False)
+
     # test list of stress names
     rm = pstore.get_stressmodel(["prec1", "evap1"], stressmodel="RechargeModel")
     assert getattr(rm, ATTR)[0].name == "prec1"
@@ -70,6 +93,7 @@ def test_recharge_model(pstore):
         ["nearest prec", "nearest evap"],
         stressmodel="RechargeModel",
         oseries="oseries1",
+        **kwargs,
     )
     assert getattr(rm, ATTR)[0].name == "prec1"
     assert getattr(rm, ATTR)[1].name == "evap1"
@@ -79,6 +103,7 @@ def test_recharge_model(pstore):
         {"prec": "nearest", "evap": "nearest"},
         stressmodel="RechargeModel",
         oseries="oseries1",
+        **kwargs,
     )
     assert getattr(rm, ATTR)[0].name == "prec1"
     assert getattr(rm, ATTR)[1].name == "evap1"
@@ -89,17 +114,23 @@ def test_recharge_model(pstore):
         kind=["prec", "evap"],
         stressmodel="RechargeModel",
         oseries="oseries1",
+        **kwargs,
     )
     assert getattr(rm, ATTR)[0].name == "prec1"
     assert getattr(rm, ATTR)[1].name == "evap1"
 
 
 def test_wellmodel(pstore):
+    kwargs = {}
+    if PASTAS_GEQ_200:
+        kwargs["model"] = pstore.create_model("oseries1", add_recharge=False)
+
     # test nearest <n> <kind>
     wm = pstore.get_stressmodel(
         "nearest 2 well",
         stressmodel="WellModel",
         oseries="oseries1",
+        **kwargs,
     )
     assert getattr(wm, ATTR)[0].name == "well1"
     assert getattr(wm, ATTR)[1].name == "well2"
@@ -109,6 +140,7 @@ def test_wellmodel(pstore):
         "nearest 2",
         stressmodel="WellModel",
         oseries="oseries1",
+        **kwargs,
     )
     assert getattr(wm, ATTR)[0].name == "well1"
     assert getattr(wm, ATTR)[1].name == "well2"
@@ -120,6 +152,7 @@ def test_wellmodel(pstore):
             kind="well2",
             stressmodel="WellModel",
             oseries="oseries1",
+            **kwargs,
         )
 
     # test nearest n with n exceeded
@@ -129,4 +162,5 @@ def test_wellmodel(pstore):
             kind="well",
             stressmodel="WellModel",
             oseries="oseries1",
+            **kwargs,
         )
