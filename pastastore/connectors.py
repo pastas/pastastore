@@ -33,6 +33,52 @@ logger = logging.getLogger(__name__)
 conn = None
 
 
+def get_worker_connector() -> BaseConnector:
+    """Return the connector initialized for the current parallel worker.
+
+    This is primarily intended for functions executed through ``PastaStore.apply``
+    or other connector-backed parallel helpers that use a worker initializer to
+    construct a connector inside each subprocess.
+
+    Returns
+    -------
+    BaseConnector
+        The connector instance for the current worker process.
+
+    Raises
+    ------
+    RuntimeError
+        If no worker connector has been initialized in the current process.
+    """
+    if conn is None:
+        raise RuntimeError(
+            "No worker connector is initialized in this process. "
+            "Use this helper inside a parallel worker or pass a connector "
+            "explicitly for picklable connectors."
+        )
+    return conn
+
+
+def _create_arcticdb_connector(name: str, uri: str, verbose: bool) -> None:
+    """Module-level initializer for ArcticDBConnector multiprocessing.
+
+    This function must be defined at module level to be picklable.
+    It creates a new ArcticDBConnector instance in each worker process
+    and stores it in the module-level `conn` variable.
+
+    Parameters
+    ----------
+    name : str
+        name of the database
+    uri : str
+        URI connection string
+    verbose : bool
+        whether to log messages when database is initialized
+    """
+    global conn
+    conn = ArcticDBConnector(name, uri, verbose, worker_process=True)
+
+
 class ParallelUtil:
     """Mix-in class for storing parallelizable methods."""
 
@@ -119,7 +165,7 @@ class ParallelUtil:
         if connector is not None:
             _conn = connector
         else:
-            _conn = globals()["conn"]
+            _conn = conn
 
         ml = _conn.get_models(ml_name)
         m_kwargs = {}
@@ -201,7 +247,12 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
     _conn_type = "arcticdb"
 
     def __init__(
-        self, name: str, uri: str, verbose: bool = True, worker_process: bool = False
+        self,
+        name: str,
+        uri: str,
+        verbose: bool = True,
+        worker_process: bool = False,
+        write_pastastore_file: bool = True,
     ):
         """Create an ArcticDBConnector object using ArcticDB to store data.
 
@@ -216,6 +267,9 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         worker_process : bool, optional
             whether the connector is created in a worker process for parallel
             processing, by default False
+        write_pastastore_file : bool, optional
+            write .pastastore file if true, use Fase for multiprocessing applications
+            to avoid conflicting writes to files.
         """
         try:
             import arcticdb
@@ -257,7 +311,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
             ):
                 self._update_time_series_model_links(recompute=False, progressbar=True)
             # write pstore file to store database info that can be used to load pstore
-            if "lmdb" in self.uri:
+            if write_pastastore_file and "lmdb" in self.uri:
                 self.write_pstore_config_file()
 
     def _initialize(self, verbose: bool = True) -> None:
@@ -484,11 +538,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
             max_workers, len(names), chunksize
         )
         if initializer is None:
-
-            def initializer(*args):
-                # assign to module-level variable without using 'global' statement
-                globals()["conn"] = ArcticDBConnector(*args, worker_process=True)
-
+            initializer = _create_arcticdb_connector
             initargs = (self.name, self.uri, False)
 
         if initargs is None:
@@ -738,7 +788,13 @@ class PasConnector(BaseConnector, ParallelUtil):
 
     _conn_type = "pas"
 
-    def __init__(self, name: str, path: str, verbose: bool = True):
+    def __init__(
+        self,
+        name: str,
+        path: str,
+        verbose: bool = True,
+        write_pastastore_file: bool = True,
+    ):
         """Create PasConnector object that stores data as JSON files on disk.
 
         Uses Pastas export format (pas-files) to store files.
@@ -752,6 +808,9 @@ class PasConnector(BaseConnector, ParallelUtil):
             path to directory for storing the data
         verbose : bool, optional
             whether to print message when database is initialized, by default True
+        write_pastastore_file : bool, optional
+            write .pastastore file if true, use Fase for multiprocessing applications
+            to avoid conflicting writes to files.
         """
         # set shared memory flags for parallel processing
         super().__init__()
@@ -778,7 +837,8 @@ class PasConnector(BaseConnector, ParallelUtil):
         ):
             self._update_time_series_model_links(recompute=False, progressbar=True)
         # write pstore file to store database info that can be used to load pstore
-        self._write_pstore_config_file()
+        if write_pastastore_file:
+            self._write_pstore_config_file()
 
     def _initialize(self, verbose: bool = True) -> None:
         """Initialize the libraries (internal method)."""
@@ -872,17 +932,17 @@ class PasConnector(BaseConnector, ParallelUtil):
         if isinstance(item, pd.Series):
             item = item.to_frame()
         if isinstance(item, pd.DataFrame):
-            if type(item) is pd.DataFrame:
-                sjson = item.to_json(orient="columns")
-            else:
-                # workaround for subclasses of DataFrame that override to_json,
-                # looking at you hydropandas...
-                sjson = pd.DataFrame(item).to_json(orient="columns")
             if name.endswith("_meta"):
                 raise ValueError(
                     "Time series name cannot end with '_meta'. "
                     "Please use a different name for your time series."
                 )
+            if type(item) is pd.DataFrame:
+                sjson = item.to_json(orient="columns", date_unit="ms")
+            else:
+                # workaround for subclasses of DataFrame that override to_json,
+                # looking at you hydropandas...
+                sjson = pd.DataFrame(item).to_json(orient="columns", date_unit="ms")
             fname = lib / f"{name}.pas"
             with fname.open("w", encoding="utf-8") as f:
                 logger.debug("Writing time series '%s' to disk at '%s'.", name, fname)
