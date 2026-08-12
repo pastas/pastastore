@@ -1,7 +1,7 @@
 # ruff: noqa: F401 D104
 import logging
 
-from pastastore import connectors, styling, util
+from pastastore import connectors, parallel, styling, util
 from pastastore.connectors import (
     ArcticDBConnector,
     DictConnector,

@@ -49,12 +49,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
         pastas-version:
           [
-            "git+https://github.com/pastas/pastas.git@v1.4.0",
+            # "git+https://github.com/pastas/pastas.git@v1.4.0",
             "git+https://github.com/pastas/pastas.git@v1.5.0",
             "git+https://github.com/pastas/pastas.git@v1.14.0",
+            "git+https://github.com/pastas/pastas.git@v2.0.0rc0",
             "git+https://github.com/pastas/pastas.git@dev",
           ]
         experimental: [false]
