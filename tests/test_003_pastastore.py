@@ -345,7 +345,10 @@ def test_save_and_load_stepmodel(pstore):
 
     # Add StepModel at a specific date
     step_date = pd.Timestamp("2013-01-01")
-    step = ps.StepModel(step_date, "step")
+    if PASTAS_GEQ_200:
+        step = ps.StepModel(tstart=step_date, name="step")
+    else:
+        step = ps.StepModel(step_date, "step")
     ml.add_stressmodel(step)
 
     # save as ps.Model

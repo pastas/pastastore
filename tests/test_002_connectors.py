@@ -325,3 +325,33 @@ def test_new_connector_in_occupied_dir():
         pst.PasConnector("my_db", "./tests/data/arcticdb")
 
     pst.util.delete_arcticdb_connector(conn1)
+
+
+def test_numeric_looking_series_names():
+    """Test that series names with numeric-looking patterns are preserved as strings."""
+    # Use a temporary connector for this test to avoid conflicts
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        conn = pst.PasConnector("test_numeric_names", tmpdir)
+        # Test various numeric-looking names that pandas might try to convert
+        test_names = [
+            "1_101_1",
+        ]
+        for name in test_names:
+            s = pd.Series(
+                index=pd.date_range("2000", periods=5, freq="D"),
+                data=[1.0, 2.0, 3.0, 4.0, 5.0],
+                name=name,
+            )
+            conn.add_oseries(s, name, metadata=None, overwrite=True)
+            s_retrieved = conn.get_oseries(name)
+            # Check that the name is preserved as a string
+            assert isinstance(s_retrieved.name, str), (
+                f"Name {name} was not preserved as string, got {type(s_retrieved.name)}"
+            )
+            assert s_retrieved.name == name, (
+                f"Name {name} was changed to {s_retrieved.name}"
+            )
+            conn.del_oseries(name)
+        pst.util.delete_pas_connector(conn)

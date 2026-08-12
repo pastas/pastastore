@@ -260,7 +260,14 @@ def series_from_json(fjson: str, squeeze: bool = True):
     s : pd.DataFrame
         DataFrame containing time series
     """
-    s = pd.read_json(fjson, orient="columns", precise_float=True, dtype=False)
+    s = pd.read_json(
+        fjson,
+        orient="columns",
+        precise_float=True,
+        dtype=False,
+        convert_axes=False,
+        date_unit="ms",
+    )
     if not isinstance(s.index, pd.DatetimeIndex):
         s.index = pd.to_datetime(s.index, unit="ms")
     s = s.sort_index()  # needed for some reason ...
