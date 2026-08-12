@@ -1651,7 +1651,12 @@ class PastaStore:
                 libname, fjson = os.path.split(f)
                 libname = os.path.split(libname)[-1]  # in case zip is one level deeper
                 if libname in ["stresses", "oseries"]:
-                    s = pd.read_json(archive.open(f), dtype=float, orient="columns")
+                    s = pd.read_json(
+                        archive.open(f),
+                        dtype=float,
+                        orient="columns",
+                        convert_axes=False,
+                    )
                     if not isinstance(s.index, pd.DatetimeIndex):
                         s.index = pd.to_datetime(s.index, unit="ms")
                     s = s.sort_index()
