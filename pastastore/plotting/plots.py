@@ -350,6 +350,7 @@ class Plots:
         normtype="log",
         cmap="viridis_r",
         set_yticks=False,
+        ylabels=None,
         figsize=(10, 8),
         dropna=True,
         **kwargs,
@@ -382,6 +383,9 @@ class Plots:
             A reference to a matplotlib colormap
         set_yticks : bool, optional
             Set the names of the series as yticks
+        ylabels : list, optional
+            Set the names of the series as yticks, default is None in which case
+            names will be used as ylabels
         figsize : tuple, optional
             The size of the new figure in inches (h,v)
         progressbar : bool
@@ -427,7 +431,7 @@ class Plots:
         else:
             norm = BoundaryNorm(boundaries=bounds, ncolors=256)
         cmap = plt.get_cmap(cmap, 256)
-        cmap.set_over((1.0, 1.0, 1.0))
+        cmap = cmap.with_extremes(over=(1.0, 1.0, 1.0))
 
         pc = None
         for i, s in enumerate(series):
@@ -460,7 +464,10 @@ class Plots:
             ax.set_yticks(np.arange(0, len(series) + 1), minor=True)
             if names is None:
                 names = [s.name for s in series]
-            ax.set_yticklabels(names)
+            if ylabels is not None:
+                ax.set_yticklabels(ylabels)
+            else:
+                ax.set_yticklabels(names)
 
             for tick in ax.yaxis.get_major_ticks():  # don't show major ytick marker
                 tick.tick1line.set_visible(False)
