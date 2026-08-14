@@ -684,7 +684,7 @@ class DictConnector(BaseConnector, ParallelUtil):
         if libname in ["models", "oseries_models", "stresses_models"]:
             lib[name] = item
         else:
-            lib[name] = (metadata, item)
+            lib[name] = (deepcopy(metadata), deepcopy(item))
 
     def _get_item(self, libname: AllLibs, name: str) -> DataFrameOrSeries | dict:
         """Retrieve item from database (internal method).
@@ -938,11 +938,13 @@ class PasConnector(BaseConnector, ParallelUtil):
                     "Please use a different name for your time series."
                 )
             if type(item) is pd.DataFrame:
-                sjson = item.to_json(orient="columns", date_unit="ms")
+                sjson = item.to_json(orient="columns", date_format="iso", indent=2)
             else:
                 # workaround for subclasses of DataFrame that override to_json,
                 # looking at you hydropandas...
-                sjson = pd.DataFrame(item).to_json(orient="columns", date_unit="ms")
+                sjson = pd.DataFrame(item).to_json(
+                    orient="columns", date_format="iso", indent=2
+                )
             fname = lib / f"{name}.pas"
             with fname.open("w", encoding="utf-8") as f:
                 logger.debug("Writing time series '%s' to disk at '%s'.", name, fname)
@@ -1001,6 +1003,7 @@ class PasConnector(BaseConnector, ParallelUtil):
         # time series
         else:
             item = series_from_json(fjson)
+            item.name = name
         return item
 
     def _del_item(self, libname: AllLibs, name: str, force: bool = False) -> None:

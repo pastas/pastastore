@@ -56,9 +56,15 @@ def test_create_model(pstore):
 
 @pytest.mark.dependency
 def test_properties(pstore):
-    pstore.add_oseries(pd.Series(dtype=np.float64), "deleteme", validate=False)
+    idx = pd.date_range("2000", periods=1, freq="D")
+    pstore.add_oseries(
+        pd.Series(index=idx, dtype=np.float64), "deleteme", validate=False
+    )
     pstore.add_stress(
-        pd.Series(dtype=np.float64), "deleteme", kind="useless", validate=False
+        pd.Series(index=idx, dtype=np.float64),
+        "deleteme",
+        kind="useless",
+        validate=False,
     )
 
     _ = pstore.oseries
@@ -598,3 +604,43 @@ def test_add_model_with_mismatching_index_attributes(pstore):
 
     # test add model
     pstore.add_model(ml2, overwrite=True)
+
+
+def test_series_index_units(pstore):
+    oseries0, ometa = pstore.get_oseries("oseries1", return_metadata=True)
+    prec0, pmeta = pstore.get_stresses("prec1", return_metadata=True)
+    evap0, emeta = pstore.get_stresses("evap1", return_metadata=True)
+
+    ml0 = pstore.create_model("oseries1")
+    ml0.solve(report=False)
+    rsq0 = ml0.stats.rsq()
+    assert np.allclose(rsq0, 0.90448)
+
+    for unit in ("ms", "us", "ns"):
+        oseries = oseries0.copy()
+        prec = prec0.copy()
+        evap = evap0.copy()
+        oseries.index = oseries.index.as_unit(unit)
+        prec.index = prec.index.as_unit(unit)
+        evap.index = evap.index.as_unit(unit)
+
+        pstore.add_oseries(oseries, "oseries1", metadata=ometa, overwrite=True)
+        pstore.add_stress(
+            prec,
+            "prec1",
+            kind="prec",
+            metadata=pmeta,
+            overwrite=True,
+        )
+        pstore.add_stress(
+            evap,
+            "evap1",
+            kind="evap",
+            metadata=emeta,
+            overwrite=True,
+        )
+        mli = pstore.create_model("oseries1")
+        mli.solve(report=False)
+        assert np.allclose(rsq0, mli.stats.rsq()), (
+            f"R-squared values do not match for unit {unit}"
+        )

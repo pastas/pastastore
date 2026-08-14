@@ -84,7 +84,9 @@ def test_recharge_model(pstore):
         kwargs["model"] = pstore.create_model("oseries1", add_recharge=False)
 
     # test list of stress names
-    rm = pstore.get_stressmodel(["prec1", "evap1"], stressmodel="RechargeModel")
+    rm = pstore.get_stressmodel(
+        ["prec1", "evap1"], stressmodel="RechargeModel", **kwargs
+    )
     assert getattr(rm, ATTR)[0].name == "prec1"
     assert getattr(rm, ATTR)[1].name == "evap1"
 

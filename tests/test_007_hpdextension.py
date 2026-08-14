@@ -112,6 +112,7 @@ def test_update_stresses():
             resampled_result,
             check_names=False,
             check_freq=False,
+            check_index_type=False,
         )
 
 

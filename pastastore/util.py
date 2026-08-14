@@ -69,11 +69,13 @@ class ZipUtils:
                 if type(s) is pd.Series:
                     s = s.to_frame()
                 if type(s) is pd.DataFrame:
-                    sjson = s.to_json(orient="columns")
+                    sjson = s.to_json(orient="columns", date_format="iso", indent=2)
                 else:
                     # workaround for subclasses of DataFrame that override to_json,
                     # looking at you hydropandas...
-                    sjson = pd.DataFrame(s).to_json(orient="columns")
+                    sjson = pd.DataFrame(s).to_json(
+                        orient="columns", date_format="iso", indent=2
+                    )
             except ValueError as e:
                 msg = (
                     f"DatetimeIndex of '{n}' probably contains NaT "
@@ -265,11 +267,7 @@ def series_from_json(fjson: str, squeeze: bool = True):
         orient="columns",
         precise_float=True,
         dtype=False,
-        convert_axes=False,
-        date_unit="ms",
     )
-    if not isinstance(s.index, pd.DatetimeIndex):
-        s.index = pd.to_datetime(s.index, unit="ms")
     s = s.sort_index()  # needed for some reason ...
     if squeeze:
         return s.squeeze(axis="columns")
