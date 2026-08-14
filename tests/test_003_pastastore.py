@@ -642,13 +642,11 @@ def test_series_index_units(pstore):
         )
         mli = pstore.create_model("oseries1")
         mli.solve(report=False)
-        result[unit] = (
-            np.allclose(rsq0, mli.stats.rsq()),
-            (f"R-squared values do not match for unit {unit}"),
-        )
-    df = pd.DataFrame(result).T
-    if PASTAS_GEQ_200:
-        assert df[0].all(), f"R-squared values do not match for units: {df[0]}"
+        result[unit] = np.allclose(rsq0, mli.stats.rsq())
+    df = pd.Series(result)
+    if pstore.conn.conn_type == "dict":
+        # ignore expected failure for pandas 2.3.3 for units ms and us when
+        # using dict connector
+        assert df.iloc[2:].all(), f"R-squared values do not match for units: {df}"
     else:
-        # expected failure on pandas 2.3.3 because ms units are truncated in to_json
-        assert df.iloc[1:].all()[0], f"R-squared values do not match for units: {df[0]}"
+        assert df.all(), f"R-squared values do not match for units: {df}"
