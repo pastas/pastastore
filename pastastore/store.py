@@ -866,8 +866,7 @@ class PastaStore:
             if time series is empty
         """
         # get oseries metadata
-        meta = self.conn.get_metadata("oseries", name, as_frame=False)
-        ts = self.conn.get_oseries(name)
+        ts, meta = self.conn.get_oseries(name, return_metadata=True)
 
         # convert to time series and create model
         if not ts.dropna().empty:
