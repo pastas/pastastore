@@ -11,6 +11,9 @@ from pytest_dependency import depends
 
 import pastastore as pst
 from pastastore.util import SeriesUsedByModel
+from pastastore.version import PASTAS_GEQ_200
+
+ATTR = "stresses" if PASTAS_GEQ_200 else "stress"
 
 
 @pytest.mark.dependency
@@ -53,9 +56,15 @@ def test_create_model(pstore):
 
 @pytest.mark.dependency
 def test_properties(pstore):
-    pstore.add_oseries(pd.Series(dtype=np.float64), "deleteme", validate=False)
+    idx = pd.date_range("2000", periods=1, freq="D")
+    pstore.add_oseries(
+        pd.Series(index=idx, dtype=np.float64), "deleteme", validate=False
+    )
     pstore.add_stress(
-        pd.Series(dtype=np.float64), "deleteme", kind="useless", validate=False
+        pd.Series(index=idx, dtype=np.float64),
+        "deleteme",
+        kind="useless",
+        validate=False,
     )
 
     _ = pstore.oseries
@@ -270,8 +279,11 @@ def test_save_and_load_stressmodel(pstore):
 
     # Add a single StressModel with precipitation
     p = pstore.get_stresses("prec1")
-    sm = ps.StressModel(p, ps.Exponential(), "prec")
-    ml.add_stressmodel(sm)
+    if PASTAS_GEQ_200:
+        sm = ps.StressModel(ml, p, ps.Exponential(), "prec")
+    else:
+        sm = ps.StressModel(p, ps.Exponential(), "prec")
+        ml.add_stressmodel(sm)
     pstore.add_model(ml)
 
     # Load and compare
@@ -289,8 +301,11 @@ def test_save_and_load_rechargemodel(pstore):
     # Add RechargeModel with precipitation and evaporation
     p = pstore.get_stresses("prec2")
     e = pstore.get_stresses("evap2")
-    rm = ps.RechargeModel(p, e, ps.Exponential(), "recharge")
-    ml.add_stressmodel(rm)
+    if PASTAS_GEQ_200:
+        rm = ps.RechargeModel(ml, p, e, ps.Exponential(), "recharge")
+    else:
+        rm = ps.RechargeModel(p, e, ps.Exponential(), "recharge")
+        ml.add_stressmodel(rm)
 
     # save as ps.Model
     pstore.add_model(ml, overwrite=True)
@@ -315,8 +330,12 @@ def test_save_and_load_tarsomodel(pstore):
     # TarsoModel cannot be combined with a constant
     p = pstore.get_stresses("prec1")
     e = pstore.get_stresses("evap1")
-    tm = ps.TarsoModel(p, e, oseries=o, rfunc=ps.Exponential(), name="tarso")
-    ml.add_stressmodel(tm)
+    if PASTAS_GEQ_200:
+        tm = ps.TarsoModel(ml, p, e, rfunc=ps.Exponential(), name="tarso")
+    else:
+        tm = ps.TarsoModel(p, e, oseries=o, rfunc=ps.Exponential(), name="tarso")
+        ml.add_stressmodel(tm)
+
     pstore.add_model(ml, overwrite=True)
 
     # save as ps.Model
@@ -337,13 +356,19 @@ def test_save_and_load_stepmodel(pstore):
 
     # Add a StressModel first with explicit stress settings
     p = pstore.get_stresses("prec2")
-    sm = ps.StressModel(p, ps.Exponential(), "prec", settings="prec")
-    ml.add_stressmodel(sm)
+    if PASTAS_GEQ_200:
+        sm = ps.StressModel(ml, p, ps.Exponential(), "prec", settings="prec")
+    else:
+        sm = ps.StressModel(p, ps.Exponential(), "prec", settings="prec")
+        ml.add_stressmodel(sm)
 
     # Add StepModel at a specific date
     step_date = pd.Timestamp("2013-01-01")
-    step = ps.StepModel(step_date, "step")
-    ml.add_stressmodel(step)
+    if PASTAS_GEQ_200:
+        step = ps.StepModel(ml, tstart=step_date, name="step")
+    else:
+        step = ps.StepModel(step_date, "step")
+        ml.add_stressmodel(step)
 
     # save as ps.Model
     pstore.add_model(ml, overwrite=True)
@@ -363,12 +388,17 @@ def test_save_and_load_lineartrend(pstore):
 
     # Add a StressModel first with explicit stress settings
     p = pstore.get_stresses("prec1")
-    sm = ps.StressModel(p, ps.Exponential(), "prec", settings="prec")
-    ml.add_stressmodel(sm)
+    if PASTAS_GEQ_200:
+        sm = ps.StressModel(ml, p, ps.Exponential(), "prec", settings="prec")
+        # Add LinearTrend with start and end dates
+        lt = ps.LinearTrend(ml, tstart=o.index[0], tend=o.index[-1], name="trend")
+    else:
+        sm = ps.StressModel(p, ps.Exponential(), "prec", settings="prec")
+        ml.add_stressmodel(sm)
+        # Add LinearTrend with start and end dates
+        lt = ps.LinearTrend(start=o.index[0], end=o.index[-1], name="trend")
+        ml.add_stressmodel(lt)
 
-    # Add LinearTrend with start and end dates
-    lt = ps.LinearTrend(start=o.index[0], end=o.index[-1], name="trend")
-    ml.add_stressmodel(lt)
     ml.solve(report=False)
 
     # save as ps.Model
@@ -392,10 +422,15 @@ def test_save_and_load_wellmodel(pstore):
     # WellModel requires distances (in this case arbitrary distances in meters)
     # and a HantushWellModel response function
     distances = [500]
-    wm = ps.WellModel(
-        [w1], name="wells", distances=distances, rfunc=ps.HantushWellModel()
-    )
-    ml.add_stressmodel(wm)
+    if PASTAS_GEQ_200:
+        wm = ps.WellModel(
+            ml, [w1], name="wells", distances=distances, rfunc=ps.HantushWellModel()
+        )
+    else:
+        wm = ps.WellModel(
+            [w1], name="wells", distances=distances, rfunc=ps.HantushWellModel()
+        )
+        ml.add_stressmodel(wm)
 
     # save as ps.Model
     pstore.add_model(ml, overwrite=True)
@@ -418,14 +453,20 @@ def test_update_ts_settings(request, pstore):
     p = pstore.get_stresses(pnam)
     enam = pstore.get_nearest_stresses("oseries2", kind="evap").iloc[0]
     e = pstore.get_stresses(enam)
-    rm = ps.RechargeModel(p.loc[:"2013"], e.loc[:"2013"])
-    ml.add_stressmodel(rm)
+    if PASTAS_GEQ_200:
+        rm = ps.RechargeModel(ml, p.loc[:"2013"], e.loc[:"2013"])
+    else:
+        rm = ps.RechargeModel(p.loc[:"2013"], e.loc[:"2013"])
+        ml.add_stressmodel(rm)
     tmax = p.index.intersection(e.index).max()
     ml.solve()
 
     p2 = pstore.get_stresses("prec1")
-    sm = ps.StressModel(p2.loc[:"2013"], ps.Exponential(), "prec")
-    ml.add_stressmodel(sm)
+    if PASTAS_GEQ_200:
+        sm = ps.StressModel(ml, p2.loc[:"2013"], ps.Exponential(), "prec")
+    else:
+        sm = ps.StressModel(p2.loc[:"2013"], ps.Exponential(), "prec")
+        ml.add_stressmodel(sm)
     pstore.add_model(ml)
 
     ml2 = pstore.get_models(ml.name, update_ts_settings=True)
@@ -433,7 +474,7 @@ def test_update_ts_settings(request, pstore):
     assert ml2.oseries.settings["tmax"] == o.index[-1]
     assert ml2.stressmodels["recharge"].prec.settings["tmax"] == tmax
     assert ml2.stressmodels["recharge"].evap.settings["tmax"] == tmax
-    assert ml2.stressmodels["prec"].stress[0].settings["tmax"] == p2.index[-1]
+    assert getattr(ml2.stressmodels["prec"], ATTR)[0].settings["tmax"] == p2.index[-1]
     pstore.del_models("ml_oseries2")
     pstore.validator.set_check_model_series_values(True)
 
@@ -563,3 +604,49 @@ def test_add_model_with_mismatching_index_attributes(pstore):
 
     # test add model
     pstore.add_model(ml2, overwrite=True)
+
+
+def test_series_index_units(pstore):
+    oseries0, ometa = pstore.get_oseries("oseries1", return_metadata=True)
+    prec0, pmeta = pstore.get_stresses("prec1", return_metadata=True)
+    evap0, emeta = pstore.get_stresses("evap1", return_metadata=True)
+
+    ml0 = pstore.create_model("oseries1")
+    ml0.solve(report=False)
+    rsq0 = ml0.stats.rsq()
+    assert np.allclose(rsq0, 0.90448)
+
+    result = {}
+    for unit in ("ms", "us", "ns"):
+        oseries = oseries0.copy()
+        prec = prec0.copy()
+        evap = evap0.copy()
+        oseries.index = oseries.index.as_unit(unit)
+        prec.index = prec.index.as_unit(unit)
+        evap.index = evap.index.as_unit(unit)
+
+        pstore.add_oseries(oseries, "oseries1", metadata=ometa, overwrite=True)
+        pstore.add_stress(
+            prec,
+            "prec1",
+            kind="prec",
+            metadata=pmeta,
+            overwrite=True,
+        )
+        pstore.add_stress(
+            evap,
+            "evap1",
+            kind="evap",
+            metadata=emeta,
+            overwrite=True,
+        )
+        mli = pstore.create_model("oseries1")
+        mli.solve(report=False)
+        result[unit] = np.allclose(rsq0, mli.stats.rsq())
+    df = pd.Series(result)
+    if pstore.conn.conn_type == "dict":
+        # ignore expected failure for pandas 2.3.3 for units ms and us when
+        # using dict connector
+        assert df.iloc[2:].all(), f"R-squared values do not match for units: {df}"
+    else:
+        assert df.all(), f"R-squared values do not match for units: {df}"

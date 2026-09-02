@@ -21,7 +21,7 @@ from pastastore.plotting import Maps, Plots
 from pastastore.styling import boolean_styler
 from pastastore.typing import DataFrameOrSeries, PastasLibs, TimeSeriesLibs
 from pastastore.util import ZipUtils, _custom_warning
-from pastastore.version import PASTAS_GEQ_150
+from pastastore.version import PASTAS_GEQ_150, PASTAS_GEQ_200
 from pastastore.yaml_interface import PastastoreYAML
 
 warnings.showwarning = _custom_warning
@@ -866,8 +866,7 @@ class PastaStore:
             if time series is empty
         """
         # get oseries metadata
-        meta = self.conn.get_metadata("oseries", name, as_frame=False)
-        ts = self.conn.get_oseries(name)
+        ts, meta = self.conn.get_oseries(name, return_metadata=True)
 
         # convert to time series and create model
         if not ts.dropna().empty:
@@ -1009,7 +1008,7 @@ class PastaStore:
     ):
         # parse stresses for RechargeModel, allow list of len 2 or 3 and
         # set correct kwarg names
-        if stressmodel._name == "RechargeModel":
+        if stressmodel.__name__ == "RechargeModel":
             if isinstance(stresses, list):
                 if len(stresses) == 2:
                     stresses = {
@@ -1039,7 +1038,7 @@ class PastaStore:
             raise TypeError("stresses must be a list, string or dictionary!")
 
         # if no kind specified, set to well for WellModel
-        if stressmodel._name == "WellModel":
+        if stressmodel.__name__ == "WellModel":
             if kind is None:
                 kind = "well"
 
@@ -1082,7 +1081,7 @@ class PastaStore:
                                 # if RechargeModel, we can infer kind
                                 if (
                                     _kind is None
-                                    and stressmodel._name == "RechargeModel"
+                                    and stressmodel.__name__ == "RechargeModel"
                                 ):
                                     kind = k
                                 elif _kind is None:  # catch no kind with bare nearest
@@ -1145,6 +1144,7 @@ class PastaStore:
         rfunc_kwargs: dict | None = None,
         kind: list[str] | str | None = None,
         oseries: str | None = None,
+        model: ps.Model | None = None,
         **kwargs,
     ):
         """Get a Pastas stressmodel from stresses time series in Pastastore.
@@ -1203,35 +1203,39 @@ class PastaStore:
 
         # get stressmodel name if not provided
         if stressmodel_name is None:
-            if stressmodel._name == "RechargeModel":
+            if stressmodel.__name__ == "RechargeModel":
                 stressmodel_name = "recharge"
             elif len(metadata) == 1:
                 stressmodel_name = stresses["stress"].squeeze().name
             else:
-                stressmodel_name = stressmodel._name
+                stressmodel_name = stressmodel.__name__
 
         # check if metadata is list of len 1 and unpack
         if isinstance(metadata, list) and len(metadata) == 1:
             metadata = metadata[0]
 
         # get stressmodel time series settings
+        ts_settings_dict = (
+            ps.timeseries.settings if PASTAS_GEQ_200 else ps.rcParams["timeseries"]
+        )
         if kind and "settings" not in kwargs:
             # try using kind to get predefined settings options
             if isinstance(kind, str):
-                kwargs["settings"] = ps.rcParams["timeseries"].get(kind, None)
+                kwargs["settings"] = ts_settings_dict.get(kind, None)
             else:
                 kwargs["settings"] = [
-                    ps.rcParams["timeseries"].get(ikind, None) for ikind in kind
+                    ts_settings_dict.get(ikind, None) for ikind in kind
                 ]
         elif kind is None and "settings" not in kwargs:
             # try using kind stored in metadata to get predefined settings options
             if isinstance(metadata, list):
                 kwargs["settings"] = [
-                    ps.rcParams["timeseries"].get(imeta.get("kind", None), None)
+                    ts_settings_dict.get(imeta.get("kind", None), None)
+                    # ps.timeseries.settings.get(imeta.get("kind", None), None)
                     for imeta in metadata
                 ]
             elif isinstance(metadata, dict):
-                kwargs["settings"] = ps.rcParams["timeseries"].get(
+                kwargs["settings"] = ts_settings_dict.get(
                     metadata.get("kind", None), None
                 )
 
@@ -1244,7 +1248,7 @@ class PastaStore:
             rfunc_kwargs = {}
 
         # special for WellModels
-        if stressmodel._name == "WellModel":
+        if stressmodel.__name__ == "WellModel":
             if isinstance(stresses["stress"], list):
                 names = [s.squeeze().name for s in stresses["stress"]]
             else:
@@ -1267,6 +1271,22 @@ class PastaStore:
             rfunc = ps.HantushWellModel
 
         kwargs["metadata"] = metadata
+
+        if PASTAS_GEQ_200:
+            if model is None:
+                warnings.warn(
+                    "Pastas 2.0 expects a model to be provided for "
+                    "StressModel creation.",
+                    stacklevel=2,
+                )
+            else:
+                return stressmodel(
+                    model=model,
+                    **stresses,
+                    rfunc=rfunc(**rfunc_kwargs),
+                    name=stressmodel_name,
+                    **kwargs,
+                )
 
         return stressmodel(
             **stresses,
@@ -1327,6 +1347,8 @@ class PastaStore:
         **kwargs
             additional keyword arguments to pass to the stressmodel
         """
+        store_model = isinstance(ml, str)
+        ml_ = self.conn.get_model(ml) if store_model else ml
         sm = self.get_stressmodel(
             stresses=stresses,
             stressmodel=stressmodel,
@@ -1334,20 +1356,25 @@ class PastaStore:
             rfunc=rfunc,
             rfunc_kwargs=rfunc_kwargs,
             kind=kind,
-            oseries=ml if isinstance(ml, str) else ml.oseries.name,
+            oseries=ml_ if isinstance(ml, str) else ml_.oseries.name,
+            model=ml_,
             **kwargs,
         )
-        if isinstance(ml, str):
-            ml: ps.Model = self.conn.get_model(ml)
-            ml.add_stressmodel(sm)
-            self.conn.add_model(ml, overwrite=True)
+
+        if not PASTAS_GEQ_200:
+            ml_.add_stressmodel(sm)
+
+        # Only persist when a model name was provided and the model was loaded
+        # from the store. For model objects, keep this operation side-effect free.
+        if store_model:
+            self.conn.add_model(ml_, overwrite=True)
             logger.info(
                 "Stressmodel '%s' added to model '%s' and stored in database.",
                 sm.name,
-                ml.name,
+                ml_.name,
             )
         else:
-            ml.add_stressmodel(sm)
+            logger.info("Stressmodel '%s' added to model '%s'.", sm.name, ml_.name)
 
     def solve_models(
         self,
@@ -1627,6 +1654,11 @@ class PastaStore:
                 archive.extractall(conn.path)
             if storename is None:
                 storename = conn.name
+            # because of the short-circuit, the model cache and reverse lookup tables
+            # are not aware of the extracted models. Guarantee the update of the
+            # connector here to ensure everything is recomputed.
+            conn._clear_cache("_modelnames_cache")
+            conn._update_time_series_model_links(recompute=True)
             return cls(conn, storename)
 
         with ZipFile(fname, "r") as archive:
@@ -1646,9 +1678,12 @@ class PastaStore:
                 libname, fjson = os.path.split(f)
                 libname = os.path.split(libname)[-1]  # in case zip is one level deeper
                 if libname in ["stresses", "oseries"]:
-                    s = pd.read_json(archive.open(f), dtype=float, orient="columns")
-                    if not isinstance(s.index, pd.DatetimeIndex):
-                        s.index = pd.to_datetime(s.index, unit="ms")
+                    s = pd.read_json(
+                        archive.open(f),
+                        orient="columns",
+                        precise_float=True,
+                        dtype=False,
+                    )
                     s = s.sort_index()
                     meta = json.load(archive.open(f.replace(f".{ext}", f"_meta.{ext}")))
                     conn._add_series(

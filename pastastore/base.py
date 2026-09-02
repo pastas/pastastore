@@ -1,4 +1,3 @@
-# ruff: noqa: B019
 """Base classes for PastaStore Connectors."""
 
 import functools
@@ -235,18 +234,21 @@ class BaseConnector(ABC, ConnectorUtil):
     BaseConnector. Your class has to override each abstractmethod and property.
     """
 
-    _default_library_names = [
+    _default_library_names = (
         "oseries",
         "stresses",
         "models",
         "oseries_models",
         "stresses_models",
-    ]
+    )
 
     _conn_type: str | None = None
     _validator: Validator | None = None
     name: str | None = None
-    _added_models = []  # internal list of added models used for updating links
+
+    def __init__(self):
+        # internal list of added models used for updating links
+        self._added_models: list[str] = []
 
     def __getstate__(self):
         """Return picklable state, stripping Manager objects and proxies.
@@ -261,6 +263,16 @@ class BaseConnector(ABC, ConnectorUtil):
         # Remove the Manager instance – it is not picklable and workers do not
         # need a reference back to the main-process manager server.
         state.pop("_manager", None)
+        # Strip cached_property values so large DataFrames are not serialised
+        # over IPC.  Workers recreate the cache on first access.
+        for _cached in (
+            "oseries",
+            "stresses",
+            "_modelnames_cache",
+            "oseries_models",
+            "stresses_models",
+        ):
+            state.pop(_cached, None)
         # Replace Manager proxy values with plain booleans.  The flags may
         # already be plain booleans when _ensure_manager_proxies() has not yet
         # been called (lazy init), so we guard with hasattr.
@@ -523,20 +535,17 @@ class BaseConnector(ABC, ConnectorUtil):
         """
         return self._parse_names(names, libname)
 
-    @property
-    @functools.lru_cache()
+    @functools.cached_property
     def oseries(self) -> pd.DataFrame:
         """Dataframe with overview of oseries."""
         return self.get_metadata(libname="oseries", names=self.oseries_names)
 
-    @property
-    @functools.lru_cache()
+    @functools.cached_property
     def stresses(self) -> pd.DataFrame:
         """Dataframe with overview of stresses."""
         return self.get_metadata(libname="stresses", names=self.stresses_names)
 
-    @property
-    @functools.lru_cache()
+    @functools.cached_property
     def _modelnames_cache(self) -> list[str]:
         """List of model names."""
         return self._list_symbols(libname="models")
@@ -577,8 +586,7 @@ class BaseConnector(ABC, ConnectorUtil):
         """
         return len(self.model_names)
 
-    @property
-    @functools.lru_cache()
+    @functools.cached_property
     def oseries_models(self) -> dict[str, list[str]]:
         """List of model names per oseries.
 
@@ -594,8 +602,7 @@ class BaseConnector(ABC, ConnectorUtil):
             d[onam] = self._get_item("oseries_models", onam)
         return d
 
-    @property
-    @functools.lru_cache()
+    @functools.cached_property
     def stresses_models(self) -> dict[str, list[str]]:
         """List of model names per stress.
 
@@ -667,8 +674,8 @@ class BaseConnector(ABC, ConnectorUtil):
                     )
                 else:
                     ps.validate_stress(series)
-        in_store = getattr(self, f"{libname}_names")
-        if name not in in_store or overwrite:
+
+        if overwrite or not self._item_exists(libname, name):
             self._add_item(libname, series, name, metadata=metadata)
             self._clear_cache(libname)
         elif (libname == "oseries" and self._item_exists("oseries_models", name)) or (
@@ -771,7 +778,7 @@ class BaseConnector(ABC, ConnectorUtil):
         """
         if libname not in ["oseries", "stresses"]:
             raise ValueError("Library must be 'oseries' or 'stresses'!")
-        if name in getattr(self, f"{libname}_names"):
+        if self._item_exists(libname, name):
             self._update_series(
                 libname, series, name, metadata=metadata, validate=validate, force=force
             )
@@ -1124,17 +1131,19 @@ class BaseConnector(ABC, ConnectorUtil):
             print information about deleted models, by default True
         """
         names = self._parse_names(names, libname="models")
-        for n in names:
-            mldict = self.get_models(n, return_dict=True)
-            oname = mldict["oseries"]["name"]
-            self._del_item("models", n)
-            # delete reference to added model if present
-            if n in self._added_models:
-                self._added_models.remove(n)
-            else:
+        try:
+            for n in names:
+                mldict = self.get_models(n, return_dict=True)
+                oname = mldict["oseries"]["name"]
+                self._del_item("models", n)
+                # remove from pending-update queue if present
+                if n in self._added_models:
+                    self._added_models.remove(n)
+                # always clean up reverse-lookup tables (no-ops if already gone)
                 self._del_oseries_model_link(oname, n)
                 self._del_stress_model_link(self._get_model_stress_names(mldict), n)
-        self._clear_cache("_modelnames_cache")
+        finally:
+            self._clear_cache("_modelnames_cache")
         if verbose:
             logger.info("Deleted %d model(s) from database.", len(names))
 
@@ -1254,7 +1263,8 @@ class BaseConnector(ABC, ConnectorUtil):
         desc = f"Get {libname}"
         n = None
         for n in tqdm(names, desc=desc) if progressbar else names:
-            ts[n] = self._get_item(libname, n)
+            series = self._get_item(libname, n)
+            ts[n] = series
         # return frame if len == 1
         if len(ts) == 1 and squeeze:
             return ts[n]
@@ -1544,25 +1554,30 @@ class BaseConnector(ABC, ConnectorUtil):
             if ui.lower() != "y":
                 return
 
-        if libname == "models":
-            # also delete linked modelnames linked to oseries and stresses
+        clearing_models = libname == "models"
+        if clearing_models:
             libs = ["models", "oseries_models", "stresses_models"]
         else:
             libs = [libname]
 
-        # delete items and clear caches
-        for libname in libs:
-            names = self._parse_names(None, libname)
+        for lib in libs:
+            names = self._parse_names(None, lib)
             for name in (
-                tqdm(names, desc=f"Deleting items from {libname}")
-                if progressbar
-                else names
+                tqdm(names, desc=f"Deleting items from {lib}") if progressbar else names
             ):
-                self._del_item(libname, name, force=True)
-            self._clear_cache(libname)
-            logger.info(
-                "Emptied library %s in %s: %s", libname, self.name, self.__class__
-            )
+                self._del_item(lib, name, force=True)
+            self._clear_cache(lib)
+            logger.info("Emptied library %s in %s: %s", lib, self.name, self.__class__)
+
+        if clearing_models:
+            # Discard any pending model names — those models no longer exist.
+            self._added_models = []
+            if hasattr(self._oseries_links_need_update, "value"):
+                self._oseries_links_need_update.value = False
+                self._stresses_links_need_update.value = False
+            else:
+                self._oseries_links_need_update = False
+                self._stresses_links_need_update = False
 
     def _iter_series(self, libname: TimeSeriesLibs, names: list[str] | None = None):
         """Iterate over time series in library (internal method).
@@ -1723,8 +1738,23 @@ class BaseConnector(ABC, ConnectorUtil):
         mlnam : str
             name of model
         """
+        if not self._item_exists("oseries_models", onam):
+            logger.debug(
+                "No oseries_models entry for '%s' when removing model '%s'; skipping.",
+                onam,
+                mlnam,
+            )
+            self._clear_cache("oseries_models")
+            return
         modellist = self._get_item("oseries_models", onam)
-        modellist.remove(mlnam)
+        try:
+            modellist.remove(mlnam)
+        except ValueError:
+            logger.debug(
+                "Model '%s' not found in oseries_models for '%s'; skipping.",
+                mlnam,
+                onam,
+            )
         if len(modellist) == 0:
             self._del_item("oseries_models", onam)
         else:
@@ -1742,8 +1772,24 @@ class BaseConnector(ABC, ConnectorUtil):
             Name of the model to remove from the stress links.
         """
         for stress_name in stress_names:
+            if not self._item_exists("stresses_models", stress_name):
+                logger.debug(
+                    "No stresses_models entry for '%s' "
+                    "when removing model '%s'; skipping.",
+                    stress_name,
+                    model_name,
+                )
+                continue
             modellist = self._get_item("stresses_models", stress_name)
-            modellist.remove(model_name)
+            try:
+                modellist.remove(model_name)
+            except ValueError:
+                logger.debug(
+                    "Model '%s' not found in stresses_models for '%s'; skipping.",
+                    model_name,
+                    stress_name,
+                )
+                continue
             if len(modellist) == 0:
                 self._del_item("stresses_models", stress_name)
             else:
@@ -1814,8 +1860,8 @@ class BaseConnector(ABC, ConnectorUtil):
     def _trigger_links_update_if_needed(
         self, modelnames: list[str] | None = None, progressbar: bool = False
     ):
-        # Check if time series-> model links need updating
-        # Handle both Manager proxies (main) and booleans (worker after pickle)
+        # Check if time series -> model links need updating.
+        # Handle both Manager proxies (main) and booleans (worker after pickle).
         needs_update = (
             self._oseries_links_need_update.value
             if hasattr(self._oseries_links_need_update, "value")
@@ -1823,8 +1869,8 @@ class BaseConnector(ABC, ConnectorUtil):
         )
         if needs_update:
             self._clear_cache("_modelnames_cache")
-            # Set BOTH flags to False BEFORE updating to prevent recursion
-            # (update always recomputes both oseries and stresses links)
+            # Set flags to False BEFORE updating to prevent recursion.
+            # They are restored in the except block if the update fails.
             if hasattr(self._oseries_links_need_update, "value"):
                 self._oseries_links_need_update.value = False
                 self._stresses_links_need_update.value = False
@@ -1832,13 +1878,24 @@ class BaseConnector(ABC, ConnectorUtil):
                 self._oseries_links_need_update = False
                 self._stresses_links_need_update = False
                 modelnames = self._added_models
-            if modelnames is None or len(modelnames) > 0:
-                self._update_time_series_model_links(
-                    modelnames=modelnames, recompute=True, progressbar=progressbar
-                )
-            self._added_models = []  # reset list of added models
+            try:
+                if modelnames is None or len(modelnames) > 0:
+                    self._update_time_series_model_links(
+                        modelnames=modelnames, recompute=True, progressbar=progressbar
+                    )
+            except Exception:
+                # Restore flags so the next access will retry the update.
+                if hasattr(self._oseries_links_need_update, "value"):
+                    self._oseries_links_need_update.value = True
+                    self._stresses_links_need_update.value = True
+                else:
+                    self._oseries_links_need_update = True
+                    self._stresses_links_need_update = True
+                raise
+            finally:
+                self._added_models = []  # always reset regardless of success/failure
         else:
-            self._added_models = []  # reset list of added models
+            self._added_models = []
 
     def _get_time_series_model_links(
         self,
@@ -1857,9 +1914,10 @@ class BaseConnector(ABC, ConnectorUtil):
         """
         oseries_links = {}
         stresses_links = {}
+        n_total = len(modelnames) if modelnames is not None else self.n_models
         for mldict in tqdm(
             self.iter_models(modelnames=modelnames, return_dict=True),
-            total=self.n_models,
+            total=n_total,
             desc=f"{'Recompute' if recompute else 'Get'} models per time series",
             disable=not progressbar,
         ):
@@ -1917,10 +1975,12 @@ class BaseConnector(ABC, ConnectorUtil):
                         stresses.append(sm.temp.name)
                 elif hasattr(sm, "stress"):
                     smstress = sm.stress
-                    if not isinstance(smstress, list):
+                    if not isinstance(smstress, (list, tuple)):
                         smstress = [smstress]
                     for s in smstress:
                         stresses.append(s.name)
+                elif hasattr(sm, "stresses"):
+                    stresses += list(sm.stresses)
         return list(set(stresses))
 
     def get_model_time_series_names(
@@ -1972,12 +2032,53 @@ class BaseConnector(ABC, ConnectorUtil):
         else:
             return structure
 
-    @staticmethod
-    def _clear_cache(libname: AllLibs) -> None:
-        """Clear cached property."""
+    def _clear_cache(self, libname: AllLibs) -> None:
+        """Clear cached property by removing it from the instance __dict__."""
         if libname == "models":
             libname = "_modelnames_cache"
-        getattr(BaseConnector, libname).fget.cache_clear()
+        self.__dict__.pop(libname, None)
+
+    def rebuild(self, rewrite_all_files: bool = False):
+        """Rebuild the database.
+
+        Parameters
+        ----------
+        rewrite_all_files : bool, optional
+            rewrite all files in the database, by default False.
+
+        Notes
+        -----
+        When `rewrite_all_files` is False, no data is lost in this operation! The
+        reverse lookup tables are updated, and the cached properties are deleted so
+        they are updated on next access. This method can be used to repair the database
+        in case of cache corruption or inconsistencies. Use when models have been
+        deleted from the models library, but are still present in the oseries_models
+        and stresses_models libraries, or vice versa.
+
+        If `rewrite_all_files` is True, all files are rewritten to the database, which
+        can be useful if the database was created with an older version of Pastas and
+        you want to update the stored files to the latest version. Take care when using
+        this option, as it will overwrite all files in the database. A safer option is
+        to migrate your database using `pastastore.util.copy_database()`.
+
+        See Also
+        --------
+        pastastore.util.copy_database()
+        """
+        logger.info("Rebuilding database '%s' ...", self.name)
+        if rewrite_all_files:
+            logger.info("Rewriting all files in the database.")
+            for libname in ["oseries", "stresses", "models"]:
+                names = self._parse_names(None, libname)
+                for name in tqdm(names, desc=f"Rewriting {libname}"):
+                    item = self._get_item(libname, name)
+                    self._add_item(libname, item, name)
+        self.empty_library("oseries_models", prompt=False, progressbar=False)
+        self.empty_library("stresses_models", prompt=False, progressbar=False)
+        for libname in ["models", "oseries", "stresses"]:
+            self._clear_cache(libname)
+        self._update_time_series_model_links(progressbar=True)
+        logger.info("Database '%s' rebuilt.", self.name)
 
 
 class ModelAccessor:

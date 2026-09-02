@@ -22,6 +22,8 @@ from matplotlib.collections import LineCollection
 from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+from pastastore.version import PASTAS_GEQ_200
+
 logger = logging.getLogger(__name__)
 
 
@@ -195,6 +197,8 @@ class Maps:
 
         if show_legend and kind_to_color is not None:
             for k, color in kind_to_color.items():
+                for kw in ["c", "s"]:
+                    kwargs.pop(kw, None)
                 ax.plot([], [], color=color, label=k, **kwargs, marker="o", ls="none")
             ax.legend(loc=(0, 1), frameon=False, ncol=5)
 
@@ -418,6 +422,7 @@ class Maps:
             series.rename("value", inplace=True)
 
         df = self.pstore.oseries.join(series, how="left")
+        df = df.loc[series.index]
 
         return self.dataframe(
             df,
@@ -868,7 +873,6 @@ class Maps:
             s = 70
             marker = "o"
             kwargs = {}
-
         # if column is passed for coloring pts
         if column:
             c = df.loc[:, column]
@@ -954,8 +958,9 @@ class Maps:
 
         stresses = pd.DataFrame(columns=["x", "y", "stressmodel", "color"])
         count = 0
+        attr = "stresses" if PASTAS_GEQ_200 else "stress"
         for name, sm in ml.stressmodels.items():
-            for istress in sm.stress:
+            for istress in getattr(sm, attr):
                 if metadata_source == "model":
                     xi = istress.metadata["x"]
                     yi = istress.metadata["y"]

@@ -137,6 +137,33 @@ def temporary_yaml_from_str(yaml: str):
         os.unlink(temp.name)
 
 
+def _coerce_parameters_dataframe(parameters: Any) -> pd.DataFrame:
+    """Coerce serialized model parameters back to a DataFrame.
+
+    Parameters
+    ----------
+    parameters : Any
+        Parameters payload stored in a model dictionary.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Parameters table with the original Pastas parameter index.
+    """
+    if isinstance(parameters, pd.DataFrame):
+        return parameters
+
+    dataframe = pd.DataFrame(parameters)
+
+    if "index" in dataframe.columns:
+        return dataframe.set_index("index")
+
+    if "name" in dataframe.columns:
+        return dataframe.set_index("name")
+
+    return dataframe
+
+
 class PastastoreYAML:
     """Class for reading/writing Pastas models in YAML format.
 
@@ -602,13 +629,24 @@ class PastastoreYAML:
         if "name" not in mldict:
             mldict["name"] = mlnam
 
-        # convert warmup and time_offset to panads.Timedelta
+        # Convert serialized settings back to their pandas scalar types so the
+        # reconstructed model matches an in-memory model after a YAML round trip.
+        for key in ("tmin", "tmax"):
+            if key in mldict["settings"] and isinstance(mldict["settings"][key], str):
+                mldict["settings"][key] = pd.Timestamp(mldict["settings"][key])
+
+        # convert warmup and time_offset to pandas.Timedelta
         if "warmup" in mldict["settings"]:
             mldict["settings"]["warmup"] = pd.Timedelta(mldict["settings"]["warmup"])
         if "time_offset" in mldict["settings"]:
             mldict["settings"]["time_offset"] = pd.Timedelta(
                 mldict["settings"]["time_offset"]
             )
+
+        # Keep the internal Pastas parameter index when parameters were already
+        # stored as a DataFrame; YAML exports serialize that index as "index".
+        if "parameters" in mldict:
+            mldict["parameters"] = _coerce_parameters_dataframe(mldict["parameters"])
         return mldict
 
     def load(self, fyaml: str) -> list[ps.Model]:

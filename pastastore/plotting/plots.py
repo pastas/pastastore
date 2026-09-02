@@ -48,6 +48,8 @@ class Plots:
         self,
         libname,
         names=None,
+        tmin=None,
+        tmax=None,
         ax=None,
         split=False,
         figsize=(10, 5),
@@ -66,6 +68,12 @@ class Plots:
             or stresses)
         names : list[str], optional
             list of time series names to plot, by default None
+        tmin : str or pd.Timestamp, optional
+            minimum time to plot, by default None, which uses the minimum
+            time of the time series
+        tmax : str or pd.Timestamp, optional
+            maximum time to plot, by default None, which uses the maximum
+            time of the time series
         ax : matplotlib.Axes, optional
             pass axes object to plot on existing axes, by default None,
             which creates a new figure
@@ -123,6 +131,10 @@ class Plots:
                 iax = ax
             if labelfunc is not None:
                 n = labelfunc(n)
+            if tmin is not None:
+                ts = ts.loc[tmin:]
+            if tmax is not None:
+                ts = ts.loc[:tmax]
             iax.plot(ts.index, ts.squeeze(), label=n, **kwargs)
 
             if split and show_legend:
@@ -140,6 +152,8 @@ class Plots:
     def oseries(
         self,
         names=None,
+        tmin=None,
+        tmax=None,
         ax=None,
         split=False,
         figsize=(10, 5),
@@ -155,6 +169,12 @@ class Plots:
         names : list[str], optional
             list of oseries names to plot, by default None, which loads
             all oseries from store
+        tmin : str or pd.Timestamp, optional
+            minimum time to plot, by default None, which uses the minimum
+            time of the time series
+        tmax : str or pd.Timestamp, optional
+            maximum time to plot, by default None, which uses the maximum
+            time of the time series
         ax : matplotlib.Axes, optional
             pass axes object to plot oseries on existing figure,
             by default None, in which case a new figure is created
@@ -179,6 +199,8 @@ class Plots:
         return self._timeseries(
             "oseries",
             names=names,
+            tmin=tmin,
+            tmax=tmax,
             ax=ax,
             split=split,
             figsize=figsize,
@@ -192,6 +214,8 @@ class Plots:
         self,
         names=None,
         kind=None,
+        tmin=None,
+        tmax=None,
         ax=None,
         split=False,
         figsize=(10, 5),
@@ -210,6 +234,12 @@ class Plots:
         kind : str, optional
             only plot stresses of a certain kind, by default None, which
             includes all stresses
+        tmin : str or pd.Timestamp, optional
+            minimum time to plot, by default None, which uses the minimum
+            time of the time series
+        tmax : str or pd.Timestamp, optional
+            maximum time to plot, by default None, which uses the maximum
+            time of the time series
         ax : matplotlib.Axes, optional
             pass axes object to plot oseries on existing figure,
             by default None, in which case a new figure is created
@@ -242,6 +272,8 @@ class Plots:
         return self._timeseries(
             "stresses",
             names=names,
+            tmin=tmin,
+            tmax=tmax,
             ax=ax,
             split=split,
             figsize=figsize,
@@ -350,6 +382,7 @@ class Plots:
         normtype="log",
         cmap="viridis_r",
         set_yticks=False,
+        ylabels=None,
         figsize=(10, 8),
         dropna=True,
         **kwargs,
@@ -382,6 +415,9 @@ class Plots:
             A reference to a matplotlib colormap
         set_yticks : bool, optional
             Set the names of the series as yticks
+        ylabels : list, optional
+            Set the names of the series as yticks, default is None in which case
+            names will be used as ylabels
         figsize : tuple, optional
             The size of the new figure in inches (h,v)
         progressbar : bool
@@ -427,7 +463,7 @@ class Plots:
         else:
             norm = BoundaryNorm(boundaries=bounds, ncolors=256)
         cmap = plt.get_cmap(cmap, 256)
-        cmap.set_over((1.0, 1.0, 1.0))
+        cmap = cmap.with_extremes(over=(1.0, 1.0, 1.0))
 
         pc = None
         for i, s in enumerate(series):
@@ -460,7 +496,10 @@ class Plots:
             ax.set_yticks(np.arange(0, len(series) + 1), minor=True)
             if names is None:
                 names = [s.name for s in series]
-            ax.set_yticklabels(names)
+            if ylabels is not None:
+                ax.set_yticklabels(ylabels)
+            else:
+                ax.set_yticklabels(names)
 
             for tick in ax.yaxis.get_major_ticks():  # don't show major ytick marker
                 tick.tick1line.set_visible(False)

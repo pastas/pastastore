@@ -3,6 +3,7 @@ import pytest
 from conftest import for_connectors
 
 import pastastore as pst
+from pastastore import connectors as pst_connectors
 
 pst.get_color_logger("DEBUG", logger_name="pastastore")
 
@@ -293,17 +294,19 @@ class TestParallelButNotReally:
         assert pstore_with_models.conn._stresses_links_need_update is False
 
 
-def add_model_pas(name):
-    """Add model using pstore."""
+def add_model_pas(name, connector):
+    """Add model in a worker using the pickled PasConnector instance."""
+    ppstore = pst.PastaStore(connector)
     ml = ppstore.create_model(name)
     ppstore.add_model(ml, overwrite=True)
 
 
 def add_model_arcticdb(name):
-    """Add model using pstore."""
-    ppstore = pst.PastaStore(conn)
+    """Add model using the worker-local ArcticDB connector."""
+    connector = pst_connectors.get_worker_connector()
+    ppstore = pst.PastaStore(connector)
     ml = ppstore.create_model(name)
-    conn.add_model(ml, overwrite=True)
+    ppstore.add_model(ml, overwrite=True)
 
 
 def setup_parallel_pstore(conn_type, data1, data2):
@@ -348,8 +351,10 @@ def test_parallel_add_model(conn_type, data1, data2):
 
     if conn_type == "arcticdb":
         func = add_model_arcticdb
+        kwargs = None
     elif conn_type == "pas":
         func = add_model_pas
+        kwargs = {"connector": ppstore.conn}
     else:
         raise ValueError("Unrecognized parameter!")
     try:
@@ -360,14 +365,15 @@ def test_parallel_add_model(conn_type, data1, data2):
             func=func,
             names=["oseries1", "oseries2"],
             libname="oseries",
+            kwargs=kwargs,
             parallel=True,
             max_workers=1,
         )
 
-        # check update parameters are set to False, since after parallel these are
-        # recomputed automatically
-        assert ppstore.conn._oseries_links_need_update.value is False
-        assert ppstore.conn._stresses_links_need_update.value is False
+        # check update parameters are set to True, since after parallel the update
+        # is deferred to the next access of oseries/stresses_models
+        assert ppstore.conn._oseries_links_need_update.value is True
+        assert ppstore.conn._stresses_links_need_update.value is True
 
         # check if result is correct
         om = ppstore.oseries_models
@@ -388,6 +394,11 @@ def test_parallel_add_model(conn_type, data1, data2):
         assert "oseries2" in sm["prec2"]
         assert "oseries1" in sm["evap1"]
         assert "oseries2" in sm["evap2"]
+
+        # check update parameters are set to False, since after access the updates
+        # should have been triggered
+        assert ppstore.conn._oseries_links_need_update.value is False
+        assert ppstore.conn._stresses_links_need_update.value is False
 
     finally:
         pst.util.delete_pastastore(ppstore)

@@ -19,6 +19,7 @@ from pastas.stats.tests import runs_test, stoffer_toloi
 from pastastore._tqdm import tqdm
 from pastastore.styling import boolean_row_styler
 from pastastore.typing import TimeSeriesLibs
+from pastastore.version import PASTAS_GEQ_200
 
 logger = logging.getLogger(__name__)
 
@@ -68,11 +69,13 @@ class ZipUtils:
                 if type(s) is pd.Series:
                     s = s.to_frame()
                 if type(s) is pd.DataFrame:
-                    sjson = s.to_json(orient="columns")
+                    sjson = s.to_json(orient="columns", date_format="iso", indent=2)
                 else:
                     # workaround for subclasses of DataFrame that override to_json,
                     # looking at you hydropandas...
-                    sjson = pd.DataFrame(s).to_json(orient="columns")
+                    sjson = pd.DataFrame(s).to_json(
+                        orient="columns", date_format="iso", indent=2
+                    )
             except ValueError as e:
                 msg = (
                     f"DatetimeIndex of '{n}' probably contains NaT "
@@ -259,9 +262,12 @@ def series_from_json(fjson: str, squeeze: bool = True):
     s : pd.DataFrame
         DataFrame containing time series
     """
-    s = pd.read_json(fjson, orient="columns", precise_float=True, dtype=False)
-    if not isinstance(s.index, pd.DatetimeIndex):
-        s.index = pd.to_datetime(s.index, unit="ms")
+    s = pd.read_json(
+        fjson,
+        orient="columns",
+        precise_float=True,
+        dtype=False,
+    )
     s = s.sort_index()  # needed for some reason ...
     if squeeze:
         return s.squeeze(axis="columns")
@@ -527,8 +533,11 @@ def compare_models(
                 type(sm.rfunc).__name__ if sm.rfunc is not None else "NA"
             )
 
-            if type(sm).__name__ == "RechargeModel":
-                stresses = [sm.prec, sm.evap]
+            if PASTAS_GEQ_200:
+                stresses = list(sm.stresses)
+            elif type(sm).__name__ == "RechargeModel":
+                temp = [sm.temp] if sm.temp is not None else []
+                stresses = [sm.prec, sm.evap] + temp
             else:
                 stresses = sm.stress
 

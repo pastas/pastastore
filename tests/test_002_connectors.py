@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import pastas as ps
 import pytest
+from pandas.testing import assert_frame_equal, assert_series_equal
 from pytest_dependency import depends
 
 with warnings.catch_warnings():
@@ -28,10 +29,28 @@ def test_add_get_series(request, conn):
     o2 = conn.get_oseries("test_series")
     try:
         assert isinstance(o2, pd.Series)
-        assert o1.equals(o2)
-        assert o1.dtype == o2.dtype
+        assert_series_equal(o1, o2, check_index_type=False, check_freq=False)
     finally:
         conn.del_oseries("test_series")
+
+
+def test_series_from_json_legacy_epoch_index(tmp_path):
+    legacy = tmp_path / "legacy_series.pas"
+    source = pd.Series(
+        [1.0, 2.0],
+        index=pd.date_range("2000", periods=2, freq="D"),
+    )
+    # deprecation warning for date_format="epoch" in pandas>3.0
+    legacy.write_text(
+        source.to_frame().to_json(orient="columns", date_format="epoch"),
+        encoding="utf-8",
+    )
+
+    loaded = pst.util.series_from_json(legacy)
+    expected = source.copy()
+
+    assert isinstance(loaded, pd.Series)
+    assert_series_equal(expected, loaded, check_freq=False, check_names=False)
 
 
 def test_add_get_single_value_series(request, conn):
@@ -41,8 +60,7 @@ def test_add_get_single_value_series(request, conn):
     o2 = conn.get_oseries("test_single_value_series")
     try:
         assert isinstance(o2, pd.Series)
-        assert o1.equals(o2)
-        assert o1.dtype == o2.dtype
+        assert_series_equal(o1, o2, check_index_type=False, check_freq=False)
     finally:
         conn.del_oseries("test_single_value_series")
 
@@ -59,7 +77,7 @@ def test_add_get_series_wnans(request, conn):
     o2 = conn.get_oseries("test_series_nans")
     try:
         assert isinstance(o2, pd.Series)
-        assert o1.equals(o2)
+        assert_series_equal(o1, o2, check_index_type=False, check_freq=False)
     finally:
         conn.del_oseries("test_series_nans")
 
@@ -78,7 +96,9 @@ def test_add_get_dataframe(request, conn):
         o2 = o2.to_frame()
     try:
         assert isinstance(o2, pd.DataFrame)
-        assert o1.equals(o2)
+        assert_frame_equal(
+            o1, o2, check_index_type=False, check_freq=False, check_names=False
+        )
     finally:
         conn.del_oseries("test_df")
 
@@ -107,7 +127,9 @@ def test_add_series_illegal_filename(request, conn):
     o2 = conn.get_oseries("testseriesillegal_chars")
     try:
         assert isinstance(o2, pd.Series)
-        assert o1.equals(o2)
+        assert_series_equal(
+            o1, o2, check_index_type=False, check_freq=False, check_names=False
+        )
     finally:
         conn.del_oseries("testseriesillegal_chars")
 
@@ -325,3 +347,33 @@ def test_new_connector_in_occupied_dir():
         pst.PasConnector("my_db", "./tests/data/arcticdb")
 
     pst.util.delete_arcticdb_connector(conn1)
+
+
+def test_numeric_looking_series_names():
+    """Test that series names with numeric-looking patterns are preserved as strings."""
+    # Use a temporary connector for this test to avoid conflicts
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        conn = pst.PasConnector("test_numeric_names", tmpdir)
+        # Test various numeric-looking names that pandas might try to convert
+        test_names = [
+            "1_101_1",
+        ]
+        for name in test_names:
+            s = pd.Series(
+                index=pd.date_range("2000", periods=5, freq="D"),
+                data=[1.0, 2.0, 3.0, 4.0, 5.0],
+                name=name,
+            )
+            conn.add_oseries(s, name, metadata=None, overwrite=True)
+            s_retrieved = conn.get_oseries(name)
+            # Check that the name is preserved as a string
+            assert isinstance(s_retrieved.name, str), (
+                f"Name {name} was not preserved as string, got {type(s_retrieved.name)}"
+            )
+            assert s_retrieved.name == name, (
+                f"Name {name} was changed to {s_retrieved.name}"
+            )
+            conn.del_oseries(name)
+        pst.util.delete_pas_connector(conn)

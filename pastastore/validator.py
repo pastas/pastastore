@@ -8,7 +8,7 @@ import warnings
 from pathlib import Path
 
 # import weakref
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import pandas as pd
 import pastas as ps
@@ -17,6 +17,7 @@ from pandas.testing import assert_series_equal
 
 from pastastore.typing import PastasLibs
 from pastastore.util import SeriesUsedByModel, _custom_warning, validate_names
+from pastastore.version import PASTAS_GEQ_200
 
 if TYPE_CHECKING:
     from pastastore.base import BaseConnector
@@ -217,6 +218,30 @@ class Validator:
         else:
             return validate
 
+    def disable(self):
+        """Turn OFF all checks for maximum performance.
+
+        This will turn off all checks in the Validator, which will increase
+        performance but can lead to data integrity issues if not used carefully.
+        Use with caution!
+        """
+        self.set_check_model_series_values(False)
+        self.set_use_pastas_validate_series(False)
+        self.set_validate_metadata(False)
+        self.set_protect_series_in_models(False)
+
+    def enable(self):
+        """Turn ON all checks for maximum safety.
+
+        This will turn on all checks in the Validator, which will decrease
+        performance but ensures data integrity. It is recommended to keep all
+        checks on.
+        """
+        self.set_check_model_series_values(True)
+        self.set_use_pastas_validate_series(True)
+        self.set_validate_metadata(True)
+        self.set_protect_series_in_models(True)
+
     @staticmethod
     def check_filename_illegal_chars(libname: PastasLibs, name: str) -> str:
         """Check filename for invalid characters (internal method).
@@ -324,10 +349,11 @@ class Validator:
         prec_evap_model = ["RechargeModel", "TarsoModel"]
 
         if isinstance(ml, ps.Model):
+            attr = "stresses" if PASTAS_GEQ_200 else "stress"
             series_names = [
                 istress.series.name
                 for sm in ml.stressmodels.values()
-                for istress in sm.stress
+                for istress in getattr(sm, attr)
             ]
 
         elif isinstance(ml, dict):
@@ -414,6 +440,7 @@ class Validator:
                     rtol=self.SERIES_EQUALITY_RELATIVE_TOLERANCE,
                     check_freq=False,
                     check_names=False,
+                    check_index_type=False,
                 )
             except AssertionError as e:
                 raise ValueError(
@@ -433,8 +460,12 @@ class Validator:
         if isinstance(ml, ps.Model):
             for sm in ml.stressmodels.values():
                 # Check class name using type instead of protected _name attribute
-                if type(sm).__name__ in prec_evap_model:
+                if PASTAS_GEQ_200:
+                    stresses = list(sm.stresses)
+                elif type(sm).__name__ in prec_evap_model:
                     stresses = [sm.prec, sm.evap]
+                    if sm.temp is not None:
+                        stresses.append(sm.temp)
                 else:
                     stresses = sm.stress
                 for s in stresses:
@@ -458,6 +489,7 @@ class Validator:
                                 rtol=self.SERIES_EQUALITY_RELATIVE_TOLERANCE,
                                 check_freq=False,
                                 check_names=False,
+                                check_index_type=False,
                             )
                         except AssertionError as e:
                             raise ValueError(
@@ -542,3 +574,22 @@ class Validator:
                 raise SeriesUsedByModel(
                     msg.format(libname=libname, name=name, n_models=n_models)
                 )
+
+    def series_index_unit(self, series, unit: Literal["ms", "us", "ns"] = "ms"):
+        """Ensure series index is in specified unit (internal method).
+
+        Parameters
+        ----------
+        series : pandas.Series or pandas.DataFrame
+            time series to check
+        unit : str, optional
+            unit to convert index to (default: 'ms' for milliseconds)
+
+        Returns
+        -------
+        pandas.Series or pandas.DataFrame
+            time series with index in given unit (default: milliseconds)
+        """
+        if series.index.unit != unit:
+            series.index = series.index.as_unit(unit)
+        return series

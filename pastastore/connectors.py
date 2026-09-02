@@ -1,5 +1,6 @@
 """Module containing classes for connecting to different data stores."""
 
+import functools
 import json
 import logging
 import os
@@ -8,8 +9,6 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from copy import deepcopy
 from functools import partial
 from pathlib import Path
-
-# import weakref
 from typing import Callable
 
 import pandas as pd
@@ -34,6 +33,52 @@ logger = logging.getLogger(__name__)
 conn = None
 
 
+def get_worker_connector() -> BaseConnector:
+    """Return the connector initialized for the current parallel worker.
+
+    This is primarily intended for functions executed through ``PastaStore.apply``
+    or other connector-backed parallel helpers that use a worker initializer to
+    construct a connector inside each subprocess.
+
+    Returns
+    -------
+    BaseConnector
+        The connector instance for the current worker process.
+
+    Raises
+    ------
+    RuntimeError
+        If no worker connector has been initialized in the current process.
+    """
+    if conn is None:
+        raise RuntimeError(
+            "No worker connector is initialized in this process. "
+            "Use this helper inside a parallel worker or pass a connector "
+            "explicitly for picklable connectors."
+        )
+    return conn
+
+
+def _create_arcticdb_connector(name: str, uri: str, verbose: bool) -> None:
+    """Module-level initializer for ArcticDBConnector multiprocessing.
+
+    This function must be defined at module level to be picklable.
+    It creates a new ArcticDBConnector instance in each worker process
+    and stores it in the module-level `conn` variable.
+
+    Parameters
+    ----------
+    name : str
+        name of the database
+    uri : str
+        URI connection string
+    verbose : bool
+        whether to log messages when database is initialized
+    """
+    global conn
+    conn = ArcticDBConnector(name, uri, verbose, worker_process=True)
+
+
 class ParallelUtil:
     """Mix-in class for storing parallelizable methods."""
 
@@ -43,6 +88,23 @@ class ParallelUtil:
     # multiprocessing.Manager proxies lazily when parallel workers are spawned.
     _oseries_links_need_update: bool
     _stresses_links_need_update: bool
+
+    def __del__(self) -> None:
+        """Shut down the Manager subprocess when the connector is garbage collected."""
+        mgr = getattr(self, "_manager", None)
+        if mgr is not None:
+            try:
+                mgr.shutdown()
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+    def __enter__(self):
+        """Support use as a context manager."""
+        return self
+
+    def __exit__(self, *args) -> None:
+        """Shut down the Manager subprocess on context-manager exit."""
+        self.__del__()
 
     def _ensure_manager_proxies(self) -> None:
         """Lazily initialize Manager proxies for cross-process communication.
@@ -103,7 +165,7 @@ class ParallelUtil:
         if connector is not None:
             _conn = connector
         else:
-            _conn = globals()["conn"]
+            _conn = conn
 
         ml = _conn.get_models(ml_name)
         m_kwargs = {}
@@ -185,7 +247,12 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
     _conn_type = "arcticdb"
 
     def __init__(
-        self, name: str, uri: str, verbose: bool = True, worker_process: bool = False
+        self,
+        name: str,
+        uri: str,
+        verbose: bool = True,
+        worker_process: bool = False,
+        write_pastastore_file: bool = True,
     ):
         """Create an ArcticDBConnector object using ArcticDB to store data.
 
@@ -200,6 +267,9 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         worker_process : bool, optional
             whether the connector is created in a worker process for parallel
             processing, by default False
+        write_pastastore_file : bool, optional
+            write .pastastore file if true, use Fase for multiprocessing applications
+            to avoid conflicting writes to files.
         """
         try:
             import arcticdb
@@ -213,6 +283,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
 
         set_config_string("PickledMetadata.LogLevel", "DEBUG")
 
+        super().__init__()
         self.uri = uri
         self.name = name
 
@@ -235,11 +306,12 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
             # for older versions of PastaStore, if oseries_models library is empty
             # populate oseries - models database
             if (self.n_models > 0) and (
-                len(self.oseries_models) == 0 or len(self.stresses_models) == 0
+                len(self._list_symbols("oseries_models")) == 0
+                or len(self._list_symbols("stresses_models")) == 0
             ):
                 self._update_time_series_model_links(recompute=False, progressbar=True)
             # write pstore file to store database info that can be used to load pstore
-            if "lmdb" in self.uri:
+            if write_pastastore_file and "lmdb" in self.uri:
                 self.write_pstore_config_file()
 
     def _initialize(self, verbose: bool = True) -> None:
@@ -278,11 +350,15 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         elif path is None and "lmdb" not in self.uri:
             raise ValueError("Please provide a path to write the pastastore file!")
 
-        with (path / self.name / f"{self.name}.pastastore").open(
-            "w",
-            encoding="utf-8",
-        ) as f:
-            json.dump(config, f)
+        fpath = path / self.name / f"{self.name}.pastastore"
+        new_content = json.dumps(config)
+        if fpath.exists():
+            try:
+                if fpath.read_text(encoding="utf-8") == new_content:
+                    return
+            except OSError:
+                pass
+        fpath.write_text(new_content, encoding="utf-8")
 
     def _library_name(self, libname: AllLibs) -> str:
         """Get full library name according to ArcticDB (internal method)."""
@@ -462,11 +538,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
             max_workers, len(names), chunksize
         )
         if initializer is None:
-
-            def initializer(*args):
-                # assign to module-level variable without using 'global' statement
-                globals()["conn"] = ArcticDBConnector(*args, worker_process=True)
-
+            initializer = _create_arcticdb_connector
             initargs = (self.name, self.uri, False)
 
         if initargs is None:
@@ -481,11 +553,13 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
                 with ProcessPoolExecutor(
                     max_workers=max_workers, initializer=initializer, initargs=initargs
                 ) as executor:
-                    futures = [
-                        executor.submit(partial(func, **kwargs), name) for name in names
-                    ]
-                    for future in as_completed(futures):
+                    pending = {
+                        executor.submit(partial(func, **kwargs), name): name
+                        for name in names
+                    }
+                    for future in as_completed(pending):
                         result.append(future.result())
+                        del pending[future]
                         pbar.update()
         else:
             with ProcessPoolExecutor(
@@ -495,8 +569,21 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
                     executor.map(partial(func, **kwargs), names, chunksize=chunksize)
                 )
 
-        # update links if models were stored
-        self._trigger_links_update_if_needed(modelnames=names)
+        # Signal that reverse-lookup tables need updating. On fork-based start
+        # methods (Linux) workers may have already set the proxy flag; on
+        # spawn-based methods (Windows/macOS) they cannot, so we always set it
+        # here. The actual update is deferred to the next access of
+        # oseries_with_models / stresses_with_models / oseries_models /
+        # stresses_models, keeping _parallel() free of the update cost.
+        if hasattr(self._oseries_links_need_update, "value"):
+            self._oseries_links_need_update.value = True
+            self._stresses_links_need_update.value = True
+            # Clear lru_caches so that the next access of oseries_models /
+            # stresses_models re-runs the getter (which calls
+            # _trigger_links_update_if_needed and actually does the update).
+            self._clear_cache("oseries_models")
+            self._clear_cache("stresses_models")
+            self._clear_cache("_modelnames_cache")
 
         return result
 
@@ -597,7 +684,7 @@ class DictConnector(BaseConnector, ParallelUtil):
         if libname in ["models", "oseries_models", "stresses_models"]:
             lib[name] = item
         else:
-            lib[name] = (metadata, item)
+            lib[name] = (deepcopy(metadata), deepcopy(item))
 
     def _get_item(self, libname: AllLibs, name: str) -> DataFrameOrSeries | dict:
         """Retrieve item from database (internal method).
@@ -701,7 +788,13 @@ class PasConnector(BaseConnector, ParallelUtil):
 
     _conn_type = "pas"
 
-    def __init__(self, name: str, path: str, verbose: bool = True):
+    def __init__(
+        self,
+        name: str,
+        path: str,
+        verbose: bool = True,
+        write_pastastore_file: bool = True,
+    ):
         """Create PasConnector object that stores data as JSON files on disk.
 
         Uses Pastas export format (pas-files) to store files.
@@ -715,6 +808,9 @@ class PasConnector(BaseConnector, ParallelUtil):
             path to directory for storing the data
         verbose : bool, optional
             whether to print message when database is initialized, by default True
+        write_pastastore_file : bool, optional
+            write .pastastore file if true, use Fase for multiprocessing applications
+            to avoid conflicting writes to files.
         """
         # set shared memory flags for parallel processing
         super().__init__()
@@ -735,12 +831,14 @@ class PasConnector(BaseConnector, ParallelUtil):
 
         # for older versions of PastaStore, if oseries_models library is empty
         # populate oseries_models library
-        if (self.n_models > 0) and (
-            len(self.oseries_models) == 0 or len(self.stresses_models) == 0
+        if not self._library_is_empty("models") and (
+            self._library_is_empty("oseries_models")
+            or self._library_is_empty("stresses_models")
         ):
             self._update_time_series_model_links(recompute=False, progressbar=True)
         # write pstore file to store database info that can be used to load pstore
-        self._write_pstore_config_file()
+        if write_pastastore_file:
+            self._write_pstore_config_file()
 
     def _initialize(self, verbose: bool = True) -> None:
         """Initialize the libraries (internal method)."""
@@ -763,6 +861,15 @@ class PasConnector(BaseConnector, ParallelUtil):
                     )
             setattr(self, f"lib_{val}", self.path / val)
 
+    def _library_is_empty(self, libname: str) -> bool:
+        """Return True if a library directory contains no .pas files.
+
+        Uses ``next()`` to short-circuit after the first hit, so it avoids
+        enumerating the entire directory.
+        """
+        lib = self._get_library(libname)
+        return next(lib.glob("*.pas"), None) is None
+
     def _write_pstore_config_file(self):
         """Write pstore configuration file to store database info."""
         config = {
@@ -770,8 +877,15 @@ class PasConnector(BaseConnector, ParallelUtil):
             "name": self.name,
             "path": str(self.parentdir.absolute()),
         }
-        with (self.path / f"{self.name}.pastastore").open("w", encoding="utf-8") as f:
-            json.dump(config, f)
+        fpath = self.path / f"{self.name}.pastastore"
+        new_content = json.dumps(config)
+        if fpath.exists():
+            try:
+                if fpath.read_text(encoding="utf-8") == new_content:
+                    return
+            except OSError:
+                pass
+        fpath.write_text(new_content, encoding="utf-8")
 
     def _get_library(self, libname: AllLibs) -> Path:
         """Get path to directory holding data.
@@ -818,16 +932,18 @@ class PasConnector(BaseConnector, ParallelUtil):
         if isinstance(item, pd.Series):
             item = item.to_frame()
         if isinstance(item, pd.DataFrame):
-            if type(item) is pd.DataFrame:
-                sjson = item.to_json(orient="columns")
-            else:
-                # workaround for subclasses of DataFrame that override to_json,
-                # looking at you hydropandas...
-                sjson = pd.DataFrame(item).to_json(orient="columns")
             if name.endswith("_meta"):
                 raise ValueError(
                     "Time series name cannot end with '_meta'. "
                     "Please use a different name for your time series."
+                )
+            if type(item) is pd.DataFrame:
+                sjson = item.to_json(orient="columns", date_format="iso", indent=2)
+            else:
+                # workaround for subclasses of DataFrame that override to_json,
+                # looking at you hydropandas...
+                sjson = pd.DataFrame(item).to_json(
+                    orient="columns", date_format="iso", indent=2
                 )
             fname = lib / f"{name}.pas"
             with fname.open("w", encoding="utf-8") as f:
@@ -887,6 +1003,7 @@ class PasConnector(BaseConnector, ParallelUtil):
         # time series
         else:
             item = series_from_json(fjson)
+            item.name = name
         return item
 
     def _del_item(self, libname: AllLibs, name: str, force: bool = False) -> None:
@@ -1000,12 +1117,13 @@ class PasConnector(BaseConnector, ParallelUtil):
                         initializer=initializer,
                         initargs=initargs,
                     ) as executor:
-                        futures = [
-                            executor.submit(partial(func, **kwargs), name)
+                        pending = {
+                            executor.submit(partial(func, **kwargs), name): name
                             for name in names
-                        ]
-                        for future in as_completed(futures):
+                        }
+                        for future in as_completed(pending):
                             result.append(future.result())
+                            del pending[future]
                             pbar.update()
             else:
                 result = process_map(
@@ -1022,8 +1140,21 @@ class PasConnector(BaseConnector, ParallelUtil):
                     executor.map(partial(func, **kwargs), names, chunksize=chunksize)
                 )
 
-        # update links if models were stored
-        self._trigger_links_update_if_needed(modelnames=names)
+        # Signal that reverse-lookup tables need updating. On fork-based start
+        # methods (Linux) workers may have already set the proxy flag; on
+        # spawn-based methods (Windows/macOS) they cannot, so we always set it
+        # here. The actual update is deferred to the next access of
+        # oseries_with_models / stresses_with_models / oseries_models /
+        # stresses_models, keeping _parallel() free of the update cost.
+        if hasattr(self._oseries_links_need_update, "value"):
+            self._oseries_links_need_update.value = True
+            self._stresses_links_need_update.value = True
+            # Clear lru_caches so that the next access of oseries_models /
+            # stresses_models re-runs the getter (which calls
+            # _trigger_links_update_if_needed and actually does the update).
+            self._clear_cache("oseries_models")
+            self._clear_cache("stresses_models")
+            self._clear_cache("_modelnames_cache")
 
         return result
 
@@ -1048,3 +1179,37 @@ class PasConnector(BaseConnector, ParallelUtil):
         lib = self._get_library(libname)
         path = lib / f"{name}.pas"
         return path.exists()
+
+    @functools.cached_property
+    def oseries_names(self) -> list[str]:
+        """Cached list of oseries names."""
+        return self._list_symbols("oseries")
+
+    @functools.cached_property
+    def stresses_names(self) -> list[str]:
+        """Cached list of stress names."""
+        return self._list_symbols("stresses")
+
+    @functools.cached_property
+    def oseries_with_models(self) -> list[str]:
+        """Cached list of oseries used in models."""
+        self._trigger_links_update_if_needed()
+        return self._list_symbols("oseries_models")
+
+    @functools.cached_property
+    def stresses_with_models(self) -> list[str]:
+        """Cached list of stresses used in models."""
+        self._trigger_links_update_if_needed()
+        return self._list_symbols("stresses_models")
+
+    def _clear_cache(self, libname: str) -> None:
+        """Clear cached properties, including PasConnector-level overrides."""
+        super()._clear_cache(libname)
+        _pas_extra = {
+            "oseries": "oseries_names",
+            "stresses": "stresses_names",
+            "oseries_models": "oseries_with_models",
+            "stresses_models": "stresses_with_models",
+        }
+        if libname in _pas_extra:
+            self.__dict__.pop(_pas_extra[libname], None)
