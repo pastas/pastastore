@@ -9,7 +9,7 @@ PASTAS_VERSION = parse_version(ps.__version__)
 PASTAS_GEQ_150 = PASTAS_VERSION >= parse_version("1.5.0")
 PASTAS_GEQ_200 = PASTAS_VERSION > parse_version("1.14.0")
 
-__version__ = "2.0.0"
+__version__ = "2.1.0.dev0"
 
 
 def show_versions(optional=False) -> None:
