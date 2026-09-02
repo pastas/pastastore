@@ -48,6 +48,8 @@ class Plots:
         self,
         libname,
         names=None,
+        tmin=None,
+        tmax=None,
         ax=None,
         split=False,
         figsize=(10, 5),
@@ -66,6 +68,12 @@ class Plots:
             or stresses)
         names : list[str], optional
             list of time series names to plot, by default None
+        tmin : str or pd.Timestamp, optional
+            minimum time to plot, by default None, which uses the minimum
+            time of the time series
+        tmax : str or pd.Timestamp, optional
+            maximum time to plot, by default None, which uses the maximum
+            time of the time series
         ax : matplotlib.Axes, optional
             pass axes object to plot on existing axes, by default None,
             which creates a new figure
@@ -123,6 +131,10 @@ class Plots:
                 iax = ax
             if labelfunc is not None:
                 n = labelfunc(n)
+            if tmin is not None:
+                ts = ts.loc[tmin:]
+            if tmax is not None:
+                ts = ts.loc[:tmax]
             iax.plot(ts.index, ts.squeeze(), label=n, **kwargs)
 
             if split and show_legend:
@@ -140,6 +152,8 @@ class Plots:
     def oseries(
         self,
         names=None,
+        tmin=None,
+        tmax=None,
         ax=None,
         split=False,
         figsize=(10, 5),
@@ -155,6 +169,12 @@ class Plots:
         names : list[str], optional
             list of oseries names to plot, by default None, which loads
             all oseries from store
+        tmin : str or pd.Timestamp, optional
+            minimum time to plot, by default None, which uses the minimum
+            time of the time series
+        tmax : str or pd.Timestamp, optional
+            maximum time to plot, by default None, which uses the maximum
+            time of the time series
         ax : matplotlib.Axes, optional
             pass axes object to plot oseries on existing figure,
             by default None, in which case a new figure is created
@@ -179,6 +199,8 @@ class Plots:
         return self._timeseries(
             "oseries",
             names=names,
+            tmin=tmin,
+            tmax=tmax,
             ax=ax,
             split=split,
             figsize=figsize,
@@ -192,6 +214,8 @@ class Plots:
         self,
         names=None,
         kind=None,
+        tmin=None,
+        tmax=None,
         ax=None,
         split=False,
         figsize=(10, 5),
@@ -210,6 +234,12 @@ class Plots:
         kind : str, optional
             only plot stresses of a certain kind, by default None, which
             includes all stresses
+        tmin : str or pd.Timestamp, optional
+            minimum time to plot, by default None, which uses the minimum
+            time of the time series
+        tmax : str or pd.Timestamp, optional
+            maximum time to plot, by default None, which uses the maximum
+            time of the time series
         ax : matplotlib.Axes, optional
             pass axes object to plot oseries on existing figure,
             by default None, in which case a new figure is created
@@ -242,6 +272,8 @@ class Plots:
         return self._timeseries(
             "stresses",
             names=names,
+            tmin=tmin,
+            tmax=tmax,
             ax=ax,
             split=split,
             figsize=figsize,
