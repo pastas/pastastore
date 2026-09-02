@@ -62,7 +62,7 @@ def prediction_interval(
 def two_step_solve(
     name: str,
     connector: BaseConnector | None = None,
-    noisemodel=ps.ArNoiseModel,
+    noisemodel=None,
     **kwargs: Any,
 ) -> None:
     """Solve a Pastas model in two steps and store the result."""
@@ -71,7 +71,15 @@ def two_step_solve(
     ml = pstore.create_model(name)
     report = kwargs.pop("report", False)
     ml.solve(report=False, **kwargs)
-    ml.add_noisemodel(noisemodel())
+    if noisemodel is not None:
+        ml.add_noisemodel(noisemodel())
+    else:
+        # support for older pastas versions
+        try:
+            noisemodel = ps.ArNoiseModel
+        except AttributeError:
+            noisemodel = ps.NoiseModel
+        ml.add_noisemodel(noisemodel())
     ml.solve(initial=False, report=report, **kwargs)
     resolved_connector.add_model(ml, overwrite=True)
 
