@@ -131,7 +131,10 @@ class Plots:
                 iax = ax
             if labelfunc is not None:
                 n = labelfunc(n)
-            ts = ts.loc[tmin:tmax]
+            if tmin is not None:
+                ts = ts.loc[tmin:]
+            if tmax is not None:
+                ts = ts.loc[:tmax]
             iax.plot(ts.index, ts.squeeze(), label=n, **kwargs)
 
             if split and show_legend:
