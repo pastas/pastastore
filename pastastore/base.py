@@ -2038,18 +2038,41 @@ class BaseConnector(ABC, ConnectorUtil):
             libname = "_modelnames_cache"
         self.__dict__.pop(libname, None)
 
-    def rebuild(self):
+    def rebuild(self, rewrite_all_files: bool = False):
         """Rebuild the database.
 
-        No data is lost in this operation! The reverse lookup tables are updated,
-        and the cached properties are deleted so they are updated on next access.
+        Parameters
+        ----------
+        rewrite_all_files : bool, optional
+            rewrite all files in the database, by default False.
 
-        This method can be used to repair the database in case of corruption or
-        inconsistencies. Use when models have been deleted from the models library, but
-        are still present in the oseries_models and stresses_models libraries, or vice
-        versa.
+        Notes
+        -----
+        When `rewrite_all_files` is False, no data is lost in this operation! The
+        reverse lookup tables are updated, and the cached properties are deleted so
+        they are updated on next access. This method can be used to repair the database
+        in case of cache corruption or inconsistencies. Use when models have been
+        deleted from the models library, but are still present in the oseries_models
+        and stresses_models libraries, or vice versa.
+
+        If `rewrite_all_files` is True, all files are rewritten to the database, which
+        can be useful if the database was created with an older version of Pastas and
+        you want to update the stored files to the latest version. Take care when using
+        this option, as it will overwrite all files in the database. A safer option is
+        to migrate your database using `pastastore.util.copy_database()`.
+
+        See Also
+        --------
+        pastastore.util.copy_database()
         """
         logger.info("Rebuilding database '%s' ...", self.name)
+        if rewrite_all_files:
+            logger.info("Rewriting all files in the database.")
+            for libname in ["oseries", "stresses", "models"]:
+                names = self._parse_names(None, libname)
+                for name in tqdm(names, desc=f"Rewriting {libname}"):
+                    item = self._get_item(libname, name)
+                    self._add_item(libname, item, name)
         self.empty_library("oseries_models", prompt=False, progressbar=False)
         self.empty_library("stresses_models", prompt=False, progressbar=False)
         for libname in ["models", "oseries", "stresses"]:
