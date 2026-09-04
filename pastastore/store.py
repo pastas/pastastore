@@ -1684,6 +1684,10 @@ class PastaStore:
                         precise_float=True,
                         dtype=False,
                     )
+                    # ensure column is numeric
+                    for col in s.columns:
+                        if s[col].dtype == "object":
+                            s[col] = pd.to_numeric(s[col], errors="coerce")
                     s = s.sort_index()
                     meta = json.load(archive.open(f.replace(f".{ext}", f"_meta.{ext}")))
                     conn._add_series(
