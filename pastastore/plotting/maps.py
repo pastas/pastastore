@@ -144,9 +144,10 @@ class Maps:
             axes handle, if not provided a new figure is created.
         figsize: tuple, optional
             figure size, by default(10, 8)
-        backgroundmap: bool, optional
+        backgroundmap: bool or str, optional
             if True, add background map (default CRS is EPSG:28992) with default tiles
-            by OpenStreetMap.Mapnik. Default option is False.
+            by OpenStreetMap.Mapnik. Default option is False. If str, it is passed as
+            map_provider to add_background_map method.
         label_kwargs: dict, optional
             dictionary with keyword arguments to pass to add_labels method
         show_legend : bool, optional
@@ -203,7 +204,12 @@ class Maps:
             ax.legend(loc=(0, 1), frameon=False, ncol=5)
 
         if backgroundmap:
-            self.add_background_map(ax)
+            self.add_background_map(
+                ax,
+                map_provider=backgroundmap
+                if isinstance(backgroundmap, str)
+                else "OpenStreetMap.Mapnik",
+            )
 
         return ax
 
@@ -233,9 +239,10 @@ class Maps:
             automated smart label placement using adjustText, by default False
         figsize: tuple, optional
             figure size, by default(10, 8)
-        backgroundmap: bool, optional
+        backgroundmap: bool or str, optional
             if True, add background map (default CRS is EPSG:28992) with default tiles
-            by OpenStreetMap.Mapnik. Default option is False.
+            by OpenStreetMap.Mapnik. Default option is False. If str, it is passed as
+            map_provider to add_background_map method.
         label_kwargs: dict, optional
             dictionary with keyword arguments to pass to add_labels method
 
@@ -267,7 +274,12 @@ class Maps:
             self.add_labels(oseries, ax, adjust=adjust, **label_kwargs)
 
         if backgroundmap:
-            self.add_background_map(ax)
+            self.add_background_map(
+                ax,
+                map_provider=backgroundmap
+                if isinstance(backgroundmap, str)
+                else "OpenStreetMap.Mapnik",
+            )
 
         return ax
 
@@ -286,9 +298,10 @@ class Maps:
             axes handle, if not provided a new figure is created.
         figsize: tuple, optional
             figure size, by default(10, 8)
-        backgroundmap: bool, optional
+        backgroundmap: bool or str, optional
             if True, add background map (default CRS is EPSG:28992) with default tiles
-            by OpenStreetMap.Mapnik. Default option is False.
+            by OpenStreetMap.Mapnik. Default option is False. If str, it is passed as
+            map_provider to add_background_map method.
 
         Returns
         -------
@@ -318,7 +331,12 @@ class Maps:
             self.add_labels(models, ax, adjust=adjust)
 
         if backgroundmap:
-            self.add_background_map(ax)
+            self.add_background_map(
+                ax,
+                map_provider=backgroundmap
+                if isinstance(backgroundmap, str)
+                else "OpenStreetMap.Mapnik",
+            )
 
         return ax
 
@@ -371,9 +389,10 @@ class Maps:
             axes handle, if not provided a new figure is created.
         figsize: tuple, optional
             figure size, by default(10, 8)
-        backgroundmap: bool, optional
+        backgroundmap: bool or str, optional
             if True, add background map (default CRS is EPSG:28992) with default tiles
-            by OpenStreetMap.Mapnik. Default option is False.
+            by OpenStreetMap.Mapnik. Default option is False.  If str, it is passed as
+            map_provider to add_background_map method.
         **kwargs: dict, optional
             additional keyword arguments to pass to dataframe_scatter method.
 
@@ -491,9 +510,10 @@ class Maps:
             axes handle, if not provided a new figure is created.
         figsize: tuple, optional
             figuresize, by default(10, 8)
-        backgroundmap: bool, optional
+        backgroundmap: bool or str, optional
             if True, add background map (default CRS is EPSG:28992) with default tiles
-            by OpenStreetMap.Mapnik. Default option is False.
+            by OpenStreetMap.Mapnik. Default option is False. If str, it is passed as
+            map_provider to add_background_map method.
         progressbar: bool, optional
             show progressbar, default is True.
 
@@ -549,7 +569,12 @@ class Maps:
             self.add_labels(df, ax, adjust=adjust)
 
         if backgroundmap:
-            self.add_background_map(ax)
+            self.add_background_map(
+                ax,
+                map_provider=backgroundmap
+                if isinstance(backgroundmap, str)
+                else "OpenStreetMap.Mapnik",
+            )
 
         return ax
 
@@ -592,9 +617,10 @@ class Maps:
             axes handle, if not provided a new figure is created.
         figsize: tuple, optional
             figuresize, by default(10, 8)
-        backgroundmap: bool, optional
+        backgroundmap: bool or str, optional
             if True, add background map (default CRS is EPSG:28992) with default tiles
-            by OpenStreetMap.Mapnik. Default option is False.
+            by OpenStreetMap.Mapnik. Default option is False. If str, it is passed as
+            map_provider to add_background_map method.
         progressbar: bool, optional
             show progressbar, default is True.
 
@@ -675,9 +701,10 @@ class Maps:
             axes handle, if not provided a new figure is created.
         figsize: tuple, optional
             figuresize, by default(10, 8)
-        backgroundmap: bool, optional
+        backgroundmap: bool or str, optional
             if True, add background map (default CRS is EPSG:28992) with default tiles
-            by OpenStreetMap.Mapnik. Default option is False.
+            by OpenStreetMap.Mapnik. Default option is False. If str, it is passed as
+            map_provider to add_background_map method.
         progressbar: bool, optional
             show progressbar, default is True
 
@@ -758,9 +785,10 @@ class Maps:
             axes handle, if not provided a new figure is created.
         figsize: tuple, optional
             figuresize, by default(10, 8)
-        backgroundmap: bool, optional
+        backgroundmap: bool or str, optional
             if True, add background map (default CRS is EPSG:28992) with default tiles
-            by OpenStreetMap.Mapnik. Default option is False.
+            by OpenStreetMap.Mapnik. Default option is False. If str, it is passed as
+            map_provider to add_background_map method.
         progressbar: bool, optional
             show progressbar, default is True
 
@@ -938,9 +966,10 @@ class Maps:
             axes handle, if not provided a new figure is created.
         figsize: tuple, optional
             figsize, default is (10, 10)
-        backgroundmap: bool, optional
+        backgroundmap: bool or str, optional
             if True, add background map (default CRS is EPSG:28992) with default tiles
-            by OpenStreetMap.Mapnik. Default option is False.
+            by OpenStreetMap.Mapnik. Default option is False. If str, it is passed as
+            map_provider to add_background_map method.
 
         Returns
         -------
@@ -1080,7 +1109,12 @@ class Maps:
                 txt.set_path_effects(stroke)
 
         if backgroundmap:
-            self.add_background_map(ax)
+            self.add_background_map(
+                ax,
+                map_provider=backgroundmap
+                if isinstance(backgroundmap, str)
+                else "OpenStreetMap.Mapnik",
+            )
 
         fig.tight_layout()
 
@@ -1126,9 +1160,10 @@ class Maps:
         adjust: bool, optional
             automated smart label placement using adjustText, by
             default False
-        backgroundmap: bool, optional
+        backgroundmap: bool or str, optional
             if True, add background map (default CRS is EPSG:28992) with default tiles
-            by OpenStreetMap.Mapnik. Default option is False.
+            by OpenStreetMap.Mapnik. Default option is False. If str, it is passed as
+            map_provider to add_background_map method.
 
         Returns
         -------
@@ -1226,7 +1261,12 @@ class Maps:
             ax.legend(handles=legend_elements)
 
         if backgroundmap:
-            self.add_background_map(ax)
+            self.add_background_map(
+                ax,
+                map_provider=backgroundmap
+                if isinstance(backgroundmap, str)
+                else "OpenStreetMap.Mapnik",
+            )
 
         return ax
 
@@ -1311,6 +1351,7 @@ class Maps:
             adjust_text(
                 texts,
                 objects=objects,
+                ax=ax,
                 force_text=(0.05, 0.10),
                 **{
                     "arrowprops": {
