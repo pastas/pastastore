@@ -268,6 +268,10 @@ def series_from_json(fjson: str, squeeze: bool = True):
         precise_float=True,
         dtype=False,
     )
+    # ensure column is numeric
+    for col in s.columns:
+        if s[col].dtype == "object":
+            s[col] = pd.to_numeric(s[col], errors="coerce")
     s = s.sort_index()  # needed for some reason ...
     if squeeze:
         return s.squeeze(axis="columns")
