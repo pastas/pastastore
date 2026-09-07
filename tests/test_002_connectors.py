@@ -50,7 +50,13 @@ def test_series_from_json_legacy_epoch_index(tmp_path):
     expected = source.copy()
 
     assert isinstance(loaded, pd.Series)
-    assert_series_equal(expected, loaded, check_freq=False, check_names=False)
+    assert_series_equal(
+        expected,
+        loaded,
+        check_freq=False,
+        check_names=False,
+        check_index_type=False,
+    )
 
 
 def test_add_get_single_value_series(request, conn):

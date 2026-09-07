@@ -271,7 +271,9 @@ class Validator:
 
     @staticmethod
     def validate_input_series(series):
-        """Check if series is pandas.DataFrame or pandas.Series.
+        """Check if series is pandas.DataFrame or pandas.Series and if it contains data.
+
+        Logs a warning if all NaN or empty series are passed.
 
         Parameters
         ----------
@@ -288,6 +290,15 @@ class Validator:
         if isinstance(series, pd.DataFrame):
             if series.columns.size > 1:
                 raise ValueError("Only DataFrames with one column are supported!")
+            is_empty = series.squeeze(axis="columns").isna().all()
+            name = series.columns[0]
+        else:
+            is_empty = series.isna().all()
+            name = series.name
+        if is_empty:
+            logger.warning(
+                "The provided series '%s' is empty (all values are NaN)." % name
+            )
 
     @staticmethod
     def set_series_name(series, name):
