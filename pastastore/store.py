@@ -132,13 +132,22 @@ class PastaStore:
 
     def _register_connector_methods(self):
         """Register connector methods (internal method)."""
-        methods = [
-            func
-            for func in dir(self.conn)
-            if callable(getattr(self.conn, func)) and not func.startswith("_")
-        ]
+        methods = [func for func in dir(self.conn) if not func.startswith("_")]
+        # avoid touching reverse lookups when running in a worker process
+        # to avoid potential collisions when multiple workers are trying
+        # to write/read from the same entry.
+        # NOTE: this should not happen, but for some reason it does in some
+        # cases on Windows machines where these reverse lookups are rebuilt
+        # when initializing a pastastore
+        if self.conn._worker_process:  # noqa: W0212
+            for meth in ["oseries_models", "stresses_models"]:
+                methods.remove(meth)
+
+        # register only callables
         for meth in methods:
-            setattr(self, meth, getattr(self.conn, meth))
+            func = getattr(self.conn, meth)
+            if callable(func):
+                setattr(self, meth, func)
 
     @property
     def oseries(self):
