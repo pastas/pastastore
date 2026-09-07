@@ -24,7 +24,7 @@ params = [
 ]
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def data1():
     d = {
         "oseries1": pd.read_csv("./tests/data/obs.csv", index_col=0, parse_dates=True),
@@ -37,7 +37,7 @@ def data1():
     return d
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def data2():
     d = {
         "oseries2": pd.read_csv(
@@ -56,7 +56,7 @@ def data2():
     return d
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def data3():
     w = pd.read_csv("./tests/data/well_month_end.csv", index_col=0, parse_dates=True)
     w = time_weighted_resample(
@@ -109,7 +109,7 @@ def initialize_project(conn, data1, data2, data3):
     return pstore
 
 
-@pytest.fixture(scope="session", params=params)
+@pytest.fixture(scope="module", params=params)
 def conn(request):
     """Fixture that yields connection object."""
     name = f"test_{request.param}"
@@ -127,7 +127,7 @@ def conn(request):
     return conn
 
 
-@pytest.fixture(scope="session", params=params)
+@pytest.fixture(scope="module", params=params)
 def pstore(request, data1, data2, data3):
     if request.param == "arcticdb":
         pid = os.getpid()  # ensure unique name for each test session
