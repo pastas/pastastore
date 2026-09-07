@@ -1,6 +1,7 @@
 # ruff: noqa: D100 D103
 import importlib
 import inspect
+import os
 from importlib import metadata
 
 import pandas as pd
@@ -129,7 +130,8 @@ def conn(request):
 @pytest.fixture(scope="module", params=params)
 def pstore(request, data1, data2, data3):
     if request.param == "arcticdb":
-        name = "testdb"
+        pid = os.getpid()  # ensure unique name for each test session
+        name = f"testdb_{pid}"
         uri = "lmdb://./tests/data/arcticdb/"
         connector = pst.ArcticDBConnector(name, uri)
     elif request.param == "dict":

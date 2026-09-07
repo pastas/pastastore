@@ -21,18 +21,24 @@ def show_versions(optional=False) -> None:
         Print the version of optional dependencies, by default False
     """
     msg = (
-        f"Pastastore version : {__version__}\n\n"
-        f"Python version     : {python_version()}\n"
-        f"Pandas version     : {metadata.version('pandas')}\n"
-        f"Matplotlib version : {metadata.version('matplotlib')}\n"
-        f"Pastas version     : {metadata.version('pastas')}\n"
-        f"PyYAML version     : {metadata.version('pyyaml')}\n"
+        f"Pastastore version    : {__version__}\n\n"
+        f"Python version        : {python_version()}\n"
+        f"Pandas version        : {metadata.version('pandas')}\n"
+        f"Matplotlib version    : {metadata.version('matplotlib')}\n"
+        f"Pastas version        : {metadata.version('pastas')}\n"
+        f"PyYAML version        : {metadata.version('pyyaml')}\n"
     )
     if optional:
-        msg += "\nArcticDB version   : "
+        msg += "\nArcticDB version      : "
         try:
             import_module("arcticdb")
             msg += f"{metadata.version('arcticdb')}"
+        except ImportError:
+            msg += "Not Installed"
+        msg += "\nHydropandas version   : "
+        try:
+            import_module("hydropandas")
+            msg += f"{metadata.version('hydropandas')}"
         except ImportError:
             msg += "Not Installed"
 
