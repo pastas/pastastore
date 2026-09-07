@@ -337,6 +337,7 @@ class Validator:
             "Constant",
             "LinearTrend",
             "StepModel",
+            "ChangeModel",
         ]
         if isinstance(ml, ps.Model):
             # Use type().__name__ instead of protected _name attribute
