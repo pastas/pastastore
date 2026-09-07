@@ -302,7 +302,8 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         # breaks on Windows outside of a ``if __name__ == '__main__'`` guard.
         self._oseries_links_need_update = False
         self._stresses_links_need_update = False
-        if not worker_process:
+        self._worker_process = worker_process
+        if not self._worker_process:
             # for older versions of PastaStore, if oseries_models library is empty
             # populate oseries - models database
             if (self.n_models > 0) and (
@@ -636,6 +637,7 @@ class DictConnector(BaseConnector, ParallelUtil):
         ):
             self._update_time_series_model_links(recompute=False, progressbar=True)
 
+        self._worker_process = False  # always false, does not support parallel
         # delayed update flags
         self._oseries_links_need_update = False
         self._stresses_links_need_update = False
@@ -794,6 +796,7 @@ class PasConnector(BaseConnector, ParallelUtil):
         path: str,
         verbose: bool = True,
         write_pastastore_file: bool = True,
+        worker_process: bool = False,
     ):
         """Create PasConnector object that stores data as JSON files on disk.
 
@@ -811,6 +814,9 @@ class PasConnector(BaseConnector, ParallelUtil):
         write_pastastore_file : bool, optional
             write .pastastore file if true, use Fase for multiprocessing applications
             to avoid conflicting writes to files.
+        worker_process : bool, optional
+            whether the connector is created in a worker process for parallel
+            processing, by default False.
         """
         # set shared memory flags for parallel processing
         super().__init__()
@@ -829,16 +835,18 @@ class PasConnector(BaseConnector, ParallelUtil):
         self._oseries_links_need_update = False
         self._stresses_links_need_update = False
 
-        # for older versions of PastaStore, if oseries_models library is empty
-        # populate oseries_models library
-        if not self._library_is_empty("models") and (
-            self._library_is_empty("oseries_models")
-            or self._library_is_empty("stresses_models")
-        ):
-            self._update_time_series_model_links(recompute=False, progressbar=True)
-        # write pstore file to store database info that can be used to load pstore
-        if write_pastastore_file:
-            self._write_pstore_config_file()
+        self._worker_process = worker_process
+        if not self._worker_process:
+            # for older versions of PastaStore, if oseries_models library is empty
+            # populate oseries_models library
+            if not self._library_is_empty("models") and (
+                self._library_is_empty("oseries_models")
+                or self._library_is_empty("stresses_models")
+            ):
+                self._update_time_series_model_links(recompute=False, progressbar=True)
+            # write pstore file to store database info that can be used to load pstore
+            if write_pastastore_file:
+                self._write_pstore_config_file()
 
     def _initialize(self, verbose: bool = True) -> None:
         """Initialize the libraries (internal method)."""
