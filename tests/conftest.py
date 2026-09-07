@@ -1,6 +1,7 @@
 # ruff: noqa: D100 D103
 import importlib
 import inspect
+import os
 from importlib import metadata
 
 import pandas as pd
@@ -108,7 +109,7 @@ def initialize_project(conn, data1, data2, data3):
     return pstore
 
 
-@pytest.fixture(scope="module", params=params)
+@pytest.fixture(scope="session", params=params)
 def conn(request):
     """Fixture that yields connection object."""
     name = f"test_{request.param}"
@@ -126,10 +127,11 @@ def conn(request):
     return conn
 
 
-@pytest.fixture(scope="module", params=params)
+@pytest.fixture(scope="session", params=params)
 def pstore(request, data1, data2, data3):
     if request.param == "arcticdb":
-        name = "testdb"
+        pid = os.getpid()  # ensure unique name for each test session
+        name = f"testdb_{pid}"
         uri = "lmdb://./tests/data/arcticdb/"
         connector = pst.ArcticDBConnector(name, uri)
     elif request.param == "dict":
