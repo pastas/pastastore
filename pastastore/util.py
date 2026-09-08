@@ -789,6 +789,7 @@ def frontiers_checks(
         "The 'frontiers_checks' function is deprecated and will be "
         "removed in a future version of pastastore.",
         FutureWarning,
+        stacklevel=2,
     )
     df = pd.DataFrame(columns=pd.Index(["all_checks_passed"]))
 
@@ -1025,6 +1026,7 @@ def frontiers_aic_select(
         "The 'frontiers_aic_select' function is deprecated and will be "
         "removed in a future version of pastastore.",
         FutureWarning,
+        stacklevel=2,
     )
     if modelnames is None and oseries is None:
         modelnames = pstore.model_names
