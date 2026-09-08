@@ -1801,7 +1801,7 @@ class PastaStore:
         parallel: bool = False,
         max_workers: int | None = None,
         fancy_output: bool = True,
-        initializer: Callable | None = None,
+        initializer: bool | Callable | None = None,
         initargs: tuple | None = None,
     ) -> dict | pd.Series | pd.DataFrame | Any:
         """Apply function to items in library.
@@ -1831,8 +1831,12 @@ class PastaStore:
         fancy_output : bool, optional
             if True, try returning result as pandas Series or DataFrame, by default
             False
-        initializer : Callable, optional
-            function to initialize each worker process, only used if parallel is True
+        initializer : bool, callable, optional
+            function to initialize each worker process, only used if parallel is True.
+            If True uses the default initializers to create a global conn variable in
+            each worker. This variable can be used by the func to access the database.
+            If a callable is provided, it will be called with the initargs as arguments
+            to initialize each worker process.
         initargs : tuple, optional
             arguments to pass to initializer, only used if parallel is True
 
