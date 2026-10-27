@@ -473,7 +473,7 @@ class Plots:
                 pc = ax.pcolormesh(
                     s.index,
                     [i, i + 1],
-                    [np.diff(s.index).astype(float)],
+                    [np.diff(s.index).astype("timedelta64[ns]").astype(float)],
                     norm=norm,
                     cmap=cmap,
                     linewidth=0,
