@@ -5,6 +5,7 @@ import logging
 import os
 import shutil
 import sys
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -718,6 +719,13 @@ def frontiers_checks(
 ) -> pd.DataFrame:  # pragma: no cover
     """Check models in a PastaStore to see if they pass reliability criteria.
 
+    .. deprecated:: 2.1.0
+
+        This function is deprecated and will be removed in a future version of
+        pastastore. Use the Pastas check module instead. E.g.
+        `ps.check.checklist(ml,checks=ps.check.checks_brakenhoff_2022)` to check a
+        model against the Brakenhoff et al. 2022 criteria.
+
     The reliability criteria are taken from Brakenhoff et al. 2022 [bra_2022]_.
     These criteria were applied in a region with recharge, river levels and
     pumping wells as stresses. This is by no means an exhaustive list of
@@ -777,6 +785,12 @@ def frontiers_checks(
     Application of Time Series Analysis to Estimate Drawdown From Multiple Well
     Fields. Front. Earth Sci., 14 June 2022 doi:10.3389/feart.2022.907609
     """
+    warnings.warn(
+        "The 'frontiers_checks' function is deprecated and will be "
+        "removed in a future version of pastastore.",
+        FutureWarning,
+        stacklevel=2,
+    )
     df = pd.DataFrame(columns=pd.Index(["all_checks_passed"]))
 
     if modelnames is not None:
@@ -974,6 +988,12 @@ def frontiers_aic_select(
 ) -> pd.DataFrame:  # pragma: no cover
     """Select the best model structure based on the minimum AIC.
 
+    .. deprecated:: 2.1.0
+
+        This function is deprecated and will be removed in a future version of
+        pastastore. Pandas makes it simple to parse model statistics such as the AICc,
+        and selec the best model per group of models based on this statistic.
+
     As proposed by Brakenhoff et al. 2022 [bra_2022]_.
 
     Parameters
@@ -1002,6 +1022,12 @@ def frontiers_aic_select(
     Multiple Well Fields. Front. Earth Sci., 14 June 2022
     doi:10.3389/feart.2022.907609
     """
+    warnings.warn(
+        "The 'frontiers_aic_select' function is deprecated and will be "
+        "removed in a future version of pastastore.",
+        FutureWarning,
+        stacklevel=2,
+    )
     if modelnames is None and oseries is None:
         modelnames = pstore.model_names
     elif modelnames is None and oseries is not None:
