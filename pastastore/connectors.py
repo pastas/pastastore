@@ -79,6 +79,26 @@ def _create_arcticdb_connector(name: str, uri: str, verbose: bool) -> None:
     conn = ArcticDBConnector(name, uri, verbose, worker_process=True)
 
 
+def _create_pas_connector(name: str, path: str, verbose: bool) -> None:
+    """Module-level initializer for PasConnector multiprocessing.
+
+    This function must be defined at module level to be picklable.
+    It creates a new PasConnector instance in each worker process
+    and stores it in the module-level `conn` variable.
+
+    Parameters
+    ----------
+    name : str
+        name of the database
+    path : str
+        path to the directory containing the JSON files
+    verbose : bool
+        whether to log messages when database is initialized
+    """
+    global conn
+    conn = PasConnector(name, path, verbose, worker_process=True)
+
+
 class ParallelUtil:
     """Mix-in class for storing parallelizable methods."""
 
@@ -302,7 +322,8 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         # breaks on Windows outside of a ``if __name__ == '__main__'`` guard.
         self._oseries_links_need_update = False
         self._stresses_links_need_update = False
-        if not worker_process:
+        self._worker_process = worker_process
+        if not self._worker_process:
             # for older versions of PastaStore, if oseries_models library is empty
             # populate oseries - models database
             if (self.n_models > 0) and (
@@ -482,7 +503,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         max_workers: int | None = None,
         chunksize: int | None = None,
         desc: str = "",
-        initializer: Callable | None = None,
+        initializer: bool | Callable | None = None,
         initargs: tuple | None = None,
     ):
         """Parallel processing of function.
@@ -525,8 +546,10 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
             chunksize for parallel processing, by default None
         desc : str, optional
             description for progressbar, by default ""
-        initializer : Callable, optional
-            function to initialize each worker process, by default None
+        initializer : bool, callable, optional
+            function to initialize each worker process, by default None (same as True)
+            which defaults to the default initializer. This creates a global `conn`
+            variable in each worker process that can be used to access the database.
         initargs : tuple, optional
             arguments to pass to initializer function, by default None
         """
@@ -537,7 +560,7 @@ class ArcticDBConnector(BaseConnector, ParallelUtil):
         max_workers, chunksize = self._get_max_workers_and_chunksize(
             max_workers, len(names), chunksize
         )
-        if initializer is None:
+        if initializer is None or initializer is True:
             initializer = _create_arcticdb_connector
             initargs = (self.name, self.uri, False)
 
@@ -636,6 +659,7 @@ class DictConnector(BaseConnector, ParallelUtil):
         ):
             self._update_time_series_model_links(recompute=False, progressbar=True)
 
+        self._worker_process = False  # always false, does not support parallel
         # delayed update flags
         self._oseries_links_need_update = False
         self._stresses_links_need_update = False
@@ -794,6 +818,7 @@ class PasConnector(BaseConnector, ParallelUtil):
         path: str,
         verbose: bool = True,
         write_pastastore_file: bool = True,
+        worker_process: bool = False,
     ):
         """Create PasConnector object that stores data as JSON files on disk.
 
@@ -811,6 +836,9 @@ class PasConnector(BaseConnector, ParallelUtil):
         write_pastastore_file : bool, optional
             write .pastastore file if true, use Fase for multiprocessing applications
             to avoid conflicting writes to files.
+        worker_process : bool, optional
+            whether the connector is created in a worker process for parallel
+            processing, by default False.
         """
         # set shared memory flags for parallel processing
         super().__init__()
@@ -829,16 +857,18 @@ class PasConnector(BaseConnector, ParallelUtil):
         self._oseries_links_need_update = False
         self._stresses_links_need_update = False
 
-        # for older versions of PastaStore, if oseries_models library is empty
-        # populate oseries_models library
-        if not self._library_is_empty("models") and (
-            self._library_is_empty("oseries_models")
-            or self._library_is_empty("stresses_models")
-        ):
-            self._update_time_series_model_links(recompute=False, progressbar=True)
-        # write pstore file to store database info that can be used to load pstore
-        if write_pastastore_file:
-            self._write_pstore_config_file()
+        self._worker_process = worker_process
+        if not self._worker_process:
+            # for older versions of PastaStore, if oseries_models library is empty
+            # populate oseries_models library
+            if not self._library_is_empty("models") and (
+                self._library_is_empty("oseries_models")
+                or self._library_is_empty("stresses_models")
+            ):
+                self._update_time_series_model_links(recompute=False, progressbar=True)
+            # write pstore file to store database info that can be used to load pstore
+            if write_pastastore_file:
+                self._write_pstore_config_file()
 
     def _initialize(self, verbose: bool = True) -> None:
         """Initialize the libraries (internal method)."""
@@ -1063,7 +1093,7 @@ class PasConnector(BaseConnector, ParallelUtil):
         max_workers: int | None = None,
         chunksize: int | None = None,
         desc: str = "",
-        initializer: Callable = None,
+        initializer: bool | Callable | None = None,
         initargs: tuple | None = None,
     ):
         """Parallel processing of function.
@@ -1092,8 +1122,12 @@ class PasConnector(BaseConnector, ParallelUtil):
             chunksize for parallel processing, by default None
         desc : str, optional
             description for progressbar, by default ""
-        initializer : Callable, optional
-            function to initialize each worker process, by default None
+        initializer : bool, callable, optional
+            function to initialize each worker process, by default None. If True,
+            uses ``_create_pas_connector`` to create a new PasConnector instance in
+            each worker process and stores it in the global `conn` variable.
+            User-provided functions can access this connector via the global `conn`
+            variable.
         initargs : tuple, optional
             arguments to pass to initializer function, by default None
         """
@@ -1109,7 +1143,10 @@ class PasConnector(BaseConnector, ParallelUtil):
             kwargs = {}
 
         if progressbar:
-            if initializer is not None:
+            if initializer:
+                if initializer is True:
+                    initializer = _create_pas_connector
+                    initargs = (self.name, str(self.parentdir), False)
                 result = []
                 with tqdm(total=len(names), desc=desc) as pbar:
                     with ProcessPoolExecutor(
