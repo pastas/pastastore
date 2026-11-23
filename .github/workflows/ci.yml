@@ -58,6 +58,11 @@ jobs:
             "git+https://github.com/pastas/pastas.git@dev",
           ]
         experimental: [false]
+        exclude:
+          - python-version: "3.15"
+            pastas-version: "git+https://github.com/pastas/pastas.git@v1.5.0"
+          - python-version: "3.15"
+            pastas-version: "git+https://github.com/pastas/pastas.git@v2.0.0"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -77,7 +82,13 @@ jobs:
       - name: Check numpy and scipy version
         if: ${{ matrix.pastas-version == 'git+https://github.com/pastas/pastas.git@v1.4.0' || matrix.pastas-version == 'git+https://github.com/pastas/pastas.git@v1.5.0' }}
         run: |
-          uv pip install "numpy<2.0" "scipy<1.17"
+          # numpy<2.0/scipy<1.17 have no wheels for Python >= 3.15 and fail to
+          # build from source there, so only downgrade on older Pythons
+          if python -c "import sys; sys.exit(0 if sys.version_info < (3, 15) else 1)"; then
+            uv pip install "numpy<2.0" "scipy<1.17"
+          else
+            echo "Skipping numpy/scipy downgrade on Python ${{ matrix.python-version }}"
+          fi
 
       - name: Print versions
         run: |
