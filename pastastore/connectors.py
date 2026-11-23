@@ -980,6 +980,8 @@ class PasConnector(BaseConnector, ParallelUtil):
                 logger.debug("Writing time series '%s' to disk at '%s'.", name, fname)
                 f.write(sjson)
             if metadata is not None:
+                if "crs" in metadata:
+                    metadata["crs"] = metadata.pop("crs").to_string()
                 mjson = json.dumps(metadata, cls=PastasEncoder, indent=4)
                 fname_meta = lib / f"{name}_meta.pas"
                 with fname_meta.open("w", encoding="utf-8") as m:
