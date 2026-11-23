@@ -1,12 +1,16 @@
 # ruff: noqa: D100 D103
 import pytest
-from conftest import for_connectors
+from conftest import for_connectors, params
 
 import pastastore as pst
 from pastastore import connectors as pst_connectors
 from pastastore import parallel
 
 pst.get_color_logger("DEBUG", logger_name="pastastore")
+
+# "dict" is not supported here; on Python >= 3.15 conftest.params already
+# excludes "arcticdb" (arcticdb is not supported on Python >= 3.15)
+parallel_conn_types = [p for p in params if p != "dict"]
 
 
 @pytest.fixture(scope="module")
@@ -352,7 +356,7 @@ def setup_parallel_pstore(conn_type, data1, data2):
     return ppstore
 
 
-@pytest.mark.parametrize("conn_type", ["pas", "arcticdb"])
+@pytest.mark.parametrize("conn_type", parallel_conn_types)
 def test_parallel_add_model(conn_type, data1, data2):
     """Test that accessing stresses_with_models triggers update of added models."""
     ppstore = setup_parallel_pstore(conn_type, data1, data2)

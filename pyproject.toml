@@ -48,7 +48,7 @@ documentation = "https://pastastore.readthedocs.io/en/latest/"
 full = ["pastastore[arcticdb,optional]", "hydropandas"]
 extensions = ["hydropandas"]
 optional = ["contextily", "pyproj", "adjustText"]
-arcticdb = ["arcticdb"]
+arcticdb = ["arcticdb; python_version < '3.15'"]
 lint = ["ruff"]
 pytest = [
     "coverage",
