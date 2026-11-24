@@ -76,8 +76,8 @@ jobs:
 
       - name: Install the project
         run: |
+          uv pip install "${{ matrix.pastas-version }}"
           uv pip install -e .[dev]
-          uv pip install --reinstall --no-deps "${{ matrix.pastas-version }}"
 
       - name: Check numpy and scipy version
         if: ${{ matrix.pastas-version == 'git+https://github.com/pastas/pastas.git@v1.4.0' || matrix.pastas-version == 'git+https://github.com/pastas/pastas.git@v1.5.0' }}
