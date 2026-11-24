@@ -12,6 +12,7 @@ import pastas as ps
 import pastastore as pst
 from pastastore import connectors as pst_connectors
 from pastastore.base import BaseConnector
+from pastastore.version import PASTAS_GEQ_150
 
 
 def _resolve_connector(connector: BaseConnector | None = None) -> BaseConnector:
@@ -75,9 +76,9 @@ def two_step_solve(
         ml.add_noisemodel(noisemodel())
     else:
         # support for older pastas versions
-        try:
+        if PASTAS_GEQ_150:
             noisemodel = ps.ArNoiseModel
-        except AttributeError:
+        else:
             noisemodel = ps.NoiseModel  # noqa: E1101:no-member
         ml.add_noisemodel(noisemodel())
     ml.solve(initial=False, report=report, **kwargs)
@@ -91,7 +92,10 @@ def get_model(model_name: str, connector: BaseConnector | None = None):
 
 
 def add_model(
-    name, connector: BaseConnector | None = None, add_recharge=True, solve=True
+    name: str,
+    connector: BaseConnector | None = None,
+    add_recharge: bool = True,
+    solve: bool = True,
 ):
     """Create a model and add it to the database.
 
