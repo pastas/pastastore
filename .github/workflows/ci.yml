@@ -62,7 +62,7 @@ jobs:
           - python-version: "3.15"
             pastas-version: "git+https://github.com/pastas/pastas.git@v1.5.0"
           - python-version: "3.15"
-            pastas-version: "git+https://github.com/pastas/pastas.git@v2.0.0"
+            pastas-version: "git+https://github.com/pastas/pastas.git@v1.14.0"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
