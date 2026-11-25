@@ -1,11 +1,16 @@
 # ruff: noqa: D100 D103
 import pytest
-from conftest import for_connectors
+from conftest import for_connectors, params
 
 import pastastore as pst
 from pastastore import connectors as pst_connectors
+from pastastore import parallel
 
 pst.get_color_logger("DEBUG", logger_name="pastastore")
+
+# "dict" is not supported here; on Python >= 3.15 conftest.params already
+# excludes "arcticdb" (arcticdb is not supported on Python >= 3.15)
+parallel_conn_types = [p for p in params if p != "dict"]
 
 
 @pytest.fixture(scope="module")
@@ -301,6 +306,13 @@ def add_model_pas(name, connector):
     ppstore.add_model(ml, overwrite=True)
 
 
+def add_model_pas_worker(name):
+    connector = pst_connectors.get_worker_connector()
+    ppstore = pst.PastaStore(connector)
+    ml = ppstore.create_model(name)
+    ppstore.add_model(ml, overwrite=True)
+
+
 def add_model_arcticdb(name):
     """Add model using the worker-local ArcticDB connector."""
     connector = pst_connectors.get_worker_connector()
@@ -344,7 +356,7 @@ def setup_parallel_pstore(conn_type, data1, data2):
     return ppstore
 
 
-@pytest.mark.parametrize("conn_type", ["pas", "arcticdb"])
+@pytest.mark.parametrize("conn_type", parallel_conn_types)
 def test_parallel_add_model(conn_type, data1, data2):
     """Test that accessing stresses_with_models triggers update of added models."""
     ppstore = setup_parallel_pstore(conn_type, data1, data2)
@@ -368,6 +380,61 @@ def test_parallel_add_model(conn_type, data1, data2):
             kwargs=kwargs,
             parallel=True,
             max_workers=1,
+        )
+
+        # check update parameters are set to True, since after parallel the update
+        # is deferred to the next access of oseries/stresses_models
+        assert ppstore.conn._oseries_links_need_update.value is True
+        assert ppstore.conn._stresses_links_need_update.value is True
+
+        # check if result is correct
+        om = ppstore.oseries_models
+        owm = ppstore.oseries_with_models
+        sm = ppstore.stresses_models
+        swm = ppstore.stresses_with_models
+        assert "oseries1" in owm
+        assert "oseries2" in owm
+        assert "oseries1" in om
+        assert "oseries2" in om
+        assert "oseries1" in om["oseries1"]
+        assert "oseries2" in om["oseries2"]
+        assert "prec1" in swm
+        assert "prec2" in swm
+        assert "evap1" in swm
+        assert "evap2" in swm
+        assert "oseries1" in sm["prec1"]
+        assert "oseries2" in sm["prec2"]
+        assert "oseries1" in sm["evap1"]
+        assert "oseries2" in sm["evap2"]
+
+        # check update parameters are set to False, since after access the updates
+        # should have been triggered
+        assert ppstore.conn._oseries_links_need_update.value is False
+        assert ppstore.conn._stresses_links_need_update.value is False
+
+    finally:
+        pst.util.delete_pastastore(ppstore)
+
+
+@pytest.mark.parametrize("conn_type", ["pas"])
+def test_parallel_add_model_worker_process(conn_type, data1, data2):
+    """Test that accessing stresses_with_models triggers update of added models."""
+    ppstore = setup_parallel_pstore(conn_type, data1, data2)
+
+    func = parallel.add_model
+    kwargs = {}
+    try:
+        # Initially, _added_models should be empty
+        assert len(ppstore.conn._added_models) == 0
+
+        ppstore.apply(
+            libname="oseries",
+            func=func,
+            names=["oseries1", "oseries2"],
+            kwargs=kwargs,
+            parallel=True,
+            max_workers=1,
+            initializer=True,
         )
 
         # check update parameters are set to True, since after parallel the update

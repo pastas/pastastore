@@ -1,10 +1,13 @@
 # ruff: noqa: D100 D103
 import importlib
 import inspect
+import os
 from importlib import metadata
+from platform import python_version
 
 import pandas as pd
 import pytest
+from packaging.version import parse as parse_version
 
 import pastastore as pst
 from pastastore.version import PASTAS_GEQ_200
@@ -16,11 +19,12 @@ else:
         timestep_weighted_resample as time_weighted_resample,
     )
 
-params = [
-    "dict",
-    "pas",
-    "arcticdb",
-]
+# arcticdb is not supported on Python >= 3.15
+params = (
+    ["dict", "pas", "arcticdb"]
+    if parse_version(python_version()) < parse_version("3.15")
+    else ["dict", "pas"]
+)
 
 
 @pytest.fixture(scope="module")
@@ -129,7 +133,8 @@ def conn(request):
 @pytest.fixture(scope="module", params=params)
 def pstore(request, data1, data2, data3):
     if request.param == "arcticdb":
-        name = "testdb"
+        pid = os.getpid()  # ensure unique name for each test session
+        name = f"testdb_{pid}"
         uri = "lmdb://./tests/data/arcticdb/"
         connector = pst.ArcticDBConnector(name, uri)
     elif request.param == "dict":

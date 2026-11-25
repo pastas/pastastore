@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import pastas as ps
 import pytest
+from conftest import requires_pkg
 from pandas.testing import assert_frame_equal, assert_series_equal
 from pytest_dependency import depends
 
@@ -50,7 +51,13 @@ def test_series_from_json_legacy_epoch_index(tmp_path):
     expected = source.copy()
 
     assert isinstance(loaded, pd.Series)
-    assert_series_equal(expected, loaded, check_freq=False, check_names=False)
+    assert_series_equal(
+        expected,
+        loaded,
+        check_freq=False,
+        check_names=False,
+        check_index_type=False,
+    )
 
 
 def test_add_get_single_value_series(request, conn):
@@ -331,6 +338,7 @@ def test_delete(request, conn):
         pst.util.delete_pas_connector(conn)
 
 
+@requires_pkg("arcticdb")
 def test_new_connector_in_occupied_dir():
     conn1 = pst.PasConnector("my_db", "./tests/data/pas")
     with pytest.raises(

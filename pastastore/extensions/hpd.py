@@ -180,7 +180,7 @@ class HydroPandasExtension:
             )
 
         # gather metadata from obs object
-        metadata = {key: getattr(obs, key) for key in obs._metadata}  # noqa: SLF001
+        metadata = {key: getattr(obs, key) for key in obs._get_meta_attr()}  # noqa: SLF001
 
         # convert np dtypes to builtins
         for k, v in metadata.items():
@@ -278,7 +278,7 @@ class HydroPandasExtension:
             observation series with normalized datetime index
         """
         if isinstance(obs, hpd.Obs):
-            metadata = {k: getattr(obs, k) for k in obs._metadata}  # noqa: SLF001
+            metadata = {k: getattr(obs, k) for k in obs._get_meta_attr()}  # noqa: SLF001
         else:
             metadata = {}
         return obs.__class__(

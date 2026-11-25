@@ -12,6 +12,7 @@ import pastas as ps
 import pastastore as pst
 from pastastore import connectors as pst_connectors
 from pastastore.base import BaseConnector
+from pastastore.version import PASTAS_GEQ_150
 
 
 def _resolve_connector(connector: BaseConnector | None = None) -> BaseConnector:
@@ -75,10 +76,10 @@ def two_step_solve(
         ml.add_noisemodel(noisemodel())
     else:
         # support for older pastas versions
-        try:
+        if PASTAS_GEQ_150:
             noisemodel = ps.ArNoiseModel
-        except AttributeError:
-            noisemodel = ps.NoiseModel
+        else:
+            noisemodel = ps.NoiseModel  # noqa: E1101:no-member
         ml.add_noisemodel(noisemodel())
     ml.solve(initial=False, report=report, **kwargs)
     resolved_connector.add_model(ml, overwrite=True)
@@ -88,3 +89,44 @@ def get_model(model_name: str, connector: BaseConnector | None = None):
     """Load a model from the active worker connector."""
     resolved_connector = _resolve_connector(connector)
     return resolved_connector.get_model(model_name)
+
+
+def add_model(
+    name: str,
+    connector: BaseConnector | None = None,
+    add_recharge: bool = True,
+    solve: bool = True,
+):
+    """Create a model and add it to the database.
+
+    Optionally add linear recharge model (default is True) and
+    solve the model (default is True).
+
+    Parameters
+    ----------
+    name : str
+        Name of the model to create.
+    connector : BaseConnector | None, optional
+        Picklable connector passed in by the caller. When omitted, the
+        worker-local connector created by the multiprocessing initializer is
+        used instead.
+    add_recharge : bool, optional
+        Whether to add a recharge stress model, by default True
+    solve : bool, optional
+        Whether to solve the model after creation, by default True
+
+    Returns
+    -------
+    float | None
+        R-squared value of the model if solved, otherwise None
+    """
+    resolved_connector = _resolve_connector(connector)
+    pstore = pst.PastaStore(resolved_connector)
+    ml = pstore.create_model(name, add_recharge=add_recharge)
+    if solve:
+        ml.solve(report=False)
+        r = ml.stats.rsq()
+    else:
+        r = None
+    resolved_connector.add_model(ml, overwrite=True)
+    return r
